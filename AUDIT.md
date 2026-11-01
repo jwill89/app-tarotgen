@@ -46,10 +46,11 @@ verification are listed at the end so nobody re-chases them.
 | 8 | Tests | 7 | 0 | — (and the owner's decisions the tests raised are implemented: "Open from §8") |
 | 9 | Product | 11 | 4 | §9.6–9.7 and the two large ones; 5.1.0–5.4.0 shipped the rest |
 
-**Deployed** (as of 2026-10-30): 5.3.0. **Next: 5.4.0**, in the order its
-CHANGELOG section gives (draw-key migration, deploy, plugin 0.8.0 straight
-after, then the changelog-table drop). FFXIV plugin 0.8.0 (draw keys)
-supersedes the unreleased 0.7.0.
+**Deployed** (2026-10-31 00:01–00:03 UTC): 5.4.0, in its CHANGELOG order:
+`migrate_plugin_draw_keys.php` (backup first), the site, FFXIV plugin 0.8.0
+(published to `/plugin/repo.json`; it supersedes the unreleased 0.7.0), then
+`migrate_drop_changelog.php` (backup first; 7 rows dropped). Prod's schema
+matches `schema.sql`.
 
 ## Decisions and production facts (2026-10-28)
 
@@ -1065,7 +1066,8 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
   `plugin/.editorconfig`.
   - **DONE 2026-10-28:** `frontend/.nvmrc` (`24`) is now the one place the Node
     version lives: CI's `setup-node` reads it (`node-version-file`) instead of
-    its own `'24'`, and `engines.node` is `>=24`. Root `.editorconfig` records
+    its own `'24'`, and `engines.node` is `>=24` (both raised to Node 26, the
+    new LTS, on 2026-11-01). Root `.editorconfig` records
     what the files already do: UTF-8, LF, final newline, no trailing whitespace
     (no tracked file has any), 4 spaces, 2 for frontend sources / npm JSON /
     YAML / Markdown, 4 for `backend/**.json`, and `schema.sql` left alone (it

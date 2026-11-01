@@ -22,6 +22,11 @@ update its section here in the same commit — no manual tagging.
 
 ## [Unreleased]
 
+### Changed
+
+- Node 26, now the LTS, is the minimum for building the frontend
+  (`frontend/.nvmrc`, `engines`); CI builds and tests on it.
+
 ## [5.4.0] — 2026-10-30
 
 Signed-out drawing now asks for a Turnstile check, and the FFXIV plugin gets a
