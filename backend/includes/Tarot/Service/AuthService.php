@@ -6,6 +6,7 @@ use Tarot\Config\Env;
 use Tarot\Repository\UserRepository;
 use Tarot\Repository\UserTokenRepository;
 use Tarot\Structure\User;
+use Tarot\Utility\AfterResponse;
 use Tarot\Utility\Clock;
 use Tarot\Utility\DbSessionHandler;
 
@@ -46,6 +47,7 @@ class AuthService
         private readonly Mailer $mailer,
         private readonly DbSessionHandler $sessions,
         private readonly AccountProtection $protection,
+        private readonly AfterResponse $afterResponse,
     ) {
     }
 
@@ -108,12 +110,12 @@ class AuthService
         $existing = $this->users->findByEmail($email);
         if ($existing !== null) {
             $base    = rtrim(Env::get('APP_URL', 'https://tarotgen.io'), '/');
-            $emailed = $this->mailer->sendRegistrationAttempt(
+            $emailed = $this->sendAfterResponse(fn(): bool => $this->mailer->sendRegistrationAttempt(
                 $existing->email,
                 $existing->display_name,
                 $base . '/login',
                 $base . '/forgot-password'
-            );
+            ));
 
             return ['ok' => true, 'emailed' => $emailed];
         }
@@ -125,7 +127,7 @@ class AuthService
         }
 
         $link    = $this->issueActivationLink($user->user_id);
-        $emailed = $this->mailer->sendActivation($user->email, $user->display_name, $link);
+        $emailed = $this->sendAfterResponse(fn(): bool => $this->mailer->sendActivation($user->email, $user->display_name, $link));
 
         return [
             'ok'              => true,
@@ -247,7 +249,7 @@ class AuthService
         }
 
         $link    = $this->issueResetLink($user->user_id);
-        $emailed = $this->mailer->sendPasswordReset($user->email, $user->display_name, $link);
+        $emailed = $this->sendAfterResponse(fn(): bool => $this->mailer->sendPasswordReset($user->email, $user->display_name, $link));
 
         return ['ok' => true, 'exists' => true, 'emailed' => $emailed, 'reset_link' => $link];
     }
@@ -431,6 +433,27 @@ class AuthService
 
         $base = rtrim(Env::get('APP_URL', 'https://tarotgen.io'), '/');
         return $base . '/reset-password?token=' . $raw;
+    }
+
+    /**
+     * Send a public account email (sign-up, password reset) after the response,
+     * where the server can (PHP-FPM, {@see AfterResponse}). Waiting on SMTP only
+     * when an address has an account made those answers slower for it, which
+     * told anyone timing them who has one. Returns whether the email was sent;
+     * one handed on counts as sent, and its failure is logged as any is. Unset
+     * SMTP is answered now: false, so outside production the link is shown.
+     *
+     * @param callable(): bool $send
+     */
+    private function sendAfterResponse(callable $send): bool
+    {
+        if (!$this->afterResponse->isAvailable() || !$this->mailer->isConfigured()) {
+            return $send();
+        }
+
+        $this->afterResponse->defer($send);
+
+        return true;
     }
 
     private static function hashToken(string $rawToken): string

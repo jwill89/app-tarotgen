@@ -11,6 +11,7 @@ use Routes\Internal\UserController;
 use Tarot\Service\AuthService;
 use Tarot\Service\Mailer;
 use Tarot\Data\UserData;
+use Tarot\Utility\AfterResponse;
 
 /**
  * Sign-up's refusals, what a new account starts as, and an email that already
@@ -21,6 +22,7 @@ use Tarot\Data\UserData;
 #[CoversClass(AuthService::class)]
 #[CoversClass(Mailer::class)]
 #[CoversClass(UserData::class)]
+#[CoversClass(AfterResponse::class)]
 final class AuthRegistrationTest extends HttpTestCase
 {
     private string $password;
@@ -152,6 +154,59 @@ final class AuthRegistrationTest extends HttpTestCase
         $registered = $this->assertJsonResponse(201, $this->register('reader@example.test', 'Reader'));
 
         $this->assertArrayNotHasKey('activation_link', $registered);
+    }
+
+    public function testUnderPhpFpmBothSignUpEmailsGoOutOnlyAfterTheAnswer(): void
+    {
+        $this->createUser('taken@example.test');
+        /** @var ArrayObject<int,string> $steps */
+        $steps = new ArrayObject();
+        $this->replaceService(AfterResponse::class, new AfterResponse(static function () use ($steps): void {
+            $steps->append('answered');
+        }));
+        $this->replaceService(Mailer::class, new class ($steps) extends Mailer {
+            /** @param ArrayObject<int,string> $steps */
+            public function __construct(private readonly ArrayObject $steps)
+            {
+            }
+
+            #[\Override]
+            public function isConfigured(): bool
+            {
+                return true;
+            }
+
+            #[\Override]
+            public function sendActivation(string $toEmail, string $toName, string $activationLink): bool
+            {
+                $this->steps->append("activation to {$toEmail}");
+                return true;
+            }
+
+            #[\Override]
+            public function sendRegistrationAttempt(string $toEmail, string $toName, string $signInLink, string $resetLink): bool
+            {
+                $this->steps->append("attempt notice to {$toEmail}");
+                return true;
+            }
+        });
+        $after = $this->service(AfterResponse::class);
+
+        // A new address and a taken one: the same answer, neither waiting on SMTP.
+        $new = $this->assertJsonResponse(201, $this->register('reader@example.test', 'Reader'));
+        $this->assertSame([], $steps->getArrayCopy());
+        $after->run();
+        $taken = $this->assertJsonResponse(201, $this->register('taken@example.test', 'Someone'));
+        $this->assertSame(['answered', 'activation to reader@example.test'], $steps->getArrayCopy());
+        $after->run();
+
+        $this->assertSame($new, $taken);
+        // Sent, as far as anyone can tell: so not shown outside production either.
+        $this->assertArrayNotHasKey('activation_link', $new);
+        $this->assertSame(
+            ['answered', 'activation to reader@example.test', 'answered', 'attempt notice to taken@example.test'],
+            $steps->getArrayCopy()
+        );
     }
 
     public function testOneAddressCanSignUpFiveTimesAnHour(): void

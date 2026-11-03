@@ -10,6 +10,7 @@ date_default_timezone_set('UTC');
 use DI\ContainerBuilder;
 use Tarot\Config\Env;
 use Tarot\Config\Paths;
+use Tarot\Utility\AfterResponse;
 
 // Load environment variables (from TAROT_DATA_DIR in production — outside the
 // web root — or the project root in dev; see Tarot\Config\Paths).
@@ -39,7 +40,11 @@ if ($is_production) {
 
 // Routes, middleware and error handling live in app.php, which the HTTP tests
 // build too.
-$app = (require __DIR__ . '/app.php')($builder->build(), $is_production);
+$container = $builder->build();
+$app = (require __DIR__ . '/app.php')($container, $is_production);
 
 // Run the App
 $app->run();
+
+// Then what a request queued to do once its answer was sent (account emails).
+$container->get(AfterResponse::class)->run();

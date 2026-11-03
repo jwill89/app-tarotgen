@@ -26,6 +26,14 @@ update its section here in the same commit — no manual tagging.
 
 - Node 26, now the LTS, is the minimum for building the frontend
   (`frontend/.nvmrc`, `engines`); CI builds and tests on it.
+- Signing up and asking for a password reset no longer wait for the email to
+  send: on the server's PHP-FPM, the email goes out after the answer.
+
+### Fixed
+
+- Forgot Password answered an address with an account more slowly than one
+  without (it waited for the email to send), so timing it could tell whether an
+  address had an account. The answer now comes before the email.
 
 ## [5.4.0] — 2026-10-30
 

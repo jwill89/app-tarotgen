@@ -15,6 +15,7 @@ use Tarot\Repository\UserTokenRepository;
 use Tarot\Service\AccountProtection;
 use Tarot\Service\AuthService;
 use Tarot\Service\Mailer;
+use Tarot\Utility\AfterResponse;
 use Tarot\Structure\User;
 use Tarot\Utility\DbSessionHandler;
 
@@ -114,7 +115,7 @@ final class AuthServiceTest extends TestCase
 
         $this->userRepo = new UserRepository(new UserData($this->pdo));
         $tokens = new UserTokenRepository(new UserTokenData($this->pdo));
-        $this->auth = new AuthService($this->userRepo, $tokens, $mailer, new DbSessionHandler($this->pdo), new AccountProtection());
+        $this->auth = new AuthService($this->userRepo, $tokens, $mailer, new DbSessionHandler($this->pdo), new AccountProtection(), new AfterResponse());
     }
 
     protected function tearDown(): void

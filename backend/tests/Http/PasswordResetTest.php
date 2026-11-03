@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarot\Tests\Http;
 
+use ArrayObject;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Psr\Http\Message\ResponseInterface;
 use Routes\Internal\UserController;
@@ -12,6 +13,7 @@ use Tarot\Service\AuthService;
 use Tarot\Service\Mailer;
 use Tarot\Service\PasswordPolicy;
 use Tarot\Service\PluginTokenService;
+use Tarot\Utility\AfterResponse;
 
 /**
  * Forgot password → emailed link → new password: what an outsider can learn from
@@ -21,6 +23,7 @@ use Tarot\Service\PluginTokenService;
 #[CoversClass(UserController::class)]
 #[CoversClass(AuthService::class)]
 #[CoversClass(PasswordPolicy::class)]
+#[CoversClass(AfterResponse::class)]
 final class PasswordResetTest extends HttpTestCase
 {
     private const string EMAIL = 'reader@example.test';
@@ -73,6 +76,49 @@ final class PasswordResetTest extends HttpTestCase
         });
 
         $this->assertArrayNotHasKey('reset_link', $this->assertJsonResponse(200, $this->forgot(self::EMAIL)));
+        $this->assertSame(1, $this->rowCount('user_tokens'));
+    }
+
+    public function testUnderPhpFpmTheEmailGoesOutOnlyAfterTheAnswer(): void
+    {
+        $this->createUserWithPassword();
+        /** @var ArrayObject<int,string> $steps */
+        $steps = new ArrayObject();
+        $this->replaceService(AfterResponse::class, new AfterResponse(static function () use ($steps): void {
+            $steps->append('answered');
+        }));
+        $this->replaceService(Mailer::class, new class ($steps) extends Mailer {
+            /** @param ArrayObject<int,string> $steps */
+            public function __construct(private readonly ArrayObject $steps)
+            {
+            }
+
+            #[\Override]
+            public function isConfigured(): bool
+            {
+                return true;
+            }
+
+            #[\Override]
+            public function sendPasswordReset(string $toEmail, string $toName, string $resetLink): bool
+            {
+                $this->steps->append("emailed {$toEmail}");
+                return true;
+            }
+        });
+        $this->setEnv('APP_ENV', 'production');
+        $after = $this->service(AfterResponse::class);
+
+        // An unknown address: the same answer, and nothing waiting to be sent.
+        $unknown = $this->assertJsonResponse(200, $this->forgot('nobody@example.test'));
+        $after->run();
+        $this->assertSame([], $steps->getArrayCopy());
+
+        // An account's: answered with nothing sent yet (no SMTP wait to time), then emailed.
+        $this->assertSame($unknown, $this->assertJsonResponse(200, $this->forgot(self::EMAIL)));
+        $this->assertSame([], $steps->getArrayCopy());
+        $after->run();
+        $this->assertSame(['answered', 'emailed ' . self::EMAIL], $steps->getArrayCopy());
         $this->assertSame(1, $this->rowCount('user_tokens'));
     }
 

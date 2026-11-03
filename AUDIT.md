@@ -73,8 +73,8 @@ audit's assumptions where they differ):
 
 | Fact | Value | Affects |
 |---|---|---|
-| PHP / SAPI | 8.5.12, mod_php; `date.timezone = UTC`; OS zone `Etc/UTC` | §1.4 is latent in prod |
-| Web `php.ini` | `error_reporting = E_ALL & ~E_DEPRECATED`, `display_errors = Off`, `log_errors = On` → `/var/log/apache2/error.log` (daily, 14 rotations) | §1.2, §1.3 |
+| PHP / SAPI | 8.5.12, mod_php; `date.timezone = UTC`; OS zone `Etc/UTC`. **Since 2026-11-03: PHP-FPM** (one shared `www` pool for every PHP site on the droplet, 12 workers, as `www-data`; unix socket via `proxy_fcgi`) and Apache on the **event** MPM with HTTP/2, which mod_php's prefork ruled out | §1.4 is latent in prod |
+| Web `php.ini` | `error_reporting = E_ALL & ~E_DEPRECATED`, `display_errors = Off`, `log_errors = On` → `/var/log/apache2/error.log` (daily, 14 rotations). Under FPM the same file (identical to the old one); PHP errors reach `error.log` as `AH01071: Got error 'PHP message: …'` and `/var/log/php8.5-fpm.log` | §1.2, §1.3 |
 | SQLite | 3.45.1 (PDO); WAL; DB **1.43 MB**; `sqlite3`, `gzip`, `rclone` installed; 21 GB free | §1.1, §2.3 |
 | Cron | none for `root` or `www-data`; `/etc/cron.d`: certbot, e2scrub_all, php, sysstat | §1.1, §1.7 |
 | `decks` columns | **no legacy columns** (`is_thoth`/`has_extras`/`non_standard`/`total_cards` already dropped) | §1.2 |

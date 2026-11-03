@@ -215,7 +215,12 @@ upgrade, change the version and recompute the sha384 of that exact file.
   (the owner is emailed), login runs a dummy hash check for an unknown email,
   and passkey login options give an unknown email stand-in credential ids
   (`PasskeyDecoys`, keyed by `<TAROT_DATA_DIR>/db/passkey-decoy.key`, created on
-  first use).
+  first use). The sign-up and password-reset emails go out **after the
+  response** under PHP-FPM (`Tarot\Utility\AfterResponse`, run by
+  `api/index.php`), so neither answer waits on SMTP only when an address has an
+  account; where a response can't be finished early (CLI, the dev server) they
+  are sent inline, as before. An admin's resend stays inline (it reports
+  whether the email went).
 - **Who may make a reading** (`POST /readings/generate`, `POST /readings`;
   `ReadingController::refuseDraw()`): with Turnstile configured, a request with
   no signed-in user (session, or a linked plugin's `tg_pat_` token) needs a
@@ -415,7 +420,8 @@ disk) for PHP's built-in server, which has no `.htaccess`. Any PHP host serving
 > calls `OpenApiSpec::builder()` or loads `RequireStructureProperties`, and
 > deploy.ps1 doesn't ship `bin/`. `composer-require-checker.json` whitelists its
 > symbols by name (the tool matches exactly); a new `OAS\*` attribute type fails
-> `composer deps:check` until it is added there.
+> `composer deps:check` until it is added there. So is `fastcgi_finish_request`,
+> which PHP-FPM itself provides (no package or extension declares it).
 
 > **Gotcha — don't `import` files under `/assets` in Vue.** `/assets` is proxied
 > to the PHP host, so referencing e.g. the brand logo as `<img src="/assets/...">`
@@ -434,8 +440,13 @@ disk) for PHP's built-in server, which has no `.htaccess`. Any PHP host serving
   ASCII, so Windows PowerShell 5.1 reads them without a BOM.
 
 ### Deployment
-The site runs on a DigitalOcean droplet (Apache + PHP 8.5) at
-`/var/www/tarotgen.io`, a single **flat** web root. `scripts/deploy.ps1` flattens
+The site runs on a DigitalOcean droplet (Apache on the event MPM + **PHP 8.5
+FPM**, since 2026-11-03; one pool shared with the droplet's other PHP sites) at
+`/var/www/tarotgen.io`, a single **flat** web root. OPcache re-checks files every
+2 s, so a deploy needs no FPM reload; `SetEnv TAROT_DATA_DIR` in the vhost reaches
+FPM; `.htaccess` `php_value` lines would be ignored under FPM (there are none).
+PHP errors land in `/var/log/apache2/error.log` (`AH01071 … PHP message:`) and
+`/var/log/php8.5-fpm.log`, beside the other sites': filter by `/var/www/tarotgen.io`. `scripts/deploy.ps1` flattens
 `frontend/dist` and the `backend/` runtime files into it (PowerShell; uses PuTTY
 `pscp`/`plink` with the DigitalOcean `.ppk` key):
 
