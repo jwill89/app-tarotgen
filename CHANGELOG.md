@@ -26,6 +26,8 @@ update its section here in the same commit — no manual tagging.
 
 - Node 26, now the LTS, is the minimum for building the frontend
   (`frontend/.nvmrc`, `engines`); CI builds and tests on it.
+- The shared ESLint config now needs ESLint 10.14, Prettier 3.9.10 and
+  TypeScript 6.0.3 or later; the frontend's ranges and lockfile follow it.
 - Signing up and asking for a password reset no longer wait for the email to
   send: on the server's PHP-FPM, the email goes out after the answer.
 

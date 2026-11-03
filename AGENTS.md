@@ -373,6 +373,13 @@ npm run gen:types      # regenerate src/types/api.generated.ts from backend/open
 > holding the registry auth token. Without it, the `@fortawesome/*` packages
 > won't resolve.
 
+> **After moving the `eslint-config` submodule, run `npm install` in `frontend/`
+> and commit `package-lock.json` with it.** The lockfile records the config's
+> dependency and peer ranges, so a config that raises them (as `e3787b1` raised
+> ESLint to `^10.14.0`) leaves the lock out of sync, and CI's `npm ci` refuses to
+> install. Keep `frontend/package.json`'s own `eslint`/`prettier`/`typescript`
+> ranges at the config's peers.
+
 ### Backend (composer / php) — run from `backend/`
 ```powershell
 cd backend
