@@ -31,11 +31,11 @@
     "@fortawesome/pro-regular-svg-icons": "^7.0.0",
     "@fortawesome/pro-solid-svg-icons": "^7.0.0",
     "@fortawesome/vue-fontawesome": "^3.3.0",
-    "@tiptap/extension-link": "^3.32.0",
-    "@tiptap/extension-placeholder": "^3.32.0",
-    "@tiptap/pm": "^3.32.0",
-    "@tiptap/starter-kit": "^3.32.0",
-    "@tiptap/vue-3": "^3.32.0",
+    "@tiptap/extension-link": "^3.32.2",
+    "@tiptap/extension-placeholder": "^3.32.2",
+    "@tiptap/pm": "^3.32.2",
+    "@tiptap/starter-kit": "^3.32.2",
+    "@tiptap/vue-3": "^3.32.2",
     "bulma": "^1.0.4",
     "dompurify": "^3.4.11",
     "marked": "^18.0.5",
@@ -56,10 +56,10 @@
     "happy-dom": "^21.0.4",
     "jiti": "^2.7.0",
     "jsdom": "^30.0.1",
-    "knip": "^6.43.0",
+    "knip": "^6.44.1",
     "postcss-html": "^2.0.0",
     "prettier": "^3.9.10",
-    "sass-embedded": "^1.100.0",
+    "sass-embedded": "^1.107.1",
     "stylelint": "^17.16.0",
     "stylelint-config-recommended": "^18.0.0",
     "stylelint-config-recommended-scss": "^17.0.1",
@@ -67,7 +67,7 @@
     "typescript": "~6.0.3",
     "vite": "^8.1.0",
     "vitest": "^5.0.5",
-    "vue-tsc": "^3.3.5"
+    "vue-tsc": "^3.3.14"
   },
   "overrides": {
     "js-beautify": {
