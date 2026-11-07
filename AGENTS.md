@@ -321,7 +321,7 @@ little PHP per navigation):
 
 Run from the project root. Shell is **PowerShell** on Windows; chain with `;`.
 
-`Taskfile.yml` runs the same commands from the repo root: `task setup`, `task dev` (both servers), `task gen` (the spec, then the frontend's types), `task lint`, `task test`, `task check`, `task vuln`, and `task deploy` (the frontend; `deploy:backend`, `deploy:both` and `deploy:plugin` for the rest). `task lint:scripts` runs the shared `shared:lint:scripts`; the other shared tasks are `shared:lint:md`, `shared:repo:check`, `shared:version:check` and `shared:update`.
+`Taskfile.yml` runs the same commands from the repo root: `task setup`, `task dev` (both servers), `task gen` (the spec, then the frontend's types), `task lint`, `task test`, `task check`, `task vuln`, and `task deploy` (everything: the backend and frontend in one upload, then the plugin when its version is new; `deploy:frontend`, `deploy:backend` and `deploy:plugin` deploy one each). `task lint:scripts` runs the shared `shared:lint:scripts`; the other shared tasks are `shared:lint:md`, `shared:repo:check`, `shared:version:check` and `shared:update`.
 
 ### Frontend (npm) — run from `frontend/`
 
@@ -431,9 +431,9 @@ later (`pscp` is no longer used), with the DigitalOcean `.ppk` key, loaded into
 Pageant first if it has a passphrase. The deploy config names its SSH user (`VpsUser`, with no default); the backend steps run `runuser` and install cron and systemd files, so that user needs root's rights.
 
 ```powershell
-.\scripts\deploy.ps1                    # frontend (default): npm build + dist swapped in by renames
+.\scripts\deploy.ps1                    # both (default): backend, then frontend, in one upload and one remote run
+.\scripts\deploy.ps1 -Target frontend   # npm build + dist swapped in by renames
 .\scripts\deploy.ps1 -Target backend    # PHP code built whole on the droplet, DB snapshot, swap, then phinx migrate
-.\scripts\deploy.ps1 -Target both       # backend, then frontend, in one upload and one remote run
 .\scripts\deploy.ps1 -Target plugin     # build the plugin (Release) + publish to its custom Dalamud repo (§12)
 .\scripts\deploy.ps1 -SkipBuild         # deploy existing dist/ without rebuilding
 .\scripts\deploy.ps1 -Target backend -NoDbPull # don't copy the live DB into backend/db/tarotdb.db afterwards

@@ -75,8 +75,16 @@
     under the droplet's `ufw limit ssh`.
 
 .PARAMETER Target
-    What to deploy: frontend (default), backend, both (backend then frontend, in one
-    upload and one remote run), or plugin (the Dalamud custom repo in WebRoot/plugin).
+    What to deploy: both (the default: backend then frontend, in one upload and one
+    remote run), frontend, backend, or plugin (the Dalamud custom repo in WebRoot/plugin).
+    task deploy runs both, then plugin with -IfNewer; task deploy:frontend, deploy:backend
+    and deploy:plugin run one each.
+
+.PARAMETER IfNewer
+    With -Target plugin: a plugin whose version is already the published one is left alone
+    and the run ends without error, where without it the run refuses. A lower version still
+    refuses. task deploy passes it, so a deploy that didn't raise the plugin's version still
+    succeeds.
 
 .PARAMETER VpsHost
     Droplet IP or hostname. If omitted, resolved from $env:DEPLOY_VPS_HOST, then
@@ -117,7 +125,7 @@
     deploy that includes the backend.
 
 .EXAMPLE
-    .\scripts\deploy.ps1                 # frontend (default)
+    .\scripts\deploy.ps1                 # backend then frontend (default)
 
 .EXAMPLE
     .\scripts\deploy.ps1 -Target backend
@@ -131,7 +139,7 @@
 [CmdletBinding()]
 param(
     [ValidateSet('frontend', 'backend', 'both', 'plugin')]
-    [string]$Target = 'frontend',
+    [string]$Target = 'both',
 
     # Server-specific settings are NOT in this tracked script. Each resolves from its
     # -param, then $env:DEPLOY_*, then the untracked scripts/deploy.config.ps1.
@@ -144,7 +152,8 @@ param(
 
     [switch]$SkipBuild,
     [switch]$NoBackup,
-    [switch]$NoDbPull
+    [switch]$NoDbPull,
+    [switch]$IfNewer
 )
 
 $ErrorActionPreference = 'Stop'
@@ -240,6 +249,10 @@ if ($withPlugin) {
         $higher = $true
     }
     if (-not $higher) {
+        if ($IfNewer -and $published -and (ConvertTo-PluginVersion -Value $planned) -eq (ConvertTo-PluginVersion -Value $published)) {
+            Write-Ok "Plugin $planned is already published; nothing to publish."
+            exit 0
+        }
         throw "The plugin's version $planned is not higher than the published $published, and Dalamud updates to nothing else. Raise <Version> in plugin/TarotGen.Plugin/TarotGen.Plugin.csproj; nothing was built or changed."
     }
 }
