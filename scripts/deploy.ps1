@@ -56,12 +56,13 @@
            - a copy of the live database pulled into backend/db/tarotdb.db, the one the app
              opens locally, keeping the three previous local copies (skip with -NoDbPull).
 
-    The snapshot before the migrations is
+    The snapshot before the migrations is SharedDeploy's Backup-RemoteDatabase:
     /var/lib/tarotgen/db/tarotdb.db.pre-<yyyyMMdd-HHmmss, UTC>.gz, written as www-data, as
     everything in the database's folder must be: sqlite3 .backup to a partial file, PRAGMA
     integrity_check, gzip, gzip -t, then the rename; the newest three are kept. It is taken
     before the swap, so a snapshot that fails changes nothing. The daily backup's pruning
-    touches only its own dated names in backups, so it can never match one.
+    touches only its own dated names in backups, so it can never match one. The pull's copy
+    is made as www-data too.
 
     Settings resolve from the parameter, then $env:DEPLOY_*, then the git-ignored
     scripts/deploy.config.ps1 (copy scripts/deploy.config.example.ps1). Nothing about the
@@ -192,10 +193,13 @@ $devDb = Join-Path $backendDir 'db\tarotdb.db'
 $dataDir = '/var/lib/tarotgen'
 $liveDb = "$dataDir/db/tarotdb.db"
 $dbOwner = 'www-data'
-# The snapshot before the migrations: Install-ServiceBinary's form, <Database>.pre-<time>.gz.
-$snapshotPrefix = "$liveDb.pre-"
-$snapshot = $snapshotPrefix + [datetime]::UtcNow.ToString('yyyyMMdd-HHmmss', [cultureinfo]::InvariantCulture) + '.gz'
-$restoreDb = "runuser -u $dbOwner -- sh -c 'rm -f $liveDb-wal $liveDb-shm && gunzip -c $snapshot > $liveDb'"
+# The snapshot before the migrations, SharedDeploy's Backup-RemoteDatabase: <Database>.pre-<UTC
+# time>.gz beside the database, written as www-data under umask 077 (AGENTS.md section 7), the
+# newest three kept. The block sets $snapshot and $snapshot_restore for the host's messages; its
+# .Snapshot and .Restore are the same, for this script's own.
+$snapshotBlock = Backup-RemoteDatabase -Database $liveDb -Owner $dbOwner -Umask '077'
+$snapshot = $snapshotBlock.Snapshot
+$restoreDb = $snapshotBlock.Restore
 # The owner's command (decided 2026-11-06), run from the web root.
 $migrate = "runuser -u $dbOwner -- env TAROT_DATA_DIR=$dataDir php vendor/bin/phinx migrate"
 
@@ -295,17 +299,11 @@ if ($withPlugin) {
 # (.deploy/backend-prev) and $bundle set, under set -e and its own EXIT trap, which puts the
 # previous code back if anything after the swap fails. So they set no trap of their own.
 $prepare = Format-RemoteScript -Value @{
-    DB              = $liveDb
-    DB_OWNER        = $dbOwner
-    DATA_DIR        = $dataDir
-    SNAPSHOT        = $snapshot
-    SNAPSHOT_PREFIX = $snapshotPrefix
+    DB       = $liveDb
+    DATA_DIR = $dataDir
+    SNAPSHOT = $snapshotBlock
 } -Template @'
 db='__DB__'
-db_owner='__DB_OWNER__'
-snap='__SNAPSHOT__'
-snap_prefix='__SNAPSHOT_PREFIX__'
-snap_suffix=''
 if [ ! -f "$db" ]; then echo "There is no database at $db (is TAROT_DATA_DIR still __DATA_DIR__?), so nothing was changed." >&2; exit 3; fi
 for t in composer php sqlite3 gzip runuser; do
   if ! command -v "$t" >/dev/null 2>&1; then echo "$t is not installed (or not on PATH) on the host, so nothing was changed." >&2; exit 3; fi
@@ -324,44 +322,13 @@ export COMPOSER_ALLOW_SUPERUSER=1
 if [ -d vendor ]; then cp -a vendor "$stage/vendor"; fi
 composer install --working-dir="$stage" --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader
 if [ ! -f "$stage/vendor/bin/phinx" ]; then echo 'composer install left no vendor/bin/phinx, so the migrations could not run; nothing was changed.' >&2; exit 3; fi
-# >>> snapshot (tested on its own; keep these markers)
-# The database before the migrations, to the standard of SharedDeploy's Install-ServiceBinary:
-# sqlite3 .backup to a partial file, PRAGMA integrity_check, gzip to another partial file,
-# gzip -t, and only then the rename, with no uncompressed copy left; the newest three kept.
-# Whatever writes in the database's folder runs as its owner, under umask 077 (AGENTS.md
-# section 7). Taken before the swap, so a snapshot that fails changes nothing.
+# The database before the migrations (Backup-RemoteDatabase): sqlite3 .backup to a partial file,
+# PRAGMA integrity_check, gzip to another partial file, gzip -t, and only then the rename, with
+# no uncompressed copy left; the newest three kept. Whatever it writes in the database's folder
+# runs as www-data, under umask 077. Taken before the swap, so a snapshot that fails stops the
+# step with nothing changed.
 echo '==> Snapshotting the database before the migrations'
-as_db_owner() { runuser -u "$db_owner" -- sh -c 'umask 077 && exec "$@"' sh "$@"; }
-snapshots() {
-  for f in "$snap_prefix"[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]"$snap_suffix" \
-    "$snap_prefix"[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]"$snap_suffix.gz"; do
-    if [ -f "$f" ]; then printf '%s %s\n' "$(stat -c %Y "$f")" "$f"; fi
-  done | sort -k 1,1nr | cut -d ' ' -f 2-
-}
-snap_raw="${snap%.gz}.partial"
-snap_part="$snap.partial"
-rm -f "$snap_raw" "$snap_part"
-if ! as_db_owner sqlite3 "$db" ".backup '$snap_raw'"; then
-  rm -f "$snap_raw"
-  echo 'sqlite3 .backup of the database failed, so nothing was changed.' >&2
-  exit 4
-fi
-verdict=$(as_db_owner sqlite3 "$snap_raw" 'PRAGMA integrity_check;' 2>&1) || true
-if [ "$verdict" != ok ]; then
-  rm -f "$snap_raw" "$snap_raw-wal" "$snap_raw-shm"
-  echo "The database snapshot failed its integrity check, so nothing was changed: $verdict" >&2
-  exit 4
-fi
-if ! as_db_owner sh -c 'gzip -c "$1" > "$2"' sh "$snap_raw" "$snap_part" || ! gzip -t "$snap_part"; then
-  rm -f "$snap_raw" "$snap_part"
-  echo 'Compressing the database snapshot failed, so nothing was changed.' >&2
-  exit 4
-fi
-mv -f "$snap_part" "$snap"
-rm -f "$snap_raw"
-snapshots | tail -n +4 | xargs -r -d '\n' rm -f --
-echo "    snapshot: $snap ($(du -h "$snap" | cut -f1)); the newest three are kept"
-# <<< snapshot
+__SNAPSHOT__
 '@
 
 $afterSwap = Format-RemoteScript -Value @{ MIGRATE = $migrate } -Template @'
@@ -384,9 +351,9 @@ else
         echo 'Each migration runs in one transaction, so the one that failed left nothing behind; any that ran before it in this deploy stay applied.'
         ;;
     esac
-    echo "The database as it was just before the migrations: $snap"
+    echo "The database as it was just before the migrations: $snapshot"
     echo "To put it back, with the site's writes stopped:"
-    echo "  runuser -u $db_owner -- sh -c 'rm -f $db-wal $db-shm && gunzip -c $snap > $db'"
+    echo "  $snapshot_restore"
   } >&2
   exit 6
 fi
@@ -527,10 +494,10 @@ try {
         }
 
         if (-not $NoDbPull) {
-            # The pull's copy goes in the SSH user's home, not beside the live database:
-            # Copy-LiveDatabase runs sqlite3 as the SSH user, and whatever is made in the
-            # database's folder must be www-data's (AGENTS.md section 7).
-            $null = Copy-LiveDatabase -Database $liveDb -Destination $devDb -Snapshot 'tarotgen-db-pull.db'
+            # sqlite3 runs as www-data, under umask 077, so its copy (tarotdb.db.pull, removed
+            # after the download) and anything it makes in the database's folder are www-data's
+            # (AGENTS.md section 7).
+            $null = Copy-LiveDatabase -Database $liveDb -Destination $devDb -Owner $dbOwner
         }
     }
 } finally {

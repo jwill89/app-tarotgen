@@ -20,6 +20,20 @@ push to `main`, after the full gate passes, if the current version
 release body taken from that version's section below. So bump the version and
 update its section here in the same commit — no manual tagging.
 
+## [Unreleased]
+
+### Changed
+
+- shared-tooling 2.0.0: the frontend's Stylelint moves to 18. `bulma.scss` is
+  read with `postcss-scss` and checked by the CSS rules, since
+  `stylelint-config-recommended-scss` has no Stylelint 18 release; its stray
+  `@charset` is gone (Sass writes one itself when the output needs it).
+- The deploy's snapshot before the migrations is shared-tooling's
+  `Backup-RemoteDatabase`, made the same way as before
+  (`tarotdb.db.pre-<UTC time>.gz`, as www-data, three kept). The database pull
+  now makes its copy on the host as www-data, beside the database, instead of
+  as the SSH user in its home.
+
 ## [5.5.0] - 2026-11-06
 
 The repo moves onto **shared-tooling** (v1.3.0, the `shared/` submodule): the
@@ -895,6 +909,7 @@ Initial release.
 - Server-rendered PHP tarot reading generator with a jQuery front-end and a
   lightbox-based card viewer.
 
+[Unreleased]: https://github.com/jwill89/tarot-site/compare/v5.5.0...HEAD
 [5.5.0]: https://github.com/jwill89/tarot-site/compare/v5.4.0...v5.5.0
 [5.4.0]: https://github.com/jwill89/tarot-site/compare/v5.3.0...v5.4.0
 [5.3.0]: https://github.com/jwill89/tarot-site/compare/v5.2.0...v5.3.0

@@ -49,12 +49,14 @@ export default {
       },
     },
     {
-      // bulma.scss configures the Bulma modules it builds from (AGENTS.md §5).
+      // bulma.scss configures the Bulma modules it builds from (AGENTS.md §5). It is
+      // read as SCSS and checked by the CSS rules, with Sass's own at-rules allowed:
+      // stylelint-config-recommended-scss had no Stylelint 18 release (decided
+      // 2026-11-06, shared-tooling 2.0.0).
       files: ['**/*.scss'],
-      extends: ['stylelint-config-recommended-scss'],
+      customSyntax: 'postcss-scss',
       rules: {
-        // Blank `//` lines separate the paragraphs of one comment.
-        'scss/comment-no-empty': null,
+        'at-rule-no-unknown': [true, { ignoreAtRules: ['use', 'forward', 'include', 'mixin'] }],
       },
     },
   ],
