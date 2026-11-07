@@ -75,7 +75,9 @@ describe('apiRequest', () => {
     const res = await apiRequest('/decks', undefined, 'Custom fallback.')
 
     expect(res.ok).toBe(false)
-    if (!res.ok) expect(res.error).toBe('Custom fallback.')
+    if (!res.ok) {
+      expect(res.error).toBe('Custom fallback.')
+    }
   })
 
   it('flags transport failures with networkError=true and status 0', async () => {

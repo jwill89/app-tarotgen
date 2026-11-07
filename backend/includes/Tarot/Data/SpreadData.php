@@ -53,12 +53,12 @@ class SpreadData extends AbstractData
         $stmt->execute([
             ':name'        => $data['name'] ?? '',
             ':description' => $data['description'] ?? '',
-            ':card_count'  => (int)($data['card_count'] ?? count($positions)),
+            ':card_count'  => (int) ($data['card_count'] ?? count($positions)),
             ':positions'   => json_encode($positions, JSON_THROW_ON_ERROR),
             ':category_id' => self::categoryId($data),
         ]);
 
-        $id = (int)$this->db->lastInsertId();
+        $id = (int) $this->db->lastInsertId();
         $result = $this->retrieve($id);
         return $result[0] ?? null;
     }
@@ -74,12 +74,12 @@ class SpreadData extends AbstractData
 
         if (array_key_exists('name', $data)) {
             $fields[] = 'name = :name';
-            $params[':name'] = (string)$data['name'];
+            $params[':name'] = (string) $data['name'];
         }
 
         if (array_key_exists('description', $data)) {
             $fields[] = 'description = :description';
-            $params[':description'] = (string)$data['description'];
+            $params[':description'] = (string) $data['description'];
         }
 
         if (array_key_exists('positions', $data)) {
@@ -96,7 +96,7 @@ class SpreadData extends AbstractData
 
         if (array_key_exists('card_count', $data)) {
             $fields[] = 'card_count = :card_count';
-            $params[':card_count'] = (int)$data['card_count'];
+            $params[':card_count'] = (int) $data['card_count'];
         }
 
         $categoryId = self::categoryId($data);
@@ -126,7 +126,7 @@ class SpreadData extends AbstractData
     {
         $categoryId = $data['category_id'] ?? null;
 
-        return is_numeric($categoryId) && (int)$categoryId > 0 ? (int)$categoryId : null;
+        return is_numeric($categoryId) && (int) $categoryId > 0 ? (int) $categoryId : null;
     }
 
     public function delete(int $spread_id): bool

@@ -28,13 +28,18 @@ const fool = card(1, 'The Fool')
 const magician = card(2, 'The Magician', true)
 const priestess = card(3, 'The High Priestess')
 
-async function openLightbox(initialIndex = 0, cards = [fool, magician, priestess]) {
+async function openLightbox(
+  initialIndex = 0,
+  cards = [fool, magician, priestess],
+  revealed: ReadonlySet<number> = new Set(cards.keys()),
+) {
   // The report button sits in a Tooltip, which needs the provider App.vue mounts.
   const { wrapper } = await mountWithApp(TooltipProvider, {
     slots: {
       default: () =>
         h(LightboxOverlay, {
           cards,
+          revealed,
           cardBack: cardBackImageUrls(DECK),
           initialIndex,
           deckId: DECK,
@@ -67,7 +72,7 @@ interface Point {
   clientY: number
 }
 
-/** A touch event carrying these touches (happy-dom builds no touch lists itself). */
+/** A touch event carrying these touches (jsdom has no Touch to build the lists with). */
 function touch(type: string, touches: Point[], changed: Point[] = touches): Event {
   const event = new Event(type, { bubbles: true, cancelable: true })
   Object.defineProperty(event, 'touches', { value: touches })
@@ -130,6 +135,26 @@ describe('LightboxOverlay', () => {
     expect(caption()).toBe('Card Back')
   })
 
+  it('shows a card still face down on the page by its back, named only by its number', async () => {
+    // The Fool is face up; the Magician and the Priestess are not yet turned.
+    await openLightbox(0, [fool, magician, priestess], new Set([0]))
+
+    await press('ArrowRight')
+
+    expect(caption()).toBe('Face-down card 2')
+    expect(image()?.getAttribute('src')).toBe(cardBackImageUrls(DECK).display)
+    expect(image()?.getAttribute('alt')).toBe('Face-down card 2')
+    expect(image()?.style.transform).toContain('scale(1, 1)')
+    expect(document.body.textContent).toContain('Image 2 of 3')
+    // Nothing in the dialog names it, and there is nothing to report or turn upright.
+    expect(dialog()?.textContent).not.toContain('Magician')
+    expect(button('View Upright')).toBeUndefined()
+    expect(button('Report a problem')).toBeUndefined()
+
+    await press('ArrowLeft')
+    expect(caption()).toBe('The Fool')
+  })
+
   it('offers previous/next buttons only where there is somewhere to go', async () => {
     await openLightbox(2)
 
@@ -157,7 +182,9 @@ describe('LightboxOverlay', () => {
     await press('0')
     expect(level()).toBe('100%')
 
-    for (let i = 0; i < 5; i++) button('Zoom in')?.click()
+    for (let i = 0; i < 5; i++) {
+      button('Zoom in')?.click()
+    }
     await nextTick()
     expect(level()).toBe('400%')
     expect(button('Zoom in')?.disabled).toBe(true)
@@ -270,13 +297,15 @@ describe('LightboxOverlay', () => {
   })
 
   describe('pointer and touch', () => {
-    // happy-dom lays nothing out: give the image a size, so a zoomed image has
+    // jsdom lays nothing out: give the image a size, so a zoomed image has
     // somewhere to pan to (at 250%, 200x300 leaves 150px either side), centred
     // at (150, 100), where the zooms below are aimed so they don't shift it.
     const centre = { clientX: 150, clientY: 100 }
     function sizeImage(): void {
       const img = image()
-      if (!img) throw new Error('No image')
+      if (!img) {
+        throw new Error('No image')
+      }
       Object.defineProperty(img, 'clientWidth', { value: 200 })
       Object.defineProperty(img, 'clientHeight', { value: 300 })
       vi.spyOn(img, 'getBoundingClientRect').mockReturnValue(

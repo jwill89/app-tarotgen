@@ -67,7 +67,9 @@ function link(label: string): HTMLAnchorElement {
     (a): a is HTMLAnchorElement =>
       a instanceof HTMLAnchorElement && a.querySelector('.nav-label')?.textContent === label,
   )
-  if (!found) throw new Error(`No "${label}" section link`)
+  if (!found) {
+    throw new Error(`No "${label}" section link`)
+  }
   return found
 }
 
@@ -76,7 +78,9 @@ function panel(title: string): Element {
   const heading = [...document.body.querySelectorAll('h3')].find(
     (h) => h.textContent.trim() === title,
   )
-  if (!heading?.parentElement) throw new Error(`No "${title}" panel`)
+  if (!heading?.parentElement) {
+    throw new Error(`No "${title}" panel`)
+  }
   return heading.parentElement
 }
 

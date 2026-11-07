@@ -33,7 +33,9 @@ export function useDataTable<T>(source: MaybeRefOrGetter<T[]>, options: DataTabl
 
   /** FontAwesome icon name reflecting this column's current sort state. */
   function headerIcon(key: string): string {
-    if (sortKey.value !== key) return 'fa-sort'
+    if (sortKey.value !== key) {
+      return 'fa-sort'
+    }
     return sortDir.value === 'asc' ? 'fa-sort-up' : 'fa-sort-down'
   }
 
@@ -53,7 +55,9 @@ export function useDataTable<T>(source: MaybeRefOrGetter<T[]>, options: DataTabl
       list.sort((a, b) => {
         const av = accessor(a)
         const bv = accessor(b)
-        if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir
+        if (typeof av === 'number' && typeof bv === 'number') {
+          return (av - bv) * dir
+        }
         return String(av).localeCompare(String(bv), undefined, { numeric: true }) * dir
       })
     }

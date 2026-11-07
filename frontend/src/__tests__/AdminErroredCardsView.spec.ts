@@ -275,7 +275,9 @@ describe('admin ErroredCardsView', () => {
     /** The purge dialog's URLs, as listed. */
     function listedUrls(): string[] {
       const open = dialog('Purge the old images')
-      if (!open) throw new Error('No purge dialog')
+      if (!open) {
+        throw new Error('No purge dialog')
+      }
       return [...open.querySelectorAll('li code')].map((c) => c.textContent.trim())
     }
 
@@ -412,7 +414,9 @@ describe('admin ErroredCardsView', () => {
       await click(button('View reports', row('Thoth Tarot')))
 
       const open = dialog('The Fool')
-      if (!open) throw new Error('No dialog for The Fool')
+      if (!open) {
+        throw new Error('No dialog for The Fool')
+      }
       expect(facts(open)).toEqual({
         Deck: 'Thoth Tarot',
         Card: '#1',
@@ -441,7 +445,9 @@ describe('admin ErroredCardsView', () => {
       await click(button('View reports', row('Deck #5')))
 
       const open = dialog('Card #12')
-      if (!open) throw new Error('No dialog for card #12')
+      if (!open) {
+        throw new Error('No dialog for card #12')
+      }
       expect(facts(open).Status).toBe(`Resolved ${formatDateTime(fixed.resolved_at)}`)
       expect(open.querySelectorAll('li')).toHaveLength(0)
       expect(open.textContent).not.toContain('Resolved earlier')

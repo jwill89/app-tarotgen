@@ -88,12 +88,12 @@ class DeckData extends AbstractData
                 ':name'             => $data['name'] ?? '',
                 ':artist'           => $data['artist'] ?? '',
                 ':purchase_url'     => $data['purchase_url'] ?? '',
-                ':deck_system_id'   => (int)($data['deck_system_id'] ?? 1),
-                ':additional_cards' => (int)($data['additional_cards'] ?? 0),
+                ':deck_system_id'   => (int) ($data['deck_system_id'] ?? 1),
+                ':additional_cards' => (int) ($data['additional_cards'] ?? 0),
                 ':card_aspect_w'    => $this->clampAspect($data['card_aspect_w'] ?? 5),
                 ':card_aspect_h'    => $this->clampAspect($data['card_aspect_h'] ?? 8.6),
-                ':approved'         => (int)($data['approved'] ?? true),
-                ':usable'           => (int)($data['usable'] ?? false),
+                ':approved'         => (int) ($data['approved'] ?? true),
+                ':usable'           => (int) ($data['usable'] ?? false),
                 ':submitted_by'     => $data['submitted_by'] ?? null,
             ]);
         } catch (PDOException $e) {
@@ -103,7 +103,7 @@ class DeckData extends AbstractData
             throw $e;
         }
 
-        $id = (int)$this->db->lastInsertId();
+        $id = (int) $this->db->lastInsertId();
         $result = $this->retrieve($id);
 
         return $result[0] ?? null;
@@ -155,7 +155,7 @@ class DeckData extends AbstractData
      */
     private function clampAspect(mixed $v): float
     {
-        return max(0.1, min(100000.0, (float)$v));
+        return max(0.1, min(100000.0, (float) $v));
     }
 
     /**

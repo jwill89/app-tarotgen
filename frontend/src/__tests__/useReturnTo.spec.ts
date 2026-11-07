@@ -20,8 +20,10 @@ async function onPage(router: Router, from: string) {
 /** A web-history router that has been through `pages`, in order. */
 async function visited(...pages: string[]) {
   const router = testWebRouter()
-  for (const page of pages.slice(0, -1)) await router.push(page)
-  const returnTo = await onPage(router, pages[pages.length - 1])
+  for (const page of pages.slice(0, -1)) {
+    await router.push(page)
+  }
+  const returnTo = await onPage(router, pages.at(-1)!)
   return { router, returnTo }
 }
 

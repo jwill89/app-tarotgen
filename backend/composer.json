@@ -1,5 +1,8 @@
 {
+    "name": "jwill89/tarotgen.io",
+    "description": "TarotGen.io's REST API: Slim 4 and PHP-DI over hand-written PDO repositories on SQLite.",
     "license": "proprietary",
+    "type": "project",
     "require": {
         "php": ">=8.5",
         "ext-ctype": "*",
@@ -17,9 +20,11 @@
         "psr/container": "^2.0",
         "psr/http-message": "^2.0",
         "psr/http-server-handler": "^1.0",
+        "robmorgan/phinx": "^0.16.12",
         "slim/http": "^1.4",
         "slim/psr7": "^1.8",
-        "slim/slim": "^4.15"
+        "slim/slim": "^4.15",
+        "symfony/console": "^8.1"
     },
     "require-dev": {
         "ergebnis/composer-normalize": "^2.54",
@@ -69,15 +74,27 @@
         ],
         "dev": "php -S localhost:80 dev-router.php",
         "docs": "@php bin/openapi.php",
+        "docs:check": [
+            "@docs",
+            "git diff --exit-code openapi.json"
+        ],
         "lint": "php-cs-fixer check --show-progress=none",
         "lint:fix": "php-cs-fixer fix",
+        "migrate": "phinx migrate",
+        "migrate:status": "phinx status",
+        "normalize:check": "@composer normalize --dry-run",
         "rector": "rector process",
         "rector:check": "rector process --dry-run",
         "stan": "phpstan analyse --memory-limit=512M",
         "test": "phpunit",
         "test:coverage": [
             "@php -d xdebug.mode=coverage vendor/bin/phpunit --coverage-clover .phpunit.cache/clover.xml --coverage-text --only-summary-for-coverage-text",
-            "@php bin/coverage-check.php .phpunit.cache/clover.xml"
+            "@php ../shared/test/php/coverage-check.php .phpunit.cache/clover.xml --lines=95 --methods=88"
         ]
+    },
+    "scripts-descriptions": {
+        "docs:check": "Regenerates openapi.json and fails if it differs from the committed one.",
+        "normalize:check": "Fails if composer.json isn't normalized (composer normalize fixes it).",
+        "test:coverage": "PHPUnit with coverage, failing below the line and method floors: raise them as tests land, never lower them."
     }
 }

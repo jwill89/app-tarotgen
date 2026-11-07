@@ -9,7 +9,9 @@ const pageText = () => text(document.body)
 
 async function requestFor(email: string) {
   const input = document.getElementById('fp-email')
-  if (!(input instanceof HTMLInputElement)) throw new Error('No email field')
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error('No email field')
+  }
   input.value = email
   input.dispatchEvent(new Event('input'))
   const send = [...document.body.querySelectorAll('button')].find(

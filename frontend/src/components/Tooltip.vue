@@ -1,4 +1,11 @@
 <script setup lang="ts">
+withDefaults(
+  defineProps<{
+    text: string
+    side?: 'top' | 'right' | 'bottom' | 'left'
+  }>(),
+  { side: 'top' },
+)
 /* A deliberately single-word wrapper name — it reads naturally at every call site
    (<Tooltip text="…">). */
 /* eslint-disable-next-line vue/multi-word-component-names */
@@ -14,14 +21,6 @@ defineOptions({ name: 'Tooltip' })
  * portaled to <body>, so its styling lives in the global .myst-tooltip* rules.
  */
 import { TooltipRoot, TooltipTrigger, TooltipPortal, TooltipContent, TooltipArrow } from 'reka-ui'
-
-withDefaults(
-  defineProps<{
-    text: string
-    side?: 'top' | 'right' | 'bottom' | 'left'
-  }>(),
-  { side: 'top' },
-)
 </script>
 
 <template>

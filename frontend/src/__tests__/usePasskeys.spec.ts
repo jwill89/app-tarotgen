@@ -64,7 +64,7 @@ describe('usePasskeys.registerPasskey', () => {
     expect(asBytes(publicKey.excludeCredentials?.[0]?.id)).toEqual([7, 8, 9])
 
     const sent = fetchMock.mock.calls.find(([url]) => url === '/api/auth/passkeys/register')
-    expect(JSON.parse((sent?.[1] as RequestInit).body as string)).toEqual({
+    expect(JSON.parse(sent![1]!.body as string)).toEqual({
       clientDataJSON: 'Cg',
       attestationObject: 'Cww',
       name: 'Laptop',
@@ -130,7 +130,7 @@ describe('usePasskeys.loginWithPasskey', () => {
     expect(asBytes(publicKey.challenge)).toEqual([1, 2, 3])
     expect(asBytes(publicKey.allowCredentials?.[0]?.id)).toEqual([4, 5, 6])
     const sent = fetchMock.mock.calls.find(([url]) => url === '/api/auth/passkeys/login')
-    expect(JSON.parse((sent?.[1] as RequestInit).body as string)).toEqual({
+    expect(JSON.parse(sent![1]!.body as string)).toEqual({
       id: 'AQ',
       clientDataJSON: 'Ag',
       authenticatorData: 'Aw',
@@ -376,7 +376,7 @@ describe('usePasskeys list and settings', () => {
   })
 
   it('offers passkeys only where the browser has WebAuthn', () => {
-    // happy-dom has navigator.credentials but no PublicKeyCredential.
+    // jsdom has no PublicKeyCredential (vitest.setup.ts gives it navigator.credentials).
     expect(usePasskeys().isSupported()).toBe(false)
 
     vi.stubGlobal('PublicKeyCredential', vi.fn())

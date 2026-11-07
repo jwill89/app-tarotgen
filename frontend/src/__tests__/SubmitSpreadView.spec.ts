@@ -35,7 +35,9 @@ function descriptionField(): HTMLElement {
   const field = document.body.querySelector<HTMLElement>(
     'textarea[placeholder="Describe the spread. Markdown is supported."]',
   )
-  if (!field) throw new Error('No description field')
+  if (!field) {
+    throw new Error('No description field')
+  }
   return field
 }
 
@@ -44,7 +46,9 @@ async function designDailyDraw(): Promise<void> {
   await typeInto(labelled('Spread Name'), dailyDraw.name)
   await typeInto(descriptionField(), dailyDraw.description)
   const token = document.body.querySelector<HTMLElement>('button[title="Place card 1"]')
-  if (!token) throw new Error('No unplaced card to place')
+  if (!token) {
+    throw new Error('No unplaced card to place')
+  }
   await click(token)
 }
 

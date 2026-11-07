@@ -8,9 +8,7 @@ use Tarot\Utility\Clock;
 
 readonly class CardFrequencyRepository
 {
-    public function __construct(private CardFrequencyData $data)
-    {
-    }
+    public function __construct(private CardFrequencyData $data) {}
 
     /**
      * How often each card turned up in the user's own readings: within one deck

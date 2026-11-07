@@ -8,9 +8,7 @@ use Tarot\Structure\DailyCard;
 
 readonly class DailyCardRepository
 {
-    public function __construct(private DailyCardData $data)
-    {
-    }
+    public function __construct(private DailyCardData $data) {}
 
     /** The user's card for $day ("Y-m-d"), if they drew one — its reading null if deleted since. */
     public function forDay(int $userId, string $day): ?DailyCard

@@ -32,13 +32,17 @@ const turndown = new TurndownService({
 
 /** Convert markdown string → HTML for Tiptap to consume */
 function mdToHtml(md: string): string {
-  if (!md) return ''
+  if (!md) {
+    return ''
+  }
   return marked.parse(md, { async: false })
 }
 
 /** Convert Tiptap HTML → markdown string for the model */
 function htmlToMd(html: string): string {
-  if (!html || html === '<p></p>') return ''
+  if (!html || html === '<p></p>') {
+    return ''
+  }
   return turndown.turndown(html)
 }
 
@@ -74,7 +78,9 @@ const editor = useEditor({
 watch(
   () => props.modelValue,
   (newVal) => {
-    if (!editor.value) return
+    if (!editor.value) {
+      return
+    }
     const currentMd = htmlToMd(editor.value.getHTML())
     if (newVal !== currentMd) {
       // TipTap 3 takes an options object here; a bare `false` (the v2 form) was
@@ -241,7 +247,7 @@ function setLink() {
 .wysiwyg-toolbar .button.is-active {
   background-color: var(--bulma-link);
   border-color: transparent;
-  color: white;
+  color: rgb(255 255 255);
 }
 
 .wysiwyg-content {
@@ -289,7 +295,7 @@ function setLink() {
 }
 
 .wysiwyg-content :deep(.tiptap code) {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgb(255 255 255 / 8%);
   border-radius: 3px;
   padding: 0.15em 0.35em;
   font-size: 0.9em;

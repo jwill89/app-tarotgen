@@ -25,7 +25,7 @@ $deckIds = array_map(intval(...), array_slice($argv, 1));
 if ($deckIds === []) {
     foreach (glob($decksRoot . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
         if (ctype_digit(basename($dir))) {
-            $deckIds[] = (int)basename($dir);
+            $deckIds[] = (int) basename($dir);
         }
     }
     sort($deckIds);

@@ -37,8 +37,7 @@ class PluginTokenService
     public function __construct(
         private readonly PluginTokenRepository $tokens,
         private readonly PluginAuthCodeRepository $codes,
-    ) {
-    }
+    ) {}
 
     /**
      * Mint a short-lived authorization code for a consenting, logged-in user,

@@ -114,7 +114,7 @@ final class ReadingJournalTest extends HttpTestCase
             foreach (['question', 'querent', 'tags', 'hide_user'] as $field) {
                 $this->assertArrayNotHasKey($field, $payload, "{$who} was sent {$field}");
             }
-            $this->assertStringNotContainsString('sister', (string)json_encode($payload), $who);
+            $this->assertStringNotContainsString('sister', (string) json_encode($payload), $who);
         }
         $this->assertSame(['locked' => true, 'reading_name' => null], $stub);
     }
@@ -149,7 +149,7 @@ final class ReadingJournalTest extends HttpTestCase
             'deck_id' => $this->deckId, 'question' => str_repeat('q', 600), 'querent' => '  ' . str_repeat('é', 150), 'tags' => [],
         ]));
 
-        $this->assertSame(ReadingInput::QUESTION_MAX, mb_strlen((string)$created['question']));
+        $this->assertSame(ReadingInput::QUESTION_MAX, mb_strlen((string) $created['question']));
         $this->assertSame(str_repeat('é', ReadingInput::QUERENT_MAX), $created['querent']);
         $this->assertSame([], $created['tags']);
     }

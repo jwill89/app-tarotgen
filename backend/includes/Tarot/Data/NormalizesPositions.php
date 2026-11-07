@@ -35,21 +35,21 @@ trait NormalizesPositions
                 continue;
             }
 
-            $rotation = (int)($p['rotation'] ?? 0) % 360;
+            $rotation = (int) ($p['rotation'] ?? 0) % 360;
             if ($rotation < 0) {
                 $rotation += 360;
             }
 
             $position = [
-                'order'    => (int)($p['order'] ?? 0),
-                'title'    => mb_substr(trim((string)($p['title'] ?? '')), 0, self::TITLE_MAX_LENGTH),
-                'x'        => max(0.0, min(100.0, round((float)($p['x'] ?? 50), 2))),
-                'y'        => max(0.0, min(100.0, round((float)($p['y'] ?? 50), 2))),
+                'order'    => (int) ($p['order'] ?? 0),
+                'title'    => mb_substr(trim((string) ($p['title'] ?? '')), 0, self::TITLE_MAX_LENGTH),
+                'x'        => max(0.0, min(100.0, round((float) ($p['x'] ?? 50), 2))),
+                'y'        => max(0.0, min(100.0, round((float) ($p['y'] ?? 50), 2))),
                 'rotation' => $rotation,
             ];
 
             $description = $p['description'] ?? null;
-            $description = is_scalar($description) ? mb_substr(trim((string)$description), 0, self::DESCRIPTION_MAX_LENGTH) : '';
+            $description = is_scalar($description) ? mb_substr(trim((string) $description), 0, self::DESCRIPTION_MAX_LENGTH) : '';
             if ($description !== '') {
                 $position['description'] = $description;
             }

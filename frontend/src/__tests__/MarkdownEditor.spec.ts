@@ -89,7 +89,7 @@ describe('MarkdownEditor', () => {
   })
 
   it('links the selection to the URL the user gives', async () => {
-    // happy-dom has no window.prompt; the link button asks with it.
+    // jsdom's window.prompt answers nothing; the link button asks with it.
     const prompt = vi.fn(() => 'https://tarotgen.io/')
     vi.stubGlobal('prompt', prompt)
     const editor = await mountEditor('Hello')

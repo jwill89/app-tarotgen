@@ -75,8 +75,8 @@ class DeckSystemData extends AbstractData
             $stmt->execute([
                 ':name'         => $data['name'] ?? '',
                 ':short_name'   => $data['short_name'] ?? '',
-                ':total_cards'  => (int)($data['total_cards'] ?? 78),
-                ':approved'     => (int)($data['approved'] ?? false),
+                ':total_cards'  => (int) ($data['total_cards'] ?? 78),
+                ':approved'     => (int) ($data['approved'] ?? false),
                 ':submitted_by' => $data['submitted_by'] ?? null,
             ]);
         } catch (PDOException $e) {
@@ -86,7 +86,7 @@ class DeckSystemData extends AbstractData
             throw $e;
         }
 
-        $id = (int)$this->db->lastInsertId();
+        $id = (int) $this->db->lastInsertId();
         $result = $this->retrieve($id);
 
         return $result[0] ?? null;
@@ -177,8 +177,8 @@ class DeckSystemData extends AbstractData
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
-            ':sys'     => (int)($data['deck_system_id'] ?? 0),
-            ':cid'     => (int)($data['card_id'] ?? 0),
+            ':sys'     => (int) ($data['deck_system_id'] ?? 0),
+            ':cid'     => (int) ($data['card_id'] ?? 0),
             ':name'    => $data['name'] ?? '',
             ':kw'      => $data['keywords'] ?? null,
             ':meaning' => $data['meaning'] ?? null,
@@ -204,7 +204,7 @@ class DeckSystemData extends AbstractData
         foreach ($cards as $card) {
             $stmt->execute([
                 ':sys'     => $systemId,
-                ':cid'     => (int)($card['card_id'] ?? 0),
+                ':cid'     => (int) ($card['card_id'] ?? 0),
                 ':name'    => $card['name'] ?? '',
                 ':kw'      => $card['keywords'] ?? null,
                 ':meaning' => $card['meaning'] ?? null,

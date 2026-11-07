@@ -21,12 +21,6 @@ import {
 import { normalizeTag } from '@/utils/visibility'
 import type { ReadingTag } from '@/types'
 
-/** The server's limits (ReadingInput::TAGS_MAX, TAG_MAX). */
-const MAX_TAGS = 10
-const MAX_LENGTH = 30
-/** How many suggestions show at once. */
-const SHOWN = 6
-
 const props = withDefaults(
   defineProps<{
     /** Put on the text input, so a `<label for>` names the field. */
@@ -36,6 +30,12 @@ const props = withDefaults(
   { id: undefined, suggestions: () => [] },
 )
 const emit = defineEmits<{ wantSuggestions: [] }>()
+/** The server's limits (ReadingInput::TAGS_MAX, TAG_MAX). */
+const MAX_TAGS = 10
+const MAX_LENGTH = 30
+/** How many suggestions show at once. */
+const SHOWN = 6
+
 const model = defineModel<string[]>({ required: true })
 
 const draft = ref('')
@@ -56,7 +56,9 @@ const tags = computed<string[]>({
 const full = computed(() => model.value.length >= MAX_TAGS)
 
 const offered = computed(() => {
-  if (full.value) return []
+  if (full.value) {
+    return []
+  }
   const typed = normalizeTag(draft.value)
   return props.suggestions
     .filter((s) => !model.value.includes(s.tag) && s.tag.includes(typed))

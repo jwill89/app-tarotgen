@@ -23,8 +23,9 @@ async function mountField(modelValue: number, props: Record<string, unknown> = {
   }
 }
 
-// Reka's steppers act on pointerdown (they auto-repeat while held), not click.
-const pointer = { button: 0, pointerType: 'mouse' }
+// Reka's steppers act on pointerdown (they auto-repeat while held), not click, and
+// on the main button, which is a PointerEvent's default.
+const pointer = { pointerType: 'mouse' }
 
 describe('NumberField', () => {
   afterEach(cleanup)

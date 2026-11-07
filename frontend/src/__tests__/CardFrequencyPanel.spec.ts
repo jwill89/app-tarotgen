@@ -17,7 +17,9 @@ const rows = () =>
 
 function button(name: string): HTMLButtonElement {
   const found = [...document.body.querySelectorAll('button')].find((b) => text(b) === name)
-  if (!found) throw new Error(`No "${name}" button`)
+  if (!found) {
+    throw new Error(`No "${name}" button`)
+  }
   return found
 }
 

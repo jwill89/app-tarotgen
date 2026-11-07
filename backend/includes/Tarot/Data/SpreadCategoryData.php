@@ -48,7 +48,7 @@ class SpreadCategoryData extends AbstractData
             throw self::nameTakenOr($e);
         }
 
-        return $this->retrieve((int)$this->db->lastInsertId())[0] ?? null;
+        return $this->retrieve((int) $this->db->lastInsertId())[0] ?? null;
     }
 
     /**

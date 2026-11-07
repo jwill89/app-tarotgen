@@ -17,7 +17,9 @@ async function mountOptions(notes = false) {
 /** A segment of the "Who Can Open It" control. */
 function segment(wrapper: VueWrapper, label: string) {
   const found = wrapper.findAll('.myst-segmented__btn').find((b) => b.text() === label)
-  if (!found) throw new Error(`No "${label}" choice`)
+  if (!found) {
+    throw new Error(`No "${label}" choice`)
+  }
   return found
 }
 
@@ -226,7 +228,9 @@ describe('ReadingOwnerOptions', () => {
 
     // ProseMirror reads typing back from the DOM it watches.
     const paragraph = editor.querySelector('p')
-    if (!paragraph) throw new Error('No paragraph to type into')
+    if (!paragraph) {
+      throw new Error('No paragraph to type into')
+    }
     paragraph.textContent = 'A gentle start'
     await new Promise((resolve) => setTimeout(resolve, 0))
 

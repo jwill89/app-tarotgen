@@ -15,8 +15,12 @@ export function useCardFrequency() {
     days,
   }: CardFrequencyFilter): Promise<ApiResult<CardFrequency>> {
     const query = new URLSearchParams()
-    if (deckId !== null) query.set('deck_id', String(deckId))
-    if (days !== null) query.set('days', String(days))
+    if (deckId !== null) {
+      query.set('deck_id', String(deckId))
+    }
+    if (days !== null) {
+      query.set('days', String(days))
+    }
     const search = query.toString()
 
     return apiRequest<CardFrequency>(

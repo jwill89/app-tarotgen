@@ -25,8 +25,7 @@ class AdminSpreadController extends AbstractController
         private readonly PendingSpreadRepository $pendingSpreads,
         private readonly FavoriteSpreadRepository $favorites,
         private readonly SpreadCategoryRepository $categories,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Get(
         path: '/admin/spreads',
@@ -72,7 +71,7 @@ class AdminSpreadController extends AbstractController
     )]
     public function getSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $spread = $this->spreads->get((int)($args['spread_id'] ?? 0));
+        $spread = $this->spreads->get((int) ($args['spread_id'] ?? 0));
 
         if (!($spread instanceof Spread)) {
             return $response->withJson(['error' => 'Spread not found'], 404);
@@ -111,7 +110,7 @@ class AdminSpreadController extends AbstractController
     {
         $params = $this->parsedBody($request);
 
-        if (trim((string)($params['name'] ?? '')) === '') {
+        if (trim((string) ($params['name'] ?? '')) === '') {
             return $response->withJson(['error' => 'Name is required'], 400);
         }
 
@@ -161,11 +160,11 @@ class AdminSpreadController extends AbstractController
     )]
     public function updateSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $spread_id = (int)($args['spread_id'] ?? 0);
+        $spread_id = (int) ($args['spread_id'] ?? 0);
         $params = $this->parsedBody($request);
 
         // A rename may not blank the name, any more than a create may leave it out.
-        if (array_key_exists('name', $params) && trim((string)$params['name']) === '') {
+        if (array_key_exists('name', $params) && trim((string) $params['name']) === '') {
             return $response->withJson(['error' => 'Name is required'], 400);
         }
 
@@ -199,7 +198,7 @@ class AdminSpreadController extends AbstractController
     )]
     public function deleteSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $spread_id = (int)($args['spread_id'] ?? 0);
+        $spread_id = (int) ($args['spread_id'] ?? 0);
 
         $result = $this->spreads->delete($spread_id);
 
@@ -265,7 +264,7 @@ class AdminSpreadController extends AbstractController
     )]
     public function approvePendingSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $pending_id = (int)($args['pending_id'] ?? 0);
+        $pending_id = (int) ($args['pending_id'] ?? 0);
 
         if (!($this->pendingSpreads->get($pending_id) instanceof PendingSpread)) {
             return $response->withJson(['error' => 'Pending spread not found'], 404);
@@ -279,7 +278,7 @@ class AdminSpreadController extends AbstractController
         $categoryId = $params['category_id'] ?? null;
         $spread = $this->pendingSpreads->approve(
             $pending_id,
-            is_numeric($categoryId) ? (int)$categoryId : null
+            is_numeric($categoryId) ? (int) $categoryId : null
         );
 
         if ($spread === null) {
@@ -307,7 +306,7 @@ class AdminSpreadController extends AbstractController
     )]
     public function rejectPendingSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $pending_id = (int)($args['pending_id'] ?? 0);
+        $pending_id = (int) ($args['pending_id'] ?? 0);
 
         $result = $this->pendingSpreads->reject($pending_id);
 
@@ -331,6 +330,6 @@ class AdminSpreadController extends AbstractController
             return true;
         }
 
-        return is_numeric($categoryId) && $this->categories->find((int)$categoryId) !== null;
+        return is_numeric($categoryId) && $this->categories->find((int) $categoryId) !== null;
     }
 }

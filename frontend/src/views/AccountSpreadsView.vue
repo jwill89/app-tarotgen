@@ -33,7 +33,9 @@ function openEdit(spread: UserSpread) {
 
 /** The fields of the UserSpread being edited that the SpreadEditor loads. */
 const editorSpread = computed<SpreadDraft | null>(() => {
-  if (!editingSpread.value) return null
+  if (!editingSpread.value) {
+    return null
+  }
   return {
     name: editingSpread.value.name,
     description: editingSpread.value.description,
@@ -52,7 +54,9 @@ async function saveEdit(payload: {
   card_count: number
   positions: SpreadPosition[]
 }) {
-  if (!editingSpread.value) return
+  if (!editingSpread.value) {
+    return
+  }
   const res = await updateUserSpread(editingSpread.value.user_spread_id, payload)
   if (res.ok) {
     toasts.success('Spread updated successfully.')
@@ -69,7 +73,9 @@ async function handleDelete(spread: UserSpread) {
     confirmLabel: 'Delete',
     danger: true,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
   const success = await deleteUserSpread(spread.user_spread_id)
   if (success) {
     toasts.success('Spread deleted.')
@@ -84,7 +90,9 @@ async function handleSubmitPublic(spread: UserSpread) {
     message: `Submit "${spread.name}" for admin review? If approved, it will become available to all users. Your personal copy will remain unchanged.`,
     confirmLabel: 'Submit for Review',
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
   const success = await submitAsPublic(spread.user_spread_id)
   if (success) {
     toasts.success('Spread submitted for review!')
@@ -152,13 +160,7 @@ async function handleSubmitPublic(spread: UserSpread) {
                       <strong>{{ spread.name }}</strong>
                       <p
                         v-if="spread.description"
-                        class="is-size-7 has-text-grey mt-1"
-                        style="
-                          max-width: 20rem;
-                          overflow: hidden;
-                          text-overflow: ellipsis;
-                          white-space: nowrap;
-                        "
+                        class="is-size-7 has-text-grey mt-1 spread-description"
                       >
                         {{ spread.description }}
                       </p>
@@ -170,6 +172,7 @@ async function handleSubmitPublic(spread: UserSpread) {
                       <div class="buttons are-small is-justify-content-flex-end">
                         <Tooltip text="Edit">
                           <button
+                            type="button"
                             class="button is-info is-outlined"
                             aria-label="Edit"
                             @click="openEdit(spread)"
@@ -181,6 +184,7 @@ async function handleSubmitPublic(spread: UserSpread) {
                         </Tooltip>
                         <Tooltip text="Submit as public spread">
                           <button
+                            type="button"
                             class="button is-link is-outlined"
                             aria-label="Submit as public spread"
                             @click="handleSubmitPublic(spread)"
@@ -192,6 +196,7 @@ async function handleSubmitPublic(spread: UserSpread) {
                         </Tooltip>
                         <Tooltip text="Delete">
                           <button
+                            type="button"
                             class="button is-danger is-outlined"
                             aria-label="Delete"
                             @click="handleDelete(spread)"
@@ -225,3 +230,12 @@ async function handleSubmitPublic(spread: UserSpread) {
     />
   </BaseModal>
 </template>
+
+<style scoped>
+.spread-description {
+  max-width: 20rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

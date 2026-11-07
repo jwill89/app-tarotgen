@@ -22,8 +22,11 @@ function button(name: string, root: ParentNode = document.body): HTMLButtonEleme
   const found = [...root.querySelectorAll('button')].filter(
     (b) => text(b) === name || b.getAttribute('aria-label') === name,
   )
-  if (found.length !== 1) throw new Error(`Expected one "${name}" button, found ${found.length}`)
-  return found[0]
+  const [only] = found
+  if (!only || found.length !== 1) {
+    throw new Error(`Expected one "${name}" button, found ${found.length}`)
+  }
+  return only
 }
 
 /** A control by the label, heading or aria-label that names it. */
@@ -35,7 +38,9 @@ function field(name: string): HTMLInputElement {
     : heading
       ? document.querySelector(`[aria-labelledby="${heading.id}"]`)
       : document.querySelector(`[aria-label="${name}"]`)
-  if (!(el instanceof HTMLInputElement)) throw new Error(`No field named "${name}"`)
+  if (!(el instanceof HTMLInputElement)) {
+    throw new Error(`No field named "${name}"`)
+  }
   return el
 }
 
@@ -56,7 +61,9 @@ const confirmText = () => text(confirmDialog() ?? document.createElement('p'))
 
 async function answer(choice: string) {
   const open = confirmDialog()
-  if (!open) throw new Error('No confirm dialog is open')
+  if (!open) {
+    throw new Error('No confirm dialog is open')
+  }
   await click(button(choice, open))
 }
 
@@ -73,8 +80,10 @@ const calledWith = (api: ReturnType<typeof stubApi>): string[] =>
 /** The JSON body of the first `'METHOD /path'` call, if it had one. */
 const sent = (api: ReturnType<typeof stubApi>, key: string): unknown => {
   const found = calledWith(api).indexOf(key)
-  if (found < 0) return undefined
-  const init: RequestInit | undefined = api.mock.calls[found][1]
+  if (found < 0) {
+    return undefined
+  }
+  const init: RequestInit | undefined = api.mock.calls[found]![1]
   return typeof init?.body === 'string' ? JSON.parse(init.body) : undefined
 }
 
@@ -103,8 +112,9 @@ function stub(handlers: Parameters<typeof stubApi>[0] = {}) {
 }
 
 /**
- * Turn on WebAuthn for the page: happy-dom has no PublicKeyCredential and its
- * navigator.credentials is null, so the passkey panel would stay hidden.
+ * Turn on WebAuthn for the page: jsdom has no PublicKeyCredential and its
+ * navigator.credentials is null (vitest.setup.ts), so the passkey panel would
+ * stay hidden.
  */
 function supportPasskeys(create = vi.fn()) {
   vi.stubGlobal('PublicKeyCredential', vi.fn())
@@ -465,7 +475,7 @@ describe('AccountSettingsView', () => {
       const removeButtons = [...document.body.querySelectorAll('button')].filter(
         (b) => b.getAttribute('aria-label') === 'Remove',
       )
-      await click(removeButtons[0])
+      await click(removeButtons[0]!)
       expect(confirmText()).toContain('Remove "Phone"?')
       await answer('Remove')
 

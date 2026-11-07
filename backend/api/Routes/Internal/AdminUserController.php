@@ -42,8 +42,7 @@ class AdminUserController extends AbstractController
         private readonly UserRepository $users,
         private readonly AuthService $auth,
         private readonly AccountProtection $protection,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Get(
         path: '/admin/users',
@@ -88,7 +87,7 @@ class AdminUserController extends AbstractController
     )]
     public function activateUser(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $user_id = (int)($args['user_id'] ?? 0);
+        $user_id = (int) ($args['user_id'] ?? 0);
 
         if ($user_id < 1 || $this->users->findById($user_id) === null) {
             return $response->withJson(['error' => 'User not found'], 404);
@@ -134,7 +133,7 @@ class AdminUserController extends AbstractController
     )]
     public function updateUser(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $user_id = (int)($args['user_id'] ?? 0);
+        $user_id = (int) ($args['user_id'] ?? 0);
         $target  = $user_id < 1 ? null : $this->users->findById($user_id);
 
         if ($target === null) {
@@ -144,7 +143,7 @@ class AdminUserController extends AbstractController
         $params = $this->parsedBody($request);
 
         if (array_key_exists('is_admin', $params)) {
-            $isAdmin = (bool)$params['is_admin'];
+            $isAdmin = (bool) $params['is_admin'];
 
             $refusal = $target->is_admin && !$isAdmin ? $this->protection->refuseDemotion($this->adminId(), $target) : null;
             if ($refusal !== null) {
@@ -187,7 +186,7 @@ class AdminUserController extends AbstractController
     )]
     public function resendActivation(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $user_id = (int)($args['user_id'] ?? 0);
+        $user_id = (int) ($args['user_id'] ?? 0);
 
         $result = $this->auth->resendActivation($user_id);
 
@@ -225,7 +224,7 @@ class AdminUserController extends AbstractController
     )]
     public function deleteUser(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $user_id = (int)($args['user_id'] ?? 0);
+        $user_id = (int) ($args['user_id'] ?? 0);
         $target  = $user_id < 1 ? null : $this->users->findById($user_id);
 
         if ($target === null) {

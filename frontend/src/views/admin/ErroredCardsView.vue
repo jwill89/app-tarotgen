@@ -96,7 +96,9 @@ function cardLabel(r: CardReport): string {
 
 async function fetchReports() {
   const data = await api.get<CardReport[]>(endpoints.admin.cardReports.list(showResolved.value))
-  if (data) reports.value = data
+  if (data) {
+    reports.value = data
+  }
 }
 
 async function toggleResolved(report: CardReport) {
@@ -105,7 +107,9 @@ async function toggleResolved(report: CardReport) {
     resolved: report.resolved_at === null,
   })
   busyId.value = null
-  if (result) await fetchReports()
+  if (result) {
+    await fetchReports()
+  }
 }
 
 /**
@@ -122,7 +126,9 @@ async function regenerate(report: CardReport) {
       'then marks the report resolved.',
     confirmLabel: 'Regenerate & resolve',
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
 
   regeneratingId.value = report.report_id
   const updated = await api.post<CardReport>(
@@ -131,7 +137,9 @@ async function regenerate(report: CardReport) {
   )
   regeneratingId.value = null
   // On failure useAdminApi has shown the server's reason; the report is still open.
-  if (!updated) return
+  if (!updated) {
+    return
+  }
 
   reports.value = reports.value.map((r) => (r.report_id === updated.report_id ? updated : r))
   purging.value = updated
@@ -143,7 +151,9 @@ async function regenerate(report: CardReport) {
  * as its Custom Purge asks for.
  */
 const purgeUrls = computed(() => {
-  if (!purging.value) return []
+  if (!purging.value) {
+    return []
+  }
   const { display, thumb, png } = cardImageUrls(purging.value.deck_id, purging.value.card_id)
   return [display, thumb, png].map((path) => new URL(path, window.location.origin).href)
 })
@@ -171,7 +181,12 @@ onMounted(fetchReports)
     subtitle="Cards users have reported, and what they say is wrong with each image."
   >
     <template #actions>
-      <button class="button" :class="showResolved ? 'is-link' : ''" @click="toggleShowResolved">
+      <button
+        type="button"
+        class="button"
+        :class="showResolved ? 'is-link' : ''"
+        @click="toggleShowResolved"
+      >
         <span class="icon"
           ><FontAwesomeIcon
             :icon="showResolved ? byPrefixAndName.fas['eye'] : byPrefixAndName.fas['eye-slash']"
@@ -237,7 +252,7 @@ onMounted(fetchReports)
                     <img
                       :src="cardThumb(row.report)"
                       :alt="row.report.card_name"
-                      style="height: 64px; width: auto; border-radius: 4px"
+                      class="report-thumb"
                       loading="lazy"
                     />
                   </a>
@@ -411,8 +426,8 @@ onMounted(fetchReports)
       </ul>
     </template>
     <template #footer>
-      <button class="button" @click="purging = null">Done</button>
-      <button class="button is-link" @click="copyPurgeUrls">
+      <button type="button" class="button" @click="purging = null">Done</button>
+      <button type="button" class="button is-link" @click="copyPurgeUrls">
         <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['copy']" /></span>
         <span>Copy URLs</span>
       </button>
@@ -421,6 +436,12 @@ onMounted(fetchReports)
 </template>
 
 <style scoped>
+.report-thumb {
+  height: 64px;
+  width: auto;
+  border-radius: 4px;
+}
+
 .reason-chips {
   display: flex;
   flex-wrap: wrap;
@@ -536,6 +557,7 @@ onMounted(fetchReports)
 .report-list.is-earlier .report-entry {
   background: transparent;
 }
+
 .report-list.is-earlier .report-entry__details {
   color: var(--myst-text-muted);
 }
@@ -570,7 +592,7 @@ onMounted(fetchReports)
   color: var(--myst-gold-bright);
 }
 
-@media screen and (max-width: 480px) {
+@media screen and (width <= 480px) {
   .report-summary {
     flex-direction: column;
   }

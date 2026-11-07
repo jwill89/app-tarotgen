@@ -4,7 +4,9 @@
  * time. Falls back to returning the raw value if it can't be parsed.
  */
 export function formatDateTime(value: string | null | undefined): string {
-  if (!value) return ''
+  if (!value) {
+    return ''
+  }
 
   // SQLite stores UTC without a zone suffix; normalise to ISO-8601 and mark
   // it as UTC so the Date constructor doesn't assume local time.
@@ -14,7 +16,9 @@ export function formatDateTime(value: string | null | undefined): string {
   }
 
   const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return value
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
 
   // Date portion in ISO-style YYYY-MM-DD (built from local components),
   // with the time portion left in the browser's locale format.

@@ -13,14 +13,19 @@ const toastMessages = () => useToasts().toasts.value.map((t) => t.message)
 
 function button(name: string): HTMLButtonElement {
   const found = [...document.body.querySelectorAll('button')].filter((b) => text(b) === name)
-  if (found.length !== 1) throw new Error(`Expected one "${name}" button, found ${found.length}`)
-  return found[0]
+  const [only] = found
+  if (!only || found.length !== 1) {
+    throw new Error(`Expected one "${name}" button, found ${found.length}`)
+  }
+  return only
 }
 
 function field(label: string): HTMLInputElement {
   const el = [...document.body.querySelectorAll('label')].find((l) => text(l) === label)
   const input = el && document.getElementById(el.htmlFor)
-  if (!(input instanceof HTMLInputElement)) throw new Error(`No field labelled "${label}"`)
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`No field labelled "${label}"`)
+  }
   return input
 }
 
@@ -168,7 +173,9 @@ describe('ContactView', () => {
         .mockReset()
         .mockImplementation((_el: HTMLElement, opts: Record<string, unknown>) => {
           const callback = opts.callback
-          if (typeof callback === 'function') solve = (token) => callback(token)
+          if (typeof callback === 'function') {
+            solve = (token) => callback(token)
+          }
           return 'widget-1'
         })
       turnstile.reset.mockReset()

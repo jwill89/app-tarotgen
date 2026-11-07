@@ -78,7 +78,7 @@ final class AdminUsersTest extends HttpTestCase
         // Each resend replaces the outstanding link rather than adding another.
         $this->assertSame(1, $this->rowCount('user_tokens'));
 
-        parse_str((string)parse_url($body['activation_link'], PHP_URL_QUERY), $query);
+        parse_str((string) parse_url($body['activation_link'], PHP_URL_QUERY), $query);
         $this->useSessionCookie(null);
         $this->assertJsonResponse(200, $this->post('/auth/activate', ['token' => $query['token'] ?? '']));
         $this->assertSame([['is_active' => 1]], $this->rows("SELECT is_active FROM users WHERE email = 'pending@example.test'"));

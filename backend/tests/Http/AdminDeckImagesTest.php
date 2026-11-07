@@ -49,7 +49,7 @@ final class AdminDeckImagesTest extends HttpTestCase
                 RecursiveIteratorIterator::CHILD_FIRST
             );
             foreach ($entries as $entry) {
-                $path = (string)$entry;
+                $path = (string) $entry;
                 is_dir($path) ? rmdir($path) : unlink($path);
             }
             rmdir($this->imageRoot);
@@ -137,7 +137,7 @@ final class AdminDeckImagesTest extends HttpTestCase
             mkdir($dir);
         }
         $image = imagecreatetruecolor(60, 103);
-        imagefill($image, 0, 0, (int)imagecolorallocate($image, 80, 40, 160));
+        imagefill($image, 0, 0, (int) imagecolorallocate($image, 80, 40, 160));
         imagepng($image, "{$dir}/{$file}");
     }
 }

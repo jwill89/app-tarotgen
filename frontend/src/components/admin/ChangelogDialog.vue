@@ -67,6 +67,7 @@ const open = ref<string[]>(newest ? [key(newest)] : [])
 .changelog-release {
   border-bottom: 1px solid var(--myst-border);
 }
+
 .changelog-release:last-child {
   border-bottom: none;
 }
@@ -88,6 +89,7 @@ const open = ref<string[]>(newest ? [key(newest)] : [])
   text-align: left;
   cursor: pointer;
 }
+
 .changelog-trigger:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
@@ -100,6 +102,7 @@ const open = ref<string[]>(newest ? [key(newest)] : [])
   letter-spacing: 0.02em;
   color: var(--myst-gold);
 }
+
 .changelog-trigger:hover .changelog-version {
   color: var(--myst-gold-bright);
 }
@@ -117,6 +120,7 @@ const open = ref<string[]>(newest ? [key(newest)] : [])
   font-size: 0.8rem;
   transition: transform 0.2s ease;
 }
+
 .changelog-trigger[data-state='open'] .changelog-chevron {
   transform: rotate(180deg);
 }
@@ -125,6 +129,7 @@ const open = ref<string[]>(newest ? [key(newest)] : [])
   padding: 0 0.25rem 1.25rem;
   font-size: 0.92rem;
 }
+
 /* Added / Changed / Fixed …: a quiet label over each list. */
 .changelog-notes :deep(h4) {
   margin: 1.25rem 0 0.5rem;
@@ -134,16 +139,19 @@ const open = ref<string[]>(newest ? [key(newest)] : [])
   text-transform: uppercase;
   color: var(--myst-text-muted);
 }
+
 .changelog-notes :deep(h5) {
   margin: 1rem 0 0.4rem;
   font-size: 0.9rem;
   color: var(--myst-text-strong);
 }
+
 .changelog-notes :deep(blockquote) {
   background: var(--myst-surface-2);
   border-left: 3px solid var(--myst-gold);
   padding: 0.6rem 0.9rem;
 }
+
 .changelog-notes :deep(a) {
   color: var(--myst-gold);
 }

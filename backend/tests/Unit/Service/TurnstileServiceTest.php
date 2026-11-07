@@ -59,9 +59,7 @@ final class TurnstileServiceTest extends TestCase
     {
         return new class ($siteVerifyResult) extends TurnstileService {
             /** @param array<string, mixed>|null $result */
-            public function __construct(private readonly ?array $result)
-            {
-            }
+            public function __construct(private readonly ?array $result) {}
 
             protected function postSiteVerify(array $payload): ?array
             {

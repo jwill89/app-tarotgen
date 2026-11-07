@@ -30,6 +30,6 @@ final class ConfigTest extends HttpTestCase
         $response = $this->get('/config');
 
         $this->assertSame(['turnstile_sitekey' => '0x4AAAAsite'], $this->assertJsonResponse(200, $response));
-        $this->assertStringNotContainsString('0x4AAAAsecret', (string)$response->getBody());
+        $this->assertStringNotContainsString('0x4AAAAsecret', (string) $response->getBody());
     }
 }

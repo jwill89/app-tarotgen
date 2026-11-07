@@ -51,7 +51,7 @@ final class AdminDashboardTest extends HttpTestCase
         $reports->report($deck->deck_id, 1, 'The Magician', CardReportReason::Quality, '');
         $reports->report($deck->deck_id, 2, 'The High Priestess', CardReportReason::Artefact, '');
         $reports->report($deck->deck_id, 3, 'The Empress', CardReportReason::WrongCard, '');
-        $reports->setResolved((int)$this->rows('SELECT report_id FROM card_reports WHERE card_id = 3')[0]['report_id'], true);
+        $reports->setResolved((int) $this->rows('SELECT report_id FROM card_reports WHERE card_id = 3')[0]['report_id'], true);
 
         $threeCard = ['spread_id' => 4, 'name' => 'Three Card'];
         $recent = time() - 60;

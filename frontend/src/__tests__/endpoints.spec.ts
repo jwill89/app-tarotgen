@@ -26,7 +26,9 @@ const served = Object.keys(openapi.paths).map(
 
 /** Every path in a branch of the registry, with sample ids for the parameterised ones. */
 function paths(node: unknown, name: string): [string, string][] {
-  if (typeof node === 'string') return [[name, node]]
+  if (typeof node === 'string') {
+    return [[name, node]]
+  }
   if (typeof node === 'function') {
     const args = Array.from({ length: node.length }, (_, i) => (i === 0 ? 'public' : String(i)))
     return [[name, String(Reflect.apply(node, undefined, args))]]

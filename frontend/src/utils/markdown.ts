@@ -11,7 +11,9 @@ import DOMPurify from 'dompurify'
  * through it — keep it that way.
  */
 export function renderMarkdown(md: string | null | undefined): string {
-  if (!md) return ''
+  if (!md) {
+    return ''
+  }
   const html = marked.parse(md, { async: false })
   return DOMPurify.sanitize(html)
 }
@@ -22,12 +24,16 @@ export function renderMarkdown(md: string | null | undefined): string {
  */
 export function markdownExcerpt(md: string | null | undefined, max: number): string {
   const html = renderMarkdown(md)
-  if (!html) return ''
+  if (!html) {
+    return ''
+  }
   const text = new DOMParser()
     .parseFromString(html, 'text/html')
     .body.textContent.replace(/\s+/g, ' ')
     .trim()
-  if (text.length <= max) return text
+  if (text.length <= max) {
+    return text
+  }
   const cut = text.slice(0, max - 1)
   const lastSpace = cut.lastIndexOf(' ')
   return (lastSpace > max / 2 ? cut.slice(0, lastSpace) : cut).replace(/[\s,.;:–—-]+$/, '') + '…'

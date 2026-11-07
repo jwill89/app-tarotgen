@@ -31,9 +31,7 @@ class DrawKeyService
     /** Codes are single-use and short-lived, as the account link's are. */
     private const int CODE_TTL_SECONDS = 300;
 
-    public function __construct(private readonly DrawKeyRepository $keys)
-    {
-    }
+    public function __construct(private readonly DrawKeyRepository $keys) {}
 
     /**
      * Mint a one-time code bound to the plugin's PKCE challenge, for a browser

@@ -20,8 +20,7 @@ class AdminDeckSystemController extends AbstractController
 
     public function __construct(
         private readonly DeckSystemRepository $deckSystems,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Get(
         path: '/admin/deck-systems',
@@ -81,7 +80,7 @@ class AdminDeckSystemController extends AbstractController
     )]
     public function getDeckSystem(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $id = (int)($args['id'] ?? 0);
+        $id = (int) ($args['id'] ?? 0);
         $system = $this->deckSystems->get($id);
 
         if (!($system instanceof DeckSystem)) {
@@ -118,7 +117,7 @@ class AdminDeckSystemController extends AbstractController
     )]
     public function approveDeckSystem(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $id = (int)($args['id'] ?? 0);
+        $id = (int) ($args['id'] ?? 0);
 
         $system = $this->deckSystems->update($id, ['approved' => true]);
 
@@ -164,7 +163,7 @@ class AdminDeckSystemController extends AbstractController
     )]
     public function updateDeckSystem(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $id     = (int)($args['id'] ?? 0);
+        $id     = (int) ($args['id'] ?? 0);
         $params = $this->parsedBody($request);
 
         // The system must exist; but an edit that only changes card definitions
@@ -177,7 +176,7 @@ class AdminDeckSystemController extends AbstractController
 
         // A rename may not blank either name, any more than a submission may leave it out.
         foreach (['name' => 'Name', 'short_name' => 'Short name'] as $field => $label) {
-            if (array_key_exists($field, $params) && trim((string)$params[$field]) === '') {
+            if (array_key_exists($field, $params) && trim((string) $params[$field]) === '') {
                 return $response->withJson(['error' => "{$label} is required"], 400);
             }
         }
@@ -198,8 +197,8 @@ class AdminDeckSystemController extends AbstractController
                     continue;
                 }
                 $cardData[] = [
-                    'card_id'           => (int)($card['card_id'] ?? ($i + 1)),
-                    'name'              => trim((string)($card['name'] ?? '')),
+                    'card_id'           => (int) ($card['card_id'] ?? ($i + 1)),
+                    'name'              => trim((string) ($card['name'] ?? '')),
                     'keywords'          => $card['keywords'] ?? null,
                     'meaning'           => $card['meaning'] ?? null,
                     'advice'            => $card['advice'] ?? null,
@@ -235,7 +234,7 @@ class AdminDeckSystemController extends AbstractController
     )]
     public function deleteDeckSystem(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $id = (int)($args['id'] ?? 0);
+        $id = (int) ($args['id'] ?? 0);
 
         $result = $this->deckSystems->delete($id);
 

@@ -24,8 +24,11 @@ function button(name: string, root: ParentNode = document.body): HTMLButtonEleme
   const found = [...root.querySelectorAll('button')].filter(
     (b) => text(b) === name || b.getAttribute('aria-label') === name,
   )
-  if (found.length !== 1) throw new Error(`Expected one "${name}" button, found ${found.length}`)
-  return found[0]
+  const [only] = found
+  if (!only || found.length !== 1) {
+    throw new Error(`Expected one "${name}" button, found ${found.length}`)
+  }
+  return only
 }
 
 function row(name: string): HTMLTableRowElement {
@@ -33,14 +36,18 @@ function row(name: string): HTMLTableRowElement {
     (tr): tr is HTMLTableRowElement =>
       tr instanceof HTMLTableRowElement && tr.querySelector('strong')?.textContent === name,
   )
-  if (!found) throw new Error(`No spread named "${name}"`)
+  if (!found) {
+    throw new Error(`No spread named "${name}"`)
+  }
   return found
 }
 
 function field(label: string): HTMLInputElement {
   const el = [...document.body.querySelectorAll('label')].find((l) => text(l) === label)
   const input = el && document.getElementById(el.htmlFor)
-  if (!(input instanceof HTMLInputElement)) throw new Error(`No field labelled "${label}"`)
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`No field labelled "${label}"`)
+  }
   return input
 }
 
@@ -56,7 +63,9 @@ const confirmDialog = () => document.body.querySelector<HTMLElement>('[role="ale
 
 async function answer(choice: string) {
   const open = confirmDialog()
-  if (!open) throw new Error('No confirm dialog is open')
+  if (!open) {
+    throw new Error('No confirm dialog is open')
+  }
   await click(button(choice, open))
 }
 
@@ -93,7 +102,7 @@ describe('AccountSpreadsView', () => {
 
     expect(names()).toEqual(['Two Paths', 'Daily Pull'])
     expect(text(row('Two Paths'))).toContain('Choose between two roads.')
-    expect(row('Daily Pull').cells[1].textContent).toBe('2')
+    expect(row('Daily Pull').cells[1]!.textContent).toBe('2')
   })
 
   it('shows a spinner, not "no spreads", while loading', async () => {

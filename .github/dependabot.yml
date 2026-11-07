@@ -3,30 +3,23 @@
 # changes). The same shape as the Kindred Nights repo.
 #
 # Dependabot can't read Actions secrets. Its jobs, and CI on its pull requests,
-# need these added again as Dependabot secrets (Settings > Secrets and
-# variables > Dependabot): FONTAWESOME_NPM_TOKEN (the Pro icon registry) and
-# ESLINT_CONFIG_TOKEN (the private eslint-config submodule: every update job
-# clones the repo with its submodules, through the `github` registry below).
+# need FONTAWESOME_NPM_TOKEN (the Pro icon registry) added again as a Dependabot
+# secret (Settings > Secrets and variables > Dependabot). The shared-tooling
+# submodule is public, so cloning the repo with it needs no token.
 version: 2
 registries:
-  # The repo's .npmrc is gitignored (it holds the token), so the scope says which
+  # frontend/.npmrc names the registry but holds no token, so the scope says which
   # packages come from here; Dependabot writes its own .npmrc from it.
   fontawesome:
     type: npm-registry
     url: https://npm.fontawesome.com
     scope: '@fortawesome'
     token: ${{ secrets.FONTAWESOME_NPM_TOKEN }}
-  github:
-    type: git
-    url: https://github.com
-    username: x-access-token
-    password: ${{ secrets.ESLINT_CONFIG_TOKEN }}
 updates:
   - package-ecosystem: npm
     directory: /frontend
     registries:
       - fontawesome
-      - github
     schedule:
       interval: weekly
       day: monday
@@ -41,8 +34,6 @@ updates:
         update-types: ['version-update:semver-major']
   - package-ecosystem: composer
     directory: /backend
-    registries:
-      - github
     schedule:
       interval: weekly
       day: monday
@@ -52,8 +43,6 @@ updates:
         update-types: [minor, patch]
   - package-ecosystem: nuget
     directory: /plugin/TarotGen.Plugin
-    registries:
-      - github
     schedule:
       interval: weekly
       day: monday
@@ -62,8 +51,6 @@ updates:
         patterns: ['*']
   - package-ecosystem: github-actions
     directory: /
-    registries:
-      - github
     schedule:
       interval: weekly
       day: monday

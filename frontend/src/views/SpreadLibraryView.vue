@@ -50,8 +50,11 @@ const tabs = computed(() => {
   const held = new Map<number, { label: string; order: number; count: number }>()
   for (const s of spreads.value) {
     const tab = held.get(s.category_id)
-    if (tab) tab.count++
-    else held.set(s.category_id, { label: s.category_name, order: s.category_sort_order, count: 1 })
+    if (tab) {
+      tab.count++
+    } else {
+      held.set(s.category_id, { label: s.category_name, order: s.category_sort_order, count: 1 })
+    }
   }
   return [
     { value: ALL, label: 'All', count: spreads.value.length },
@@ -107,7 +110,9 @@ function close(): void {
 }
 
 async function copyOpen(): Promise<void> {
-  if (!open.value || copying.value) return
+  if (!open.value || copying.value) {
+    return
+  }
   copying.value = true
   const res = await copyPublicSpread(open.value.spread_id)
   copying.value = false
@@ -301,6 +306,7 @@ async function copyOpen(): Promise<void> {
   margin: 0.5rem 0 0.25rem;
   border-bottom: 1px solid var(--myst-border);
 }
+
 .library-tab {
   display: inline-flex;
   align-items: baseline;
@@ -318,18 +324,22 @@ async function copyOpen(): Promise<void> {
     color 0.15s ease,
     border-color 0.15s ease;
 }
+
 .library-tab:hover {
   color: var(--myst-text-strong);
 }
+
 .library-tab:focus-visible {
   outline: 2px solid var(--myst-gold-bright);
   outline-offset: 2px;
   border-radius: 2px;
 }
+
 .library-tab[data-state='active'] {
   color: var(--myst-text-strong);
   border-bottom-color: var(--myst-aqua);
 }
+
 .library-tab__count {
   font-size: 0.75rem;
   color: var(--myst-text-dim);
@@ -340,6 +350,7 @@ async function copyOpen(): Promise<void> {
   list-style: none;
   margin: 0;
 }
+
 .library-entry {
   position: relative;
   display: grid;
@@ -351,19 +362,24 @@ async function copyOpen(): Promise<void> {
   border-radius: 10px;
   transition: background-color 0.15s ease;
 }
+
 .library-entry:last-child {
   border-bottom: 0;
 }
+
 .library-entry:hover {
   background-color: color-mix(in srgb, var(--myst-surface-3) 55%, transparent);
 }
+
 .library-entry:focus-within {
   outline: 2px solid var(--myst-gold-bright);
   outline-offset: -2px;
 }
+
 .library-entry__shape {
   width: 100%;
 }
+
 .library-entry__name {
   margin: 0;
   font-family: var(--myst-heading-font);
@@ -372,6 +388,7 @@ async function copyOpen(): Promise<void> {
   line-height: 1.25;
   color: var(--myst-text-strong);
 }
+
 /* The name is the control; it stretches over the whole row. */
 .library-entry__open {
   padding: 0;
@@ -382,25 +399,30 @@ async function copyOpen(): Promise<void> {
   text-align: left;
   cursor: pointer;
 }
+
 .library-entry__open::after {
   content: '';
   position: absolute;
   inset: 0;
 }
+
 .library-entry__open:focus-visible {
   outline: none;
 }
+
 .library-entry__meta {
   margin-top: 0.2rem;
   font-size: 0.8rem;
   letter-spacing: 0.02em;
   color: var(--myst-gold);
 }
+
 .library-entry__excerpt {
   margin-top: 0.4rem;
   font-size: 0.9rem;
   color: var(--myst-text-muted);
 }
+
 .library-empty {
   padding: 1.5rem 0.5rem;
   color: var(--myst-text-muted);
@@ -412,12 +434,14 @@ async function copyOpen(): Promise<void> {
   font-size: 0.85rem;
   color: var(--myst-gold);
 }
+
 .library-detail {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 1.5rem;
   align-items: start;
 }
+
 .library-detail__heading {
   margin-bottom: 0.6rem;
   font-family: var(--myst-heading-font);
@@ -425,10 +449,12 @@ async function copyOpen(): Promise<void> {
   font-weight: 400;
   color: var(--myst-text-strong);
 }
+
 .library-positions {
   list-style: none;
   margin: 0;
 }
+
 .library-position {
   display: flex;
   gap: 0.7rem;
@@ -436,37 +462,45 @@ async function copyOpen(): Promise<void> {
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--myst-border);
 }
+
 .library-position:last-child {
   border-bottom: 0;
 }
+
 .library-position .spread-detail-order {
   margin-top: 0.05rem;
 }
+
 .library-position__title {
   color: var(--myst-text);
   font-weight: 600;
 }
+
 .library-position__about {
   margin-top: 0.15rem;
   font-size: 0.85rem;
   color: var(--myst-text-muted);
 }
+
 .library-copied {
   margin-top: 1rem;
 }
 
-@media screen and (max-width: 600px) {
+@media screen and (width <= 600px) {
   .library-entry {
     grid-template-columns: 4.75rem 1fr;
     gap: 0.9rem;
     padding: 0.9rem 0.25rem;
   }
+
   .library-entry__name {
     font-size: 1.05rem;
   }
+
   .library-detail {
     grid-template-columns: 1fr;
   }
+
   .library-detail__shape {
     max-width: 16rem;
     margin: 0 auto;

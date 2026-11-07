@@ -114,7 +114,7 @@ final class AdminContactsTest extends HttpTestCase
         $contact = $this->service(ContactData::class)->store(['name' => 'Visitor', 'email' => 'visitor@example.test', 'message' => $text]);
         $this->assertNotNull($contact);
         $this->db->prepare('UPDATE contacts SET submitted_at = ?, is_read = ? WHERE contact_id = ?')
-            ->execute([$submittedAt, (int)$read, $contact->contact_id]);
+            ->execute([$submittedAt, (int) $read, $contact->contact_id]);
 
         return $contact->contact_id;
     }

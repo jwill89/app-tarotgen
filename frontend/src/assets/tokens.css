@@ -12,11 +12,13 @@
   /* The theme is always dark. Say so, or the browser draws its own chrome —
      scrollbars, date/number pickers, autofill — light on the charcoal. */
   color-scheme: dark;
+
   /* Quiet scrollbars everywhere (inherited): a hairline-tone thumb, no track.
      Colour only — widths are untouched, so modal scroll-lock math is unchanged. */
   scrollbar-color: var(--myst-border-strong) transparent;
 
   /* ── Raw palette (neutral charcoal + gold/silver, one aqua pop) ─────────── */
+
   /* Backgrounds → surfaces, deepest to most raised. Neutral charcoal — no violet. */
   --myst-bg: #0b0b0f;
   --myst-bg-2: #101016;
@@ -25,18 +27,26 @@
   --myst-surface-2: #1c1c25; /* boxes, panels, inputs, tables */
   --myst-surface-3: #24242f; /* raised / hover */
   --myst-scrim: #06060a; /* below the background: the wash behind dialogs, used as a tint */
-  --myst-border: rgba(255, 255, 255, 0.1);
-  --myst-border-strong: rgba(255, 255, 255, 0.16);
+  --myst-border: rgb(255 255 255 / 10%);
+  --myst-border-strong: rgb(255 255 255 / 16%);
   --myst-hair-gold: color-mix(in srgb, var(--myst-gold) 38%, transparent); /* thin gold hairline */
 
   /* Text tiers — all SOLID and WCAG-AA (>=6:1) on every surface. The old
        opacity-based --myst-text-dim (0.45 white) FAILED AA at ~3.3:1; it is now
-       a solid #a3a1b2 (~6:1). Never use text below --myst-text-dim on a surface. */
+       a solid #a3a1b2 (~6:1). Never use text below --myst-text-dim on a surface,
+       but for Bulma's .has-text-grey (--myst-text-grey, below). */
   --myst-text: #ecebf2;
   --myst-text-strong: #f6f5fb;
   --myst-text-muted: #b9b7c6;
   --myst-text-dim: #a3a1b2;
   --myst-text-soft: var(--myst-text-dim);
+
+  /* Bulma's .has-text-grey, the quietest text (hints, empty states), which reads
+       it below. Bulma's own #69748c read 2.7–4.2:1 on these surfaces. Same hue
+       (222deg, 14%), lightened to the first step that reaches 4.5:1 on all of
+       them: 6–7:1 on the page and panels, 5.4:1 on --myst-surface-3, 4.55:1 on
+       surface-3 under a 6% white hover, the lightest. */
+  --myst-text-grey: #929aad;
 
   /* Metals + the single pop. */
   --myst-gold: #c9a24b;
@@ -72,6 +82,7 @@
   --myst-heading-font: 'Crucial', Georgia, 'Times New Roman', serif;
 
   /* ── Bulma intent palette → reskin ─────────────────────── */
+
   /* Action semantics (used consistently across the app):
        primary = create/generate (now AQUA, the single pop), link = gold/utility,
        info = edit, success = save/submit/approve, danger = delete/reject,
@@ -82,6 +93,10 @@
   --bulma-link-h: 43deg;
   --bulma-link-s: 52%;
   --bulma-link-l: 52%;
+
+  /* Text on a gold fill (an is-link button) is dark ink, as on the aqua primary:
+     Bulma picked white for its own blue link, which reads at 2.4:1 on the gold. */
+  --bulma-link-invert-l: var(--bulma-link-05-l);
   --bulma-info-h: 205deg;
   --bulma-info-s: 52%;
   --bulma-info-l: 52%;
@@ -113,6 +128,7 @@
   --bulma-radius: 0.55rem;
   --bulma-radius-medium: 0.7rem;
   --bulma-radius-large: 0.9rem;
+
   /* Gold focus ring everywhere. */
   --bulma-focus-h: 43deg;
   --bulma-focus-s: 55%;
@@ -134,13 +150,14 @@
     --myst-surface: #fff;
     --myst-surface-2: #fff;
     --myst-surface-3: #f3f3f5;
-    --myst-border: rgba(0, 0, 0, 0.15);
-    --myst-border-strong: rgba(0, 0, 0, 0.3);
+    --myst-border: rgb(0 0 0 / 15%);
+    --myst-border-strong: rgb(0 0 0 / 30%);
 
     --myst-text: #1c1c22;
     --myst-text-strong: #000;
     --myst-text-muted: #4a4a55;
     --myst-text-dim: #5a5a66;
+    --myst-text-grey: #656f86; /* the same hue darkened: 5:1 on white, 4.5:1 on surface-3 */
 
     --myst-gold: #7a5b1c;
     --myst-gold-bright: #6a4e16;
@@ -169,23 +186,24 @@
 .button.is-warning:hover,
 .button.is-link:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 32%);
 }
 
 /* Outlined buttons get a subtler hover — no lift, just a gentle glow. */
 .button.is-outlined:hover {
   transform: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
 }
 
 .button:focus-visible {
-  box-shadow: 0 0 0 0.18rem hsla(43, 55%, 54%, 0.45);
+  box-shadow: 0 0 0 0.18rem hsl(43deg 55% 54% / 45%);
 }
 
 /* Headings: mystical display serif + strong text. */
 .title {
   color: var(--myst-text-strong);
   font-family: var(--myst-heading-font);
+
   /* Headings render in normal case. The display face has no real small-caps
        glyphs, so `font-variant-caps: small-caps` made the browser SYNTHESISE
        them by scaling capitals down — which thins the strokes of a
@@ -202,6 +220,13 @@
 .help {
   font-size: 0.875rem;
   color: var(--myst-text-muted);
+}
+
+/* Bulma writes its grey as a fixed #69748c (bulma-helpers.css, kept byte-identical
+   to upstream), under 4.5:1 on every surface on screen: the token above replaces
+   it, on screen and on paper. */
+.has-text-grey {
+  color: var(--myst-text-grey) !important;
 }
 
 /* Small grey inline hints (e.g. "tap to place", instructions) use is-size-7

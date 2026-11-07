@@ -15,8 +15,7 @@ class AdminContactController extends AbstractController
 {
     public function __construct(
         private readonly ContactRepository $contacts,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Get(
         path: '/admin/contacts',
@@ -85,7 +84,7 @@ class AdminContactController extends AbstractController
     )]
     public function updateContact(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $contact_id = (int)($args['contact_id'] ?? 0);
+        $contact_id = (int) ($args['contact_id'] ?? 0);
 
         if ($contact_id < 1) {
             return $response->withJson(['error' => 'Invalid contact ID'], 400);
@@ -98,7 +97,7 @@ class AdminContactController extends AbstractController
         $params = $this->parsedBody($request);
 
         if (array_key_exists('is_read', $params)) {
-            $this->contacts->markRead($contact_id, (bool)$params['is_read']);
+            $this->contacts->markRead($contact_id, (bool) $params['is_read']);
         }
 
         return $response->withJson(['success' => true]);

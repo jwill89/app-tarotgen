@@ -66,7 +66,7 @@ const navGroups = computed<NavGroup[]>(() => [
       {
         to: 'admin-deck-system-submissions',
         label: 'Deck System Submissions',
-        icon: byPrefixAndName.fad['inbox'],
+        icon: byPrefixAndName.fad.inbox,
         // Waiting for review, so a badge like unread contacts.
         count: counts.value.pendingDeckSystems,
         badge: true,
@@ -74,7 +74,7 @@ const navGroups = computed<NavGroup[]>(() => [
       {
         to: 'admin-special-cards',
         label: 'Special Cards',
-        icon: byPrefixAndName.fad['sparkles'],
+        icon: byPrefixAndName.fad.sparkles,
         count: counts.value.specialCards,
       },
       {
@@ -86,7 +86,7 @@ const navGroups = computed<NavGroup[]>(() => [
       {
         to: 'admin-spread-submissions',
         label: 'Spread Submissions',
-        icon: byPrefixAndName.fad['inbox'],
+        icon: byPrefixAndName.fad.inbox,
         // Waiting for review, so a badge like unread contacts.
         count: counts.value.pendingSpreads,
         badge: true,
@@ -100,19 +100,19 @@ const navGroups = computed<NavGroup[]>(() => [
       {
         to: 'admin-readings',
         label: 'Readings',
-        icon: byPrefixAndName.fad['scroll'],
+        icon: byPrefixAndName.fad.scroll,
         count: counts.value.readings,
       },
       {
         to: 'admin-users',
         label: 'Users',
-        icon: byPrefixAndName.fad['users'],
+        icon: byPrefixAndName.fad.users,
         count: counts.value.users,
       },
       {
         to: 'admin-contacts',
         label: 'Contacts',
-        icon: byPrefixAndName.fad['envelope'],
+        icon: byPrefixAndName.fad.envelope,
         count: counts.value.unreadContacts,
         badge: true,
       },
@@ -320,15 +320,18 @@ onMounted(async () => {
   vertical-align: middle;
   font-size: 0.6em;
   font-weight: 600;
+
   /* A button (it opens the changelog) that still reads as the version tag. */
   border: 0;
   font-family: inherit;
   cursor: pointer;
   transition: color 0.15s ease;
 }
+
 .app-version:hover {
   color: var(--myst-gold);
 }
+
 .app-version:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
@@ -362,10 +365,12 @@ onMounted(async () => {
   text-transform: uppercase;
   color: var(--myst-text-dim);
 }
+
 .admin-nav-group .icon {
   color: var(--myst-gold);
   font-size: 0.8rem;
 }
+
 .admin-nav-group:first-child {
   padding-top: 0.35rem;
 }
@@ -382,6 +387,7 @@ onMounted(async () => {
     background-color 0.15s ease,
     color 0.15s ease;
 }
+
 .admin-nav-item .nav-icon {
   flex: none;
   width: 1.25em;
@@ -389,15 +395,18 @@ onMounted(async () => {
   justify-content: center;
   color: var(--myst-gold);
 }
+
 .admin-nav-item .nav-label {
   flex: 1 1 auto;
 }
+
 .admin-nav-item .nav-count {
   flex: none;
   color: var(--myst-text-dim);
   font-variant-numeric: tabular-nums;
   font-size: 0.85rem;
 }
+
 .admin-nav-item .nav-badge {
   flex: none;
   background: var(--myst-aqua);
@@ -408,13 +417,16 @@ onMounted(async () => {
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
 }
+
 .admin-nav-item:hover {
   background: color-mix(in srgb, var(--myst-gold) 10%, transparent);
   color: var(--myst-text-strong);
 }
+
 .admin-nav-item:hover .nav-label {
   color: var(--myst-text-strong);
 }
+
 .admin-nav-item:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
@@ -434,10 +446,11 @@ onMounted(async () => {
 }
 
 /* Stack the console on narrow screens. */
-@media screen and (max-width: 768px) {
+@media screen and (width <= 768px) {
   .admin-console {
     flex-direction: column;
   }
+
   .admin-nav {
     position: static;
     flex-basis: auto;

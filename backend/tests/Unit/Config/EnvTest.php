@@ -159,7 +159,7 @@ final class EnvTest extends TestCase
 
     private function envFile(string $contents): string
     {
-        $file = (string)tempnam(sys_get_temp_dir(), 'tarot-env');
+        $file = (string) tempnam(sys_get_temp_dir(), 'tarot-env');
         file_put_contents($file, $contents);
         $this->files[] = $file;
         return $file;

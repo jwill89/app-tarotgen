@@ -41,11 +41,17 @@ export function monthWeeks(month: string): (string | null)[][] {
   const length = new Date(y, m, 0).getDate()
 
   const cells: (string | null)[] = Array.from({ length: lead }, () => null)
-  for (let d = 1; d <= length; d++) cells.push(`${String(y)}-${pad(m)}-${pad(d)}`)
-  while (cells.length % 7 !== 0) cells.push(null)
+  for (let d = 1; d <= length; d++) {
+    cells.push(`${String(y)}-${pad(m)}-${pad(d)}`)
+  }
+  while (cells.length % 7 !== 0) {
+    cells.push(null)
+  }
 
   const weeks: (string | null)[][] = []
-  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+  for (let i = 0; i < cells.length; i += 7) {
+    weeks.push(cells.slice(i, i + 7))
+  }
   return weeks
 }
 
@@ -69,9 +75,13 @@ export function monthCalendar(month: string, cards: DailyCard[]): (CalendarDay |
   const byDay = new Map(cards.map((c) => [c.day, c]))
   return monthWeeks(month).map((week) =>
     week.map((day): CalendarDay | null => {
-      if (day === null) return null
+      if (day === null) {
+        return null
+      }
       const card = byDay.get(day)
-      if (!card) return { day, status: 'empty' }
+      if (!card) {
+        return { day, status: 'empty' }
+      }
       return isKept(card) ? { day, status: 'drawn', card } : { day, status: 'deleted' }
     }),
   )

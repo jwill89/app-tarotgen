@@ -7,9 +7,7 @@ use Tarot\Structure\PluginToken;
 
 readonly class PluginTokenRepository
 {
-    public function __construct(private PluginTokenData $data)
-    {
-    }
+    public function __construct(private PluginTokenData $data) {}
 
     public function store(int $userId, string $tokenHash, string $label, string $scope, ?string $expiresAt): int
     {

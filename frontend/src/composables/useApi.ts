@@ -40,7 +40,9 @@ export function useAdminApi() {
       return res
     }
 
-    if (successMessage) toastSuccess(successMessage)
+    if (successMessage) {
+      toastSuccess(successMessage)
+    }
     return res
   }
 
@@ -84,7 +86,9 @@ export function useAdminApi() {
   // 204 is a success, not the falsy `null` that a failure returns.
   async function del<T = unknown>(path: string, successMessage?: string): Promise<T | null> {
     const res = await requestResult<T>(path, { method: 'DELETE' }, successMessage)
-    if (!res.ok) return null
+    if (!res.ok) {
+      return null
+    }
     return (res.data ?? true) as T
   }
 

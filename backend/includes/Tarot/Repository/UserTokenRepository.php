@@ -7,9 +7,7 @@ use Tarot\Structure\UserToken;
 
 readonly class UserTokenRepository
 {
-    public function __construct(private UserTokenData $data)
-    {
-    }
+    public function __construct(private UserTokenData $data) {}
 
     public function store(int $userId, string $type, string $tokenHash, string $expiresAt): bool
     {

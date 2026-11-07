@@ -7,9 +7,7 @@ use Tarot\Structure\SpecialCard;
 
 readonly class SpecialCardRepository
 {
-    public function __construct(private SpecialCardData $data)
-    {
-    }
+    public function __construct(private SpecialCardData $data) {}
 
     /**
      * @param list<int> $card_ids

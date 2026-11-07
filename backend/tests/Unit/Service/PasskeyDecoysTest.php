@@ -79,7 +79,7 @@ final class PasskeyDecoysTest extends TestCase
 
         new PasskeyDecoys($this->keyFile())->forEmail('nobody@example.test');
 
-        $key = (string)file_get_contents($this->keyFile());
+        $key = (string) file_get_contents($this->keyFile());
         $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $key);
         new PasskeyDecoys($this->keyFile())->forEmail('somebody@example.test');
         $this->assertSame($key, file_get_contents($this->keyFile()));
@@ -93,12 +93,12 @@ final class PasskeyDecoysTest extends TestCase
 
         new PasskeyDecoys($this->keyFile())->forEmail('nobody@example.test');
 
-        $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', (string)file_get_contents($this->keyFile()));
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', (string) file_get_contents($this->keyFile()));
     }
 
     public function testAKeyThatCannotBeKeptStillGivesStandIns(): void
     {
-        $log = (string)tempnam(sys_get_temp_dir(), 'tarot-decoys-log');
+        $log = (string) tempnam(sys_get_temp_dir(), 'tarot-decoys-log');
         $previous = ini_set('error_log', $log);
         try {
             $ids = new PasskeyDecoys($this->dir . '/missing-dir/decoy.key')->forEmail('nobody@example.test');
@@ -107,7 +107,7 @@ final class PasskeyDecoysTest extends TestCase
         }
 
         $this->assertContains(strlen($ids[0]), [16, 20, 32, 64]);
-        $this->assertStringContainsString('could not create', (string)file_get_contents($log));
+        $this->assertStringContainsString('could not create', (string) file_get_contents($log));
         unlink($log);
     }
 

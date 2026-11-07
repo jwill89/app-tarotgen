@@ -7,9 +7,7 @@ use Tarot\Structure\Spread;
 
 readonly class SpreadRepository
 {
-    public function __construct(private SpreadData $data)
-    {
-    }
+    public function __construct(private SpreadData $data) {}
 
     /**
      * @return list<Spread>|Spread

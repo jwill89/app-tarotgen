@@ -83,7 +83,7 @@ class GoogleOAuthService
         // loosely-typed payload upward.
         return [
             'access_token' => $data['access_token'],
-            'id_token'     => (string)($data['id_token'] ?? ''),
+            'id_token'     => (string) ($data['id_token'] ?? ''),
         ];
     }
 
@@ -118,8 +118,8 @@ class GoogleOAuthService
             // Only a real true (or "true", as some Google endpoints spell booleans):
             // a (bool) cast read the string "false" as verified.
             'email_verified' => in_array($data['email_verified'] ?? false, [true, 'true'], true),
-            'name'           => (string)($data['name'] ?? ''),
-            'picture'        => (string)($data['picture'] ?? ''),
+            'name'           => (string) ($data['name'] ?? ''),
+            'picture'        => (string) ($data['picture'] ?? ''),
         ];
     }
 

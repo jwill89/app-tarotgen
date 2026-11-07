@@ -25,13 +25,15 @@ describe('useRecentReadings', () => {
     record(entry('b'))
     record(entry('a', { summary: '5 cards' }))
     expect(recent.value.map((r) => r.id)).toEqual(['a', 'b'])
-    expect(recent.value[0].summary).toBe('5 cards')
+    expect(recent.value[0]!.summary).toBe('5 cards')
   })
 
   it('caps the list at 12 entries', () => {
-    for (let i = 0; i < 15; i++) record(entry(`id${i}`))
+    for (let i = 0; i < 15; i++) {
+      record(entry(`id${i}`))
+    }
     expect(recent.value).toHaveLength(12)
-    expect(recent.value[0].id).toBe('id14')
+    expect(recent.value[0]!.id).toBe('id14')
   })
 
   it('persists to localStorage', () => {

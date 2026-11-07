@@ -12,7 +12,9 @@ let inFlight: Promise<void> | null = null
 
 export function useFavoriteSpreads() {
   function fetchFavorites(): Promise<void> {
-    if (inFlight) return inFlight
+    if (inFlight) {
+      return inFlight
+    }
     inFlight = (async () => {
       const res = await apiRequest<FavoriteSpread[]>(endpoints.account.favorites)
       if (res.ok) {
@@ -40,7 +42,9 @@ export function useFavoriteSpreads() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ spread_type: spreadType, spread_id: spreadId }),
     })
-    if (!res.ok) return false
+    if (!res.ok) {
+      return false
+    }
     favorites.value = [...favorites.value, { spread_type: spreadType, spread_id: spreadId }]
     return true
   }
@@ -52,7 +56,9 @@ export function useFavoriteSpreads() {
     const res = await apiRequest(endpoints.account.favoriteById(spreadType, spreadId), {
       method: 'DELETE',
     })
-    if (!res.ok) return false
+    if (!res.ok) {
+      return false
+    }
     favorites.value = favorites.value.filter(
       (f) => !(f.spread_type === spreadType && f.spread_id === spreadId),
     )
@@ -67,7 +73,9 @@ export function useFavoriteSpreads() {
       ? await removeFavorite(spreadType, spreadId)
       : await addFavorite(spreadType, spreadId)
     // Callers fire-and-forget (the star just doesn't change), so say it here.
-    if (!ok) useToasts().error("Couldn't update your favourite spreads. Please try again.")
+    if (!ok) {
+      useToasts().error("Couldn't update your favourite spreads. Please try again.")
+    }
     return ok
   }
 

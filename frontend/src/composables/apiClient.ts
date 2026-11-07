@@ -52,7 +52,9 @@ export type ApiResult<T> =
  * throws on an empty body) for the DELETE/PATCH endpoints that answer 204.
  */
 function hasNoBody(res: Response): boolean {
-  if (res.status === 204 || res.status === 205) return true
+  if (res.status === 204 || res.status === 205) {
+    return true
+  }
   // `headers` may be absent on hand-rolled test doubles; guard defensively.
   const headers = res.headers as Headers | undefined
   return headers?.get('content-length') === '0'

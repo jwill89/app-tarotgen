@@ -53,8 +53,9 @@ const cards = computed<PreviewCard[]>(() => {
 
   // Candidate number spots as a fraction of the card's half-size: centre
   // first, then edge midpoints, then corners.
+  const centre: [number, number] = [0, 0]
   const candidates: [number, number][] = [
-    [0, 0],
+    centre,
     [0, -0.68],
     [0, 0.68],
     [-0.68, 0],
@@ -67,7 +68,7 @@ const cards = computed<PreviewCard[]>(() => {
 
   return placed.map((c, i) => {
     const onTop = placed.filter((_, j) => j > i)
-    let chosen = candidates[0]
+    let chosen = centre
     for (const [fx, fy] of candidates) {
       const lx = fx * (cardW / 2)
       const ly = fy * (cardH / 2)
@@ -118,6 +119,7 @@ const cards = computed<PreviewCard[]>(() => {
 .spread-canvas--thumb {
   border-radius: 10px;
 }
+
 .spread-canvas--thumb .spread-card--editor {
   border-width: 1px;
   border-radius: 3px;

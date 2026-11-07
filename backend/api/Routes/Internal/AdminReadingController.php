@@ -15,8 +15,7 @@ class AdminReadingController extends AbstractController
 {
     public function __construct(
         private readonly ReadingRepository $readings,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Get(
         path: '/admin/readings',
@@ -45,8 +44,8 @@ class AdminReadingController extends AbstractController
     public function getReadings(Request $request, Response $response): Response|ResponseInterface
     {
         $params = $request->getQueryParams();
-        $limit  = max(1, (int)($params['limit'] ?? 50));
-        $offset = max(0, (int)($params['offset'] ?? 0));
+        $limit  = max(1, (int) ($params['limit'] ?? 50));
+        $offset = max(0, (int) ($params['offset'] ?? 0));
 
         return $response->withJson($this->readings->listAll($limit, $offset));
     }
@@ -116,7 +115,7 @@ class AdminReadingController extends AbstractController
     )]
     public function cleanReadings(Request $request, Response $response): Response|ResponseInterface
     {
-        $days = (int)($request->getQueryParams()['older_than_days'] ?? 0);
+        $days = (int) ($request->getQueryParams()['older_than_days'] ?? 0);
 
         $allowed = [7, 14, 30, 60, 90, 180, 365];
         if (!in_array($days, $allowed, true)) {

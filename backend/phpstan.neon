@@ -1,22 +1,23 @@
 includes:
+    # The shared PHPStan bar (shared-tooling's lint/php): level 8, full null-safety
+    # on top of the level-6 array value-type rules. Every nullable access must be
+    # guarded, and request/PDO/env values are narrowed to concrete types before use.
+    - ../shared/lint/php/phpstan.neon
     # Pre-existing findings are baselined so `composer stan` stays green and only
-    # *new* issues fail. Burn the baseline down over time; regenerate with:
+    # *new* issues fail: today one interface-mandated `string|false` signature.
+    # Burn it down over time; the bar for all new code is a clean run. Regenerate
+    # with:
     #   composer stan -- --generate-baseline
     - phpstan-baseline.neon
 
 parameters:
-    # Level 8 adds full null-safety on top of the level-6 array value-type rules:
-    # every nullable access must be guarded, and request/PDO/env values are
-    # narrowed to concrete types before use. The baseline holds only a handful of
-    # deliberately-defensive guards (GD dimension checks, malformed rate-limit
-    # entries) and an interface-mandated `string|false` signature. Burn it down
-    # over time; the bar for all new code is a clean level-8 run.
-    level: 8
     paths:
         - includes/Tarot
         - api
         - bin
         - tests
+        - db/migrations
+        - phinx.php
     # phpstan-strict-rules, phpstan-deprecation-rules and phpstan-phpunit load
     # through phpstan/extension-installer (AUDIT §6.2).
     ignoreErrors:

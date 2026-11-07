@@ -42,7 +42,7 @@ final class ClockTest extends TestCase
         $stmt = $this->db->prepare("SELECT CAST(strftime('%s', 'now') - strftime('%s', :t) AS INTEGER)");
         $stmt->execute([':t' => $timestamp]);
 
-        return abs((int)$stmt->fetchColumn());
+        return abs((int) $stmt->fetchColumn());
     }
 
     public function testNowMatchesSqliteCurrentTimestamp(): void
@@ -64,13 +64,13 @@ final class ClockTest extends TestCase
     {
         $today = $this->db->prepare("SELECT date('now')");
         $today->execute();
-        $this->assertSame((string)$today->fetchColumn(), Clock::today());
+        $this->assertSame((string) $today->fetchColumn(), Clock::today());
     }
 
     public function testDataLayerWritesUtcTimestamps(): void
     {
         // A real write path: registration stamps registered_at in PHP.
-        $this->db->exec((string)file_get_contents(dirname(__DIR__, 3) . '/db/schema.sql'));
+        $this->db->exec((string) file_get_contents(dirname(__DIR__, 3) . '/db/schema.sql'));
         $user = new UserData($this->db)->create('clock@example.test', 'Clock', 'not-a-real-hash');
 
         $this->assertNotNull($user);

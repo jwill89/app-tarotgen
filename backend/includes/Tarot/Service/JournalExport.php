@@ -48,8 +48,7 @@ final readonly class JournalExport
     public function __construct(
         private ReadingRepository $readings,
         private DeckRepository $decks,
-    ) {
-    }
+    ) {}
 
     /**
      * The journal as one JSON document (JournalExport in the API spec), pretty-
@@ -91,7 +90,7 @@ final readonly class JournalExport
         yield "\u{FEFF}" . self::csvLine(self::CSV_HEADER);
 
         foreach ($this->entries($userId) as $entry) {
-            $spreadName = $entry['spread'] === null ? 'Free Draw' : (string)($entry['spread']['name'] ?? '');
+            $spreadName = $entry['spread'] === null ? 'Free Draw' : (string) ($entry['spread']['name'] ?? '');
             $cards = $entry['cards'] === [] ? [null] : $entry['cards'];
 
             foreach ($cards as $card) {
@@ -105,7 +104,7 @@ final readonly class JournalExport
                     self::PRIVACY[$entry['visibility']] ?? $entry['visibility'],
                     $entry['deck_name'],
                     $spreadName,
-                    $card === null ? '' : (string)$card['position'],
+                    $card === null ? '' : (string) $card['position'],
                     $card['position_title'] ?? '',
                     $card['card_name'] ?? '',
                     $card === null ? '' : ($card['reversed'] ? 'Yes' : 'No'),
@@ -171,7 +170,7 @@ final readonly class JournalExport
             $info = [];
         }
 
-        $deckId = (int)($info['deck_id'] ?? 0);
+        $deckId = (int) ($info['deck_id'] ?? 0);
         $spread = is_array($info['spread'] ?? null) ? $info['spread'] : null;
 
         // A spread position holds the card drawn in its `order` (1-based); a card
@@ -179,7 +178,7 @@ final readonly class JournalExport
         $titles = [];
         foreach (is_array($spread['positions'] ?? null) ? $spread['positions'] : [] as $position) {
             if (is_array($position)) {
-                $titles[(int)($position['order'] ?? 0)] = (string)($position['title'] ?? '');
+                $titles[(int) ($position['order'] ?? 0)] = (string) ($position['title'] ?? '');
             }
         }
 
@@ -188,7 +187,7 @@ final readonly class JournalExport
             if (!is_array($card)) {
                 continue;
             }
-            $cardId = (int)($card['card_id'] ?? 0);
+            $cardId = (int) ($card['card_id'] ?? 0);
             $name = $card['card_name'] ?? null;
             $cards[] = [
                 'position'       => $i + 1,
@@ -197,7 +196,7 @@ final readonly class JournalExport
                 // As the reading page names it: an extra card nobody has named yet
                 // is stored without a name.
                 'card_name'      => is_string($name) && $name !== '' ? $name : "Card #{$cardId}",
-                'reversed'       => (bool)($card['reversed'] ?? false),
+                'reversed'       => (bool) ($card['reversed'] ?? false),
             ];
         }
 

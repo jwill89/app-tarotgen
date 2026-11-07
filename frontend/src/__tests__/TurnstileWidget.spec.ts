@@ -45,12 +45,12 @@ async function mountWidget() {
   return { widget, token, enabled, shown }
 }
 
-// Scripts the widget adds to <head>. happy-dom refuses to fetch scripts and fails
-// them at once, so they are held back here and the test says when one loads.
+// Scripts the widget adds to <head>. jsdom never fetches them, so they are held
+// back here and the test says when one loads or fails.
 let scripts: HTMLScriptElement[] = []
 
 async function settleScript(index: number, outcome: 'load' | 'error'): Promise<void> {
-  scripts[index].dispatchEvent(new Event(outcome))
+  scripts[index]!.dispatchEvent(new Event(outcome))
   await flushPromises()
 }
 
@@ -58,7 +58,9 @@ describe('TurnstileWidget', () => {
   beforeEach(() => {
     scripts = []
     vi.spyOn(document.head, 'appendChild').mockImplementation(<T extends Node>(node: T): T => {
-      if (node instanceof HTMLScriptElement) scripts.push(node)
+      if (node instanceof HTMLScriptElement) {
+        scripts.push(node)
+      }
       return node
     })
     delete window.turnstile
@@ -162,8 +164,8 @@ describe('TurnstileWidget', () => {
     await mountWidget()
 
     expect(scripts).toHaveLength(1)
-    expect(scripts[0].src).toBe(SCRIPT)
-    expect(scripts[0].async).toBe(true)
+    expect(scripts[0]!.src).toBe(SCRIPT)
+    expect(scripts[0]!.async).toBe(true)
     expect(turnstile.api.render).not.toHaveBeenCalled()
 
     window.turnstile = turnstile.api

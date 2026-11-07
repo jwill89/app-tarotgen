@@ -34,6 +34,6 @@ class Contact extends AbstractStructure
     /** Whether the message has been read (the stored column is a 0/1 int). */
     public function isRead(): bool
     {
-        return (bool)$this->is_read;
+        return (bool) $this->is_read;
     }
 }

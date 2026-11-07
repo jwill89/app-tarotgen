@@ -18,7 +18,8 @@ async function repoFile(path: string): Promise<string> {
 
 const retentionPhp = await repoFile('backend/scripts/retention.php')
 const readingInputPhp = await repoFile('backend/includes/Tarot/Service/ReadingInput.php')
-const backupScript = await repoFile('scripts/server/tarotgen-backup.sh')
+const deployScript = await repoFile('scripts/deploy.ps1')
+const sharedDeploy = await repoFile('shared/deploy/pwsh/SharedDeploy.psm1')
 
 /** The paragraphs under a numbered heading, as one string. */
 function section(heading: string): string {
@@ -30,7 +31,7 @@ function section(heading: string): string {
   return parts.join(' ')
 }
 
-// AGENTS.md: the retention window is stated here and enforced by the nightly
+// AGENTS.md: the retention window is stated here and enforced by the daily
 // jobs; change both together. These fail when one moves without the other.
 describe('PrivacyPolicyView', () => {
   afterEach(cleanup)
@@ -75,11 +76,18 @@ describe('PrivacyPolicyView', () => {
     expect(checked.sort()).toEqual(Object.keys(named).sort())
     const sharing = section('Data Sharing')
     expect(sharing).toContain('Cloudflare Turnstile check')
-    for (const phrase of Object.values(named)) expect(sharing).toContain(phrase)
+    for (const phrase of Object.values(named)) {
+      expect(sharing).toContain(phrase)
+    }
   })
 
-  it('states how long the nightly backups keep deleted data', async () => {
-    const keep = Number(/TAROT_BACKUP_KEEP:-(\d+)/.exec(backupScript)?.[1])
+  it('states how long the daily backups keep deleted data', async () => {
+    // The deploy installs the backup with SharedDeploy's Install-BackupTimer: its
+    // -Keep where the deploy passes one, else the module's default.
+    const keep = Number(
+      /Install-BackupTimer\b[^\n]*-Keep (\d+)/.exec(deployScript)?.[1] ??
+        /\[int\]\$Keep = (\d+)/.exec(sharedDeploy)?.[1],
+    )
     await mountWithApp(PrivacyPolicyView, { path: '/privacy' })
 
     expect(section('Data Retention')).toContain(`backups for up to ${keep} days`)

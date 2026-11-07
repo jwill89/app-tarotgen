@@ -1,7 +1,3 @@
-// @vitest-environment jsdom
-// DOMPurify (>=3.4.8) sanitizes correctly in real browsers and jsdom, but the
-// default happy-dom test DOM (even at its latest) mishandles its parsing and
-// fails to strip <script> — so this XSS-contract test runs under jsdom.
 import { describe, it, expect } from 'vitest'
 import { markdownExcerpt, renderMarkdown } from '@/utils/markdown'
 

@@ -140,7 +140,7 @@ final class Session
      */
     public static function userId(): ?int
     {
-        $id = (int)($_SESSION['user_id'] ?? 0);
+        $id = (int) ($_SESSION['user_id'] ?? 0);
         return $id > 0 ? $id : null;
     }
 
@@ -169,8 +169,8 @@ final class Session
     private static function sendCookie(int $lifetime): void
     {
         setcookie(
-            (string)session_name(),
-            (string)session_id(),
+            (string) session_name(),
+            (string) session_id(),
             [
                 'expires'  => time() + $lifetime,
                 'path'     => '/',

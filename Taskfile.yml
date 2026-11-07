@@ -1,0 +1,166 @@
+version: '3'
+
+# Day-to-day commands; `task` alone lists them. CI (.github/workflows/ci.yml) runs the same checks.
+
+# The tasks every repo shares, from the shared-tooling submodule (shared:lint:scripts,
+# shared:lint:md, shared:update and the rest).
+includes:
+  shared: ./shared/repo/Taskfile.yml
+
+tasks:
+  default:
+    silent: true
+    cmds:
+      - task --list
+
+  setup:
+    desc: Install the frontend's and backend's dependencies (run `git submodule update --init` first; the Font Awesome token goes in ~/.npmrc)
+    cmds:
+      # --prefer-offline: the Font Awesome Pro kit installs from npm's cache unless the lockfile changed.
+      - cd frontend && npm ci --prefer-offline
+      - cd backend && composer install
+
+  dev:
+    desc: Run the PHP API on :80 and the Vite dev server on :5173 together
+    deps: [dev:backend, dev:frontend]
+
+  dev:backend:
+    dir: backend
+    env:
+      # Composer stops a script after five minutes by default.
+      COMPOSER_PROCESS_TIMEOUT: '0'
+    cmds:
+      - composer dev
+
+  dev:frontend:
+    dir: frontend
+    cmds:
+      - npm run dev
+
+  gen:
+    desc: Regenerate backend/openapi.json from the PHP attributes, then the frontend's API types from it
+    cmds:
+      - cd backend && composer docs
+      - cd frontend && npm run gen:types
+
+  build:
+    desc: Build the SPA into frontend/dist
+    dir: frontend
+    cmds:
+      - npm run build
+
+  build:plugin:
+    desc: Build the FFXIV plugin in Release against this machine's Dalamud (XIVLauncher)
+    cmds:
+      - dotnet build plugin/TarotGen.Plugin/TarotGen.Plugin.csproj --configuration Release
+
+  test:
+    desc: Run every test - Vitest, PHPUnit, then the Playwright smoke run
+    aliases: [tests]
+    cmds:
+      - task: test:unit
+      - task: test:e2e
+
+  test:unit:
+    desc: Run the frontend (Vitest) and backend (PHPUnit) tests
+    aliases: [tests:unit]
+    cmds:
+      - task: test:frontend
+      - task: test:backend
+
+  test:frontend:
+    desc: Run the frontend's Vitest tests
+    aliases: [tests:frontend]
+    dir: frontend
+    cmds:
+      - npm test
+
+  test:backend:
+    desc: Run the backend's PHPUnit tests (unit and HTTP)
+    aliases: [tests:backend]
+    dir: backend
+    cmds:
+      - composer test
+
+  test:e2e:
+    desc: Run the Playwright suite (it builds the SPA) on the real API, on a throwaway database
+    aliases: [tests:e2e, test:smoke, tests:smoke]
+    dir: frontend
+    cmds:
+      - npm run test:e2e
+
+  lint:
+    desc: Lint, format-check, type-check, and statically analyse everything
+    cmds:
+      - task: lint:frontend
+      - task: lint:backend
+      - task: lint:plugin
+      - task: lint:scripts
+      - task: shared:lint:md
+      - task: shared:repo:check
+      - task: shared:version:check
+
+  lint:frontend:
+    dir: frontend
+    cmds:
+      - npm run type-check
+      - npm run lint
+      - npm run lint:css
+      - npm run knip
+      - npm run format:check
+
+  lint:backend:
+    dir: backend
+    cmds:
+      - composer normalize:check
+      - composer deps:check
+      - composer lint
+      - composer rector:check
+      - composer stan
+      # The committed openapi.json is what the PHP attributes make now.
+      - composer docs:check
+
+  lint:plugin:
+    cmds:
+      - dotnet format plugin/TarotGen.Plugin/TarotGen.Plugin.csproj --verify-no-changes
+
+  # PSScriptAnalyzer, with the shared settings, on every tracked script (the local
+  # deploy.config.ps1 is the owner's and untracked). Install it once with
+  # Install-PSResource PSScriptAnalyzer -Version 1.25.0 -Scope CurrentUser -TrustRepository
+  lint:scripts:
+    cmds:
+      - task: shared:lint:scripts
+
+  vuln:
+    desc: Check dependencies for known vulnerabilities
+    cmds:
+      - cd backend && composer audit
+      - cd frontend && npm audit --audit-level=high --omit=dev
+
+  check:
+    desc: Lint, audit, and run every test (CI also checks the generated files and coverage floors)
+    cmds:
+      - task: lint
+      - task: vuln
+      - task: test
+
+  deploy:frontend:
+    desc: Build and deploy the SPA, the script's default (pass flags after --, e.g. -- -SkipBuild)
+    aliases: [deploy]
+    cmds:
+      - pwsh -NoProfile -File scripts/deploy.ps1 -Target frontend {{.CLI_ARGS}}
+
+  deploy:backend:
+    desc: Deploy the PHP backend, run its migrations, then check the site (pass flags after --, e.g. -- -NoDbPull)
+    cmds:
+      - pwsh -NoProfile -File scripts/deploy.ps1 -Target backend {{.CLI_ARGS}}
+
+  deploy:both:
+    desc: Deploy the frontend and backend in one upload
+    cmds:
+      - pwsh -NoProfile -File scripts/deploy.ps1 -Target both {{.CLI_ARGS}}
+
+  deploy:plugin:
+    desc: Build the FFXIV plugin and publish it to the site's plugin repo
+    cmds:
+      - pwsh -NoProfile -File scripts/deploy.ps1 -Target plugin {{.CLI_ARGS}}

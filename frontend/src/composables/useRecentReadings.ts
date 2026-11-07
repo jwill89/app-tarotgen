@@ -32,7 +32,9 @@ function load(): RecentReading[] {
   // Untrusted localStorage JSON — treat as `unknown` and validate each entry.
   const raw = local.get<unknown>(STORAGE_KEYS.recentReadings, [])
   // Defend against malformed/old data shapes.
-  if (!Array.isArray(raw)) return []
+  if (!Array.isArray(raw)) {
+    return []
+  }
   return raw.filter((r) => r && typeof r.id === 'string' && r.id !== '').sort(byDateDesc)
 }
 
@@ -45,7 +47,9 @@ function persist(): void {
 export function useRecentReadings() {
   /** Add/refresh a reading, de-duplicated, sorted by reading date, and capped. */
   function record(entry: RecentReading): void {
-    if (!entry.id) return
+    if (!entry.id) {
+      return
+    }
     const without = recent.value.filter((r) => r.id !== entry.id)
     recent.value = [entry, ...without].sort(byDateDesc).slice(0, MAX_ENTRIES)
     persist()

@@ -73,7 +73,9 @@ describe('PluginDrawKeyView', () => {
         .mockReset()
         .mockImplementation((_el: HTMLElement, opts: Record<string, unknown>) => {
           const callback = opts.callback
-          if (typeof callback === 'function') solve = (token) => callback(token)
+          if (typeof callback === 'function') {
+            solve = (token) => callback(token)
+          }
           return 'widget-1'
         })
       turnstile.reset.mockReset()

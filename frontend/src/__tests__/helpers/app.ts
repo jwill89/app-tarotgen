@@ -15,7 +15,7 @@ export function testRouter(): Router {
 const webRouters = new Set<Router>()
 
 /**
- * testRouter on the window's own history (happy-dom's) instead of a memory one,
+ * testRouter on the window's own history (jsdom's) instead of a memory one,
  * for specs about Back: only there does vue-router keep the previous entry in
  * history.state, and window.history.back() fires the popstate it listens for.
  * Each starts afresh at `/` with no state; cleanup() stops it listening.
@@ -67,9 +67,13 @@ export async function mountWithApp<T>(
  * Vue patching nodes that are gone.
  */
 export async function cleanup(): Promise<void> {
-  for (const wrapper of mounted) wrapper.unmount()
+  for (const wrapper of mounted) {
+    wrapper.unmount()
+  }
   mounted.clear()
-  for (const router of webRouters) router.options.history.destroy()
+  for (const router of webRouters) {
+    router.options.history.destroy()
+  }
   webRouters.clear()
   await flushPromises()
   document.body.innerHTML = ''

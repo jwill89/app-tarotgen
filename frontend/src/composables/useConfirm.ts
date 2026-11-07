@@ -47,7 +47,9 @@ export function useConfirm() {
 
   /** Resolve the pending confirm() with the user's choice. */
   function settle(value: boolean): void {
-    if (!state.value.active) return
+    if (!state.value.active) {
+      return
+    }
     state.value = { ...state.value, active: false }
     resolver?.(value)
     resolver = null

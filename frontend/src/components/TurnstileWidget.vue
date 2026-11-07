@@ -18,8 +18,12 @@ const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render
 // Load the Turnstile script once per page, shared across any widget instances.
 let scriptPromise: Promise<void> | null = null
 function loadScript(): Promise<void> {
-  if (window.turnstile) return Promise.resolve()
-  if (scriptPromise) return scriptPromise
+  if (window.turnstile) {
+    return Promise.resolve()
+  }
+  if (scriptPromise) {
+    return scriptPromise
+  }
 
   scriptPromise = new Promise<void>((resolve, reject) => {
     const script = document.createElement('script')
@@ -38,7 +42,7 @@ function loadScript(): Promise<void> {
 </script>
 
 <script setup lang="ts">
-import { ref, toValue, onMounted, onBeforeUnmount } from 'vue'
+import { toValue, onMounted, onBeforeUnmount, useTemplateRef } from 'vue'
 import { apiFetch } from '@/composables/apiClient'
 import { endpoints } from '@/api/endpoints'
 
@@ -58,7 +62,7 @@ import { endpoints } from '@/api/endpoints'
 const token = defineModel<string>({ default: '' })
 const enabled = defineModel<boolean>('enabled', { default: false })
 
-const container = ref<HTMLDivElement | null>(null)
+const container = useTemplateRef<HTMLDivElement>('container')
 let widgetId: string | null = null
 
 onMounted(async () => {
@@ -79,7 +83,9 @@ onMounted(async () => {
   // Read the element again: the component may have unmounted while the script
   // loaded (TypeScript still assumes the check before the await holds).
   const el = toValue(container)
-  if (!window.turnstile || !el) return
+  if (!window.turnstile || !el) {
+    return
+  }
 
   widgetId = window.turnstile.render(el, {
     sitekey: siteKey,

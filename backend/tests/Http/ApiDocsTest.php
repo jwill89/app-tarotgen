@@ -26,7 +26,7 @@ final class ApiDocsTest extends HttpTestCase
         $this->assertSame(200, $first->getStatusCode());
         $this->assertStringContainsString(
             'src="' . ApiDocsController::SCALAR_BUNDLE . '" integrity="' . ApiDocsController::SCALAR_SRI . '"',
-            (string)$first->getBody()
+            (string) $first->getBody()
         );
 
         $policy = $first->getHeaderLine('Content-Security-Policy');

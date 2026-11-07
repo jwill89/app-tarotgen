@@ -43,7 +43,7 @@ $nonce = ContentSecurityPolicy::nonce();
 header(ContentSecurityPolicy::headerName(Env::get('CSP_MODE')) . ': ' . ContentSecurityPolicy::forShell($nonce));
 
 // Only a reading's own URL gets share meta (the rewrite leaves REQUEST_URI intact).
-$path = (string)parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+$path = (string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
 if (preg_match('#^/reading/([A-Za-z0-9]+)/?$#', $path, $m)) {
     try {
         $db = Connection::getInstance();

@@ -163,6 +163,6 @@ final class AccountFavoritesTest extends HttpTestCase
 
     private function pathId(mixed $id): string
     {
-        return is_int($id) || is_string($id) ? (string)$id : '';
+        return is_int($id) || is_string($id) ? (string) $id : '';
     }
 }

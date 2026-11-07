@@ -51,7 +51,7 @@ final class AdminDeckLifecycleTest extends HttpTestCase
             RecursiveIteratorIterator::CHILD_FIRST
         );
         foreach ($folders as $folder) {
-            rmdir((string)$folder);
+            rmdir((string) $folder);
         }
         rmdir($this->imageRoot);
 

@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    shared-tooling's base (shared/test/php/phpunit.xml.dist), with TarotGen's suites
+    and <source>: a warning, notice or deprecation fails the run, PHPUnit's own
+    included. PHPUnit can't extend another config, so a change to the base is copied
+    here. `composer test:coverage` writes the clover report and checks the floor.
+-->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
          bootstrap="vendor/autoload.php"
@@ -15,7 +21,8 @@
         <testsuite name="unit">
             <directory>tests/Unit</directory>
         </testsuite>
-        <!-- The whole app, request in, response out (tests/Http/HttpTestCase.php). -->
+        <!-- The whole app, request in, response out, on a real (in-memory) database
+             (tests/Http/HttpTestCase.php). -->
         <testsuite name="http">
             <directory>tests/Http</directory>
         </testsuite>

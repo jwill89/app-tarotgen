@@ -14,14 +14,10 @@ final class Connection
     private static PDO $conn;
 
     // Prevent New Object Instantiation
-    private function __construct()
-    {
-    }
+    private function __construct() {}
 
     // Prevent cloning
-    private function __clone()
-    {
-    }
+    private function __clone() {}
 
     public static function getInstance(): PDO
     {

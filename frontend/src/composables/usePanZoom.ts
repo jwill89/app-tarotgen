@@ -84,10 +84,14 @@ export function usePanZoom(opts?: { min?: number; max?: number; step?: number })
   }
 
   function onPanMove(e: PointerEvent) {
-    if (!panning) return
+    if (!panning) {
+      return
+    }
     const dx = e.clientX - startX
     const dy = e.clientY - startY
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      moved = true
+    }
     panX.value = startPanX + dx
     panY.value = startPanY + dy
     clampPan()

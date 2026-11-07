@@ -63,7 +63,9 @@ const readingNotesHtml = computed(() =>
 )
 
 const readingDeck = computed(() => {
-  if (!readingInfo.value) return null
+  if (!readingInfo.value) {
+    return null
+  }
   return deckLookup.value[readingInfo.value.deck_id] ?? null
 })
 
@@ -72,13 +74,17 @@ const cardBack = computed(() =>
 )
 
 const readingUrl = computed(() => {
-  if (!reading.value) return ''
+  if (!reading.value) {
+    return ''
+  }
   return 'https://tarotgen.io/reading/' + reading.value.reading_id
 })
 
 const readingCards = computed<ReadingCard[]>(() => {
   const info = readingInfo.value
-  if (!info?.draw) return []
+  if (!info?.draw) {
+    return []
+  }
   return info.draw.map((card) => {
     const urls = cardImageUrls(info.deck_id, card.card_id)
     return {
@@ -105,7 +111,9 @@ const expiresAt = computed(() => reading.value?.expires_at ?? null)
 const editing = ref(false)
 const editable = computed(() => {
   const r = reading.value
-  if (!r?.is_owner) return null
+  if (!r?.is_owner) {
+    return null
+  }
   return {
     reading_id: r.reading_id,
     reading_name: r.reading_name,
@@ -123,7 +131,9 @@ function onEdited(saved: AccountReading): void {
   editing.value = false
   toasts.success('Reading updated.')
   const current = reading.value
-  if (!current) return
+  if (!current) {
+    return
+  }
   reading.value = {
     ...current,
     reading_name: saved.reading_name,
@@ -154,7 +164,9 @@ const deckExtraCards = computed(() => readingDeck.value?.additional_cards ?? 0)
 // Cards drawn after a spread was placed sit at the end of the draw with no
 // position yet — surfaced as a prompt to open the editor and place them.
 const unplacedNewCount = computed(() => {
-  if (!spread.value) return 0
+  if (!spread.value) {
+    return 0
+  }
   return Math.max(0, drawnCount.value - spread.value.positions.length)
 })
 
@@ -164,6 +176,7 @@ const drawForm = reactive({ count: 1, useReversals: false, useAdditionalCards: f
 
 // Cards still available to draw from this deck (free-draw uses the system total).
 const maxDrawMore = computed(() => {
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a system of 0 cards falls back to 78 too, as NewReadingView's count does
   const base = readingDeck.value?.system_total_cards || 78
   const total = base + (drawForm.useAdditionalCards ? deckExtraCards.value : 0)
   return Math.max(0, total - drawnCount.value)
@@ -177,7 +190,9 @@ function openDrawMore() {
 }
 
 async function submitDrawMore() {
-  if (!reading.value) return
+  if (!reading.value) {
+    return
+  }
   const id = reading.value.reading_id
   drawing.value = true
   const res = await drawMore(
@@ -206,7 +221,9 @@ async function submitDrawMore() {
 }
 
 async function markFinal() {
-  if (!reading.value) return
+  if (!reading.value) {
+    return
+  }
   const ok = await confirm({
     title: 'Mark reading as final?',
     message:
@@ -214,7 +231,9 @@ async function markFinal() {
     confirmLabel: 'Mark Final',
     danger: true,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
   const res = await finalize(reading.value.reading_id)
   if (!res.ok) {
     toasts.error(res.error, { detail: res })
@@ -236,7 +255,9 @@ interface SpreadCard {
 
 // Pair each spread position (by order) with the drawn card at the matching index.
 const spreadCards = computed<SpreadCard[]>(() => {
-  if (!spread.value) return []
+  if (!spread.value) {
+    return []
+  }
   const cards = readingCards.value
   return [...spread.value.positions]
     .sort((a, b) => a.order - b.order)
@@ -309,7 +330,22 @@ function setActive(drawIndex: number) {
 }
 
 function clearActive() {
-  if (!flippingAll.value) activeIndex.value = null
+  if (!flippingAll.value) {
+    activeIndex.value = null
+  }
+}
+
+/**
+ * What a card's button is called. Face down it names only its place, so a
+ * screen reader can't give the card away before it is turned; face up it adds
+ * the card, as the caption and the details list do.
+ */
+function cardButtonLabel(order: number, title: string, card: ReadingCard, faceUp: boolean): string {
+  const place = title ? `${String(order)}, ${title}` : String(order)
+  if (!faceUp) {
+    return `Face-down card ${place}`
+  }
+  return `Card ${place}: ${card.card_name}${card.reversed ? ', reversed' : ''}`
 }
 
 function onSpreadCardClick(drawIndex: number) {
@@ -326,7 +362,9 @@ function onSpreadCardClick(drawIndex: number) {
 // Toggle: reveal every remaining card one-by-one, or — if all are already
 // revealed — flip them all back face-down (same flip animation either way).
 async function flipAll() {
-  if (flippingAll.value) return
+  if (flippingAll.value) {
+    return
+  }
   if (allFlipped.value) {
     flipped.value = new Set()
     activeIndex.value = null
@@ -358,7 +396,9 @@ function printReading() {
 
 function exportAt(scale: number) {
   showExportModal.value = false
-  if (!reading.value || !readingInfo.value) return
+  if (!reading.value || !readingInfo.value) {
+    return
+  }
   void exportReading({
     fileName: 'tarot-reading-' + reading.value.reading_id + (scale > 1 ? '-hires' : '') + '.png',
     readingId: reading.value.reading_id,
@@ -435,7 +475,9 @@ async function fetchReading(id: string) {
 
 async function unlock() {
   const id = route.params.id
-  if (typeof id !== 'string' || !id) return
+  if (typeof id !== 'string' || !id) {
+    return
+  }
   unlocking.value = true
   unlockError.value = ''
   const res = await unlockReading(id, unlockPassword.value)
@@ -455,7 +497,9 @@ async function unlock() {
 watch(
   () => route.params.id,
   (id) => {
-    if (typeof id !== 'string' || !id) return
+    if (typeof id !== 'string' || !id) {
+      return
+    }
     flipped.value = new Set()
     activeIndex.value = null
     showSpreadDetails.value = false
@@ -538,7 +582,7 @@ watch(
                   <dd v-else class="meta-url">
                     <span class="reading-url-text">{{ readingUrl }}</span>
                     <Tooltip text="Copy Reading URL">
-                      <button class="button is-small is-link" @click="copyReadingUrl">
+                      <button type="button" class="button is-small is-link" @click="copyReadingUrl">
                         <span class="icon is-small"
                           ><FontAwesomeIcon :icon="byPrefixAndName.fas['copy']"
                         /></span>
@@ -580,7 +624,7 @@ watch(
                   </dt>
                   <dd class="meta-privacy">
                     <span>{{ visibilityLabels[reading.visibility] }}</span>
-                    <button class="button is-small" @click="editing = true">
+                    <button type="button" class="button is-small" @click="editing = true">
                       <span class="icon is-small"
                         ><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']"
                       /></span>
@@ -646,13 +690,19 @@ watch(
 
               <!-- Free draw: actions sit under the reading details. -->
               <div v-if="!spread" class="buttons mt-3">
-                <button class="button is-primary" :disabled="flippingAll" @click="flipAll">
+                <button
+                  type="button"
+                  class="button is-primary"
+                  :disabled="flippingAll"
+                  @click="flipAll"
+                >
                   <span class="icon"
                     ><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-rotate']"
                   /></span>
                   <span>{{ allFlipped ? 'Flip All Back' : 'Flip All' }}</span>
                 </button>
                 <button
+                  type="button"
                   class="button is-link"
                   :class="{ 'is-loading': exporting }"
                   @click="showExportModal = true"
@@ -660,11 +710,16 @@ watch(
                   <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['image']" /></span>
                   <span>Save as Image</span>
                 </button>
-                <button class="button is-link" @click="printReading">
+                <button type="button" class="button is-link" @click="printReading">
                   <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['print']" /></span>
                   <span>Print</span>
                 </button>
-                <button v-if="canDrawMore" class="button is-link is-light" @click="openDrawMore">
+                <button
+                  v-if="canDrawMore"
+                  type="button"
+                  class="button is-link is-light"
+                  @click="openDrawMore"
+                >
                   <span class="icon">
                     <FontAwesomeLayers>
                       <FontAwesomeIcon :icon="byPrefixAndName.fas['cards']" />
@@ -677,7 +732,7 @@ watch(
                   <span>Draw More Cards</span>
                 </button>
                 <Tooltip v-if="isOwner && !isFinal" text="Permanently lock this reading">
-                  <button class="button is-light" @click="markFinal">
+                  <button type="button" class="button is-light" @click="markFinal">
                     <span class="icon"
                       ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']"
                     /></span>
@@ -727,23 +782,27 @@ watch(
               @focusin="setActive(item.drawIndex)"
               @focusout="clearActive"
             >
+              <!-- Named by cardButtonLabel; the face's alt stays empty until it is turned. -->
               <div
                 class="spread-flip"
                 role="button"
                 tabindex="0"
+                :aria-label="
+                  cardButtonLabel(item.order, item.title, item.card, flipped.has(item.drawIndex))
+                "
                 @click="onSpreadCardClick(item.drawIndex)"
                 @keydown.enter.prevent="onSpreadCardClick(item.drawIndex)"
                 @keydown.space.prevent="onSpreadCardClick(item.drawIndex)"
               >
                 <div class="spread-face spread-face--back">
-                  <img :src="cardBack?.thumb" alt="Card Back" />
-                  <span class="spread-order-badge">{{ item.order }}</span>
+                  <img :src="cardBack?.thumb" alt="" />
+                  <span class="spread-order-badge" aria-hidden="true">{{ item.order }}</span>
                 </div>
                 <div class="spread-face spread-face--reveal">
                   <img
                     :src="item.card.thumbUrl"
                     :class="{ reversed: item.card.reversed }"
-                    :alt="item.card.card_name"
+                    :alt="flipped.has(item.drawIndex) ? item.card.card_name : ''"
                     loading="lazy"
                   />
                   <!-- Print only (the caption names the card on screen): pairs the
@@ -782,28 +841,41 @@ watch(
                   @focusin="setActive(sc.drawIndex)"
                   @focusout="clearActive"
                 >
+                  <!-- Named by cardButtonLabel; the face's alt stays empty until it is turned. -->
                   <div
                     class="spread-flip"
                     role="button"
                     tabindex="0"
+                    :aria-label="
+                      cardButtonLabel(
+                        sc.position.order,
+                        sc.position.title,
+                        sc.card,
+                        flipped.has(sc.drawIndex),
+                      )
+                    "
                     @click="onSpreadCardClick(sc.drawIndex)"
                     @keydown.enter.prevent="onSpreadCardClick(sc.drawIndex)"
                     @keydown.space.prevent="onSpreadCardClick(sc.drawIndex)"
                   >
                     <div class="spread-face spread-face--back">
-                      <img :src="cardBack?.thumb" alt="Card Back" />
-                      <span class="spread-order-badge">{{ sc.position.order }}</span>
+                      <img :src="cardBack?.thumb" alt="" />
+                      <span class="spread-order-badge" aria-hidden="true">{{
+                        sc.position.order
+                      }}</span>
                     </div>
                     <div class="spread-face spread-face--reveal">
                       <img
                         :src="sc.card.thumbUrl"
                         :class="{ reversed: sc.card.reversed }"
-                        :alt="sc.card.card_name"
+                        :alt="flipped.has(sc.drawIndex) ? sc.card.card_name : ''"
                         loading="lazy"
                       />
-                      <span class="spread-order-badge spread-order-badge--reveal">{{
-                        sc.position.order
-                      }}</span>
+                      <span
+                        class="spread-order-badge spread-order-badge--reveal"
+                        aria-hidden="true"
+                        >{{ sc.position.order }}</span
+                      >
                     </div>
                   </div>
                 </div>
@@ -848,13 +920,19 @@ watch(
                 </div>
 
                 <div class="buttons mt-4">
-                  <button class="button is-primary" :disabled="flippingAll" @click="flipAll">
+                  <button
+                    type="button"
+                    class="button is-primary"
+                    :disabled="flippingAll"
+                    @click="flipAll"
+                  >
                     <span class="icon"
                       ><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-rotate']"
                     /></span>
                     <span>{{ allFlipped ? 'Flip All Back' : 'Flip All' }}</span>
                   </button>
                   <button
+                    type="button"
                     class="button is-link"
                     :class="{ 'is-loading': exporting }"
                     @click="showExportModal = true"
@@ -864,20 +942,25 @@ watch(
                     /></span>
                     <span>Save as Image</span>
                   </button>
-                  <button class="button is-link" @click="printReading">
+                  <button type="button" class="button is-link" @click="printReading">
                     <span class="icon"
                       ><FontAwesomeIcon :icon="byPrefixAndName.fas['print']"
                     /></span>
                     <span>Print</span>
                   </button>
-                  <button v-if="canDrawMore" class="button is-link is-light" @click="openDrawMore">
+                  <button
+                    v-if="canDrawMore"
+                    type="button"
+                    class="button is-link is-light"
+                    @click="openDrawMore"
+                  >
                     <span class="icon"
                       ><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']"
                     /></span>
                     <span>Draw More Cards</span>
                   </button>
                   <Tooltip v-if="isOwner && !isFinal" text="Permanently lock this reading">
-                    <button class="button is-light" @click="markFinal">
+                    <button type="button" class="button is-light" @click="markFinal">
                       <span class="icon"
                         ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']"
                       /></span>
@@ -1032,6 +1115,7 @@ watch(
   <LightboxOverlay
     v-if="lightboxIndex !== null && cardBack"
     :cards="readingCards"
+    :revealed="flipped"
     :card-back="cardBack"
     :initial-index="lightboxIndex"
     :deck-id="readingInfo?.deck_id ?? 0"
@@ -1046,13 +1130,13 @@ watch(
   >
     <p class="mb-4">Choose an image size:</p>
     <div class="export-options">
-      <button class="button export-option" @click="exportAt(1)">
+      <button type="button" class="button export-option" @click="exportAt(1)">
         <span class="export-option-main">
           <strong>Standard</strong>
           <span class="export-option-sub">Best for quick sharing · ~1600px wide</span>
         </span>
       </button>
-      <button class="button is-primary export-option" @click="exportAt(2)">
+      <button type="button" class="button is-primary export-option" @click="exportAt(2)">
         <span class="export-option-main">
           <strong>High resolution</strong>
           <span class="export-option-sub">Larger, sharper cards · ~3200px wide</span>
@@ -1104,8 +1188,9 @@ watch(
     </div>
 
     <template #footer>
-      <button class="button" @click="showDrawMore = false">Cancel</button>
+      <button type="button" class="button" @click="showDrawMore = false">Cancel</button>
       <button
+        type="button"
         class="button is-primary"
         :class="{ 'is-loading': drawing }"
         :disabled="drawing || maxDrawMore < 1 || drawForm.count < 1"
@@ -1208,6 +1293,7 @@ watch(
     display: block;
     margin: 0;
   }
+
   .columns > .column {
     width: auto;
     margin: 0;
@@ -1227,6 +1313,7 @@ watch(
     background: none;
     border: 0;
   }
+
   .reading-meta .meta-row {
     grid-template-columns: 7rem 1fr;
     padding: 0.15rem 0;
@@ -1239,19 +1326,24 @@ watch(
     transform: none !important;
     transition: none;
   }
+
   .spread-face--back {
     display: none;
   }
+
   .spread-face--reveal {
     transform: none;
   }
+
   .spread-face {
     box-shadow: none;
   }
+
   .spread-order-badge--reveal {
     opacity: 1;
     transition: none;
   }
+
   .spread-card.is-active .spread-flip,
   .reading-grid-card.is-active .spread-flip {
     outline: none;
@@ -1265,11 +1357,13 @@ watch(
     border: 1px solid var(--myst-border);
     break-inside: avoid;
   }
+
   .reading-grid {
     grid-template-columns: repeat(5, 1fr);
     gap: 0.75rem;
     margin-bottom: 1rem;
   }
+
   .reading-grid-card {
     break-inside: avoid;
   }
@@ -1279,6 +1373,7 @@ watch(
     border-collapse: collapse;
     margin-bottom: 1.25rem;
   }
+
   .reading-print-cards th,
   .reading-print-cards td {
     padding: 0.3rem 0.6rem 0.3rem 0;
@@ -1287,18 +1382,22 @@ watch(
     vertical-align: top;
     color: var(--myst-text);
   }
+
   .reading-print-cards th:first-child {
     width: 2.5rem;
   }
+
   .reading-print-cards th {
     font-size: 0.75rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--myst-text-muted);
   }
+
   .reading-print-cards tr {
     break-inside: avoid;
   }
+
   .reading-print-reversed {
     color: var(--myst-text-muted);
   }

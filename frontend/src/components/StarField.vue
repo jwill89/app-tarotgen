@@ -35,7 +35,7 @@ const stars: Star[] = Array.from({ length: COUNT }, () => {
     // Independent timing is what makes it read as twinkling, not pulsing.
     duration: rand(2.2, 6.5).toFixed(2) + 's',
     delay: (-rand(0, 8)).toFixed(2) + 's',
-    color: TINTS[Math.floor(Math.random() * TINTS.length)],
+    color: TINTS[Math.floor(Math.random() * TINTS.length)] ?? '#ffffff',
     // A quarter sit still so the sky isn't uniformly busy.
     twinkles: Math.random() > 0.25,
   }
@@ -76,7 +76,7 @@ const stars: Star[] = Array.from({ length: COUNT }, () => {
   position: absolute;
   border-radius: 50%;
   opacity: var(--star-opacity);
-  box-shadow: 0 0 3px rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 3px rgb(255 255 255 / 45%);
 }
 
 .star.is-twinkling {
@@ -92,6 +92,7 @@ const stars: Star[] = Array.from({ length: COUNT }, () => {
     opacity: calc(var(--star-opacity) * 0.2);
     transform: scale(0.6);
   }
+
   50% {
     opacity: var(--star-opacity);
     transform: scale(1);

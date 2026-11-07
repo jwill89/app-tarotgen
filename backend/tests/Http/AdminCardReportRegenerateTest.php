@@ -59,7 +59,7 @@ final class AdminCardReportRegenerateTest extends HttpTestCase
                 RecursiveIteratorIterator::CHILD_FIRST
             );
             foreach ($entries as $entry) {
-                $path = (string)$entry;
+                $path = (string) $entry;
                 is_dir($path) ? rmdir($path) : unlink($path);
             }
             rmdir($this->imageRoot);
@@ -182,7 +182,7 @@ final class AdminCardReportRegenerateTest extends HttpTestCase
         $row = $this->rows("SELECT report_id FROM card_reports WHERE card_id = {$cardId}");
         $this->assertCount(1, $row);
 
-        return (int)$row[0]['report_id'];
+        return (int) $row[0]['report_id'];
     }
 
     /** A small stand-in for a master scan. */
@@ -193,7 +193,7 @@ final class AdminCardReportRegenerateTest extends HttpTestCase
             mkdir($dir);
         }
         $image = imagecreatetruecolor(60, 103);
-        imagefill($image, 0, 0, (int)imagecolorallocate($image, 80, 40, 160));
+        imagefill($image, 0, 0, (int) imagecolorallocate($image, 80, 40, 160));
         imagepng($image, "{$dir}/{$file}");
     }
 

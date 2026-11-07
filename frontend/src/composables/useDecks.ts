@@ -14,8 +14,12 @@ export function useDecks() {
   // Decks rarely change within a session and are shared module-wide, so by
   // default we fetch them only once. Pass force = true to refresh on demand.
   function fetchDecks(force = false): Promise<void> {
-    if (!force && decks.value.length > 0) return Promise.resolve()
-    if (inFlight) return inFlight
+    if (!force && decks.value.length > 0) {
+      return Promise.resolve()
+    }
+    if (inFlight) {
+      return inFlight
+    }
 
     inFlight = (async () => {
       const res = await apiRequest<Deck[]>(endpoints.decks.list)

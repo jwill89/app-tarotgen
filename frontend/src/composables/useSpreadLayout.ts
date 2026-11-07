@@ -31,7 +31,9 @@ export function computeSpreadFit(
   positions: SpreadPosition[],
   cardAspect: number = CARD_ASPECT,
 ): SpreadFit {
-  if (positions.length === 0) return { scale: 1, cx: 50, cy: 50 }
+  if (positions.length === 0) {
+    return { scale: 1, cx: 50, cy: 50 }
+  }
 
   const halfH = (CARD_WIDTH_PCT * cardAspect) / 2
   const xs = positions.map((p) => p.x)

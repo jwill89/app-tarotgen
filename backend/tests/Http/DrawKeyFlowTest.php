@@ -56,7 +56,7 @@ final class DrawKeyFlowTest extends HttpTestCase
         $this->assertDocumented('post', '/plugin/draw-keys/authorize', 200, $approved);
         $this->assertIsString($approved['redirect_uri']);
         $this->assertStringStartsWith(self::REDIRECT . '?code=', $approved['redirect_uri']);
-        parse_str((string)parse_url($approved['redirect_uri'], PHP_URL_QUERY), $query);
+        parse_str((string) parse_url($approved['redirect_uri'], PHP_URL_QUERY), $query);
         $this->assertSame('xyz', $query['state']);
         $this->assertIsString($code = $query['code']);
 
@@ -263,7 +263,7 @@ final class DrawKeyFlowTest extends HttpTestCase
             'code_challenge' => $this->challenge, 'redirect_uri' => self::REDIRECT,
         ]));
         $this->assertIsString($approved['redirect_uri']);
-        parse_str((string)parse_url($approved['redirect_uri'], PHP_URL_QUERY), $query);
+        parse_str((string) parse_url($approved['redirect_uri'], PHP_URL_QUERY), $query);
         $this->assertIsString($query['code']);
         return $query['code'];
     }

@@ -11,7 +11,7 @@ async function mountButton(props: { disabled?: boolean; loading?: boolean } = {}
   const { wrapper } = await mountWithApp(TooltipProvider, {
     slots: {
       default: () =>
-        h(IconButton, { icon: byPrefixAndName.fas['trash'], label: 'Delete deck', ...props }),
+        h(IconButton, { icon: byPrefixAndName.fas.trash, label: 'Delete deck', ...props }),
     },
   })
   return { button: wrapper.getComponent(IconButton), element: wrapper.get('button') }

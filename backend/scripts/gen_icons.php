@@ -56,16 +56,16 @@ function composite($src, int $size, float $inner, string $path): void
         $t = $y / ($size - 1);
         $c = imagecolorallocate(
             $dst,
-            (int)round($r1 + ($r2 - $r1) * $t),
-            (int)round($g1 + ($g2 - $g1) * $t),
-            (int)round($b1 + ($b2 - $b1) * $t)
+            (int) round($r1 + ($r2 - $r1) * $t),
+            (int) round($g1 + ($g2 - $g1) * $t),
+            (int) round($b1 + ($b2 - $b1) * $t)
         );
         imageline($dst, 0, $y, $size, $y, $c);
     }
 
     // Scale the mark into the central safe zone and centre it.
-    $target = (int)round($size * $inner);
-    $offset = (int)round(($size - $target) / 2);
+    $target = (int) round($size * $inner);
+    $offset = (int) round(($size - $target) / 2);
     imagecopyresampled($dst, $src, $offset, $offset, 0, 0, $target, $target, imagesx($src), imagesy($src));
 
     imagepng($dst, $path);

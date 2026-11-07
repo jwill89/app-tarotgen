@@ -33,8 +33,7 @@ final readonly class ReadingShareMeta
         private ReadingRepository $readings,
         private DeckRepository $decks,
         private string $webRoot,
-    ) {
-    }
+    ) {}
 
     /**
      * The meta for reading $id, as an anonymous visitor may see it.
@@ -53,23 +52,23 @@ final readonly class ReadingShareMeta
             return self::meta(
                 $this->webRoot,
                 $id,
-                ($reading->reading_name ?? '') !== '' ? (string)$reading->reading_name : 'Protected Tarot Reading',
+                ($reading->reading_name ?? '') !== '' ? (string) $reading->reading_name : 'Protected Tarot Reading',
                 'This reading is password-protected on TarotGen.io.',
             );
         }
 
         $info = json_decode($reading->reading_info, true);
         $info = is_array($info) ? $info : [];
-        $deckId = (int)($info['deck_id'] ?? 0);
+        $deckId = (int) ($info['deck_id'] ?? 0);
         $count = is_array($info['draw'] ?? null) ? count($info['draw']) : 0;
-        $spread = is_array($info['spread'] ?? null) ? (string)($info['spread']['name'] ?? '') : '';
+        $spread = is_array($info['spread'] ?? null) ? (string) ($info['spread']['name'] ?? '') : '';
 
         $deck = $deckId > 0 ? $this->decks->get($deckId) : null;
         $deckName = $deck instanceof Deck ? $deck->name : '';
 
         // A custom reading name wins; otherwise describe the spread / card count.
         $title = match (true) {
-            ($reading->reading_name ?? '') !== '' => (string)$reading->reading_name,
+            ($reading->reading_name ?? '') !== '' => (string) $reading->reading_name,
             $spread !== '' => $spread . ' — Tarot Reading',
             $count > 0 => $count . '-Card Tarot Reading',
             default => 'Tarot Reading',

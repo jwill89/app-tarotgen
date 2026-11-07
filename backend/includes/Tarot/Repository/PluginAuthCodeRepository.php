@@ -7,9 +7,7 @@ use Tarot\Structure\PluginAuthCode;
 
 readonly class PluginAuthCodeRepository
 {
-    public function __construct(private PluginAuthCodeData $data)
-    {
-    }
+    public function __construct(private PluginAuthCodeData $data) {}
 
     public function store(int $userId, string $codeHash, string $codeChallenge, string $scope, string $expiresAt): bool
     {

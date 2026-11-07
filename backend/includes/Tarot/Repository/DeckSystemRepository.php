@@ -8,9 +8,7 @@ use Tarot\Structure\DeckSystemCard;
 
 readonly class DeckSystemRepository
 {
-    public function __construct(private DeckSystemData $data)
-    {
-    }
+    public function __construct(private DeckSystemData $data) {}
 
     /**
      * @return list<DeckSystem>|DeckSystem

@@ -40,7 +40,9 @@ async function submitCardReport(input: CardReportInput): Promise<CardReportOutco
     'Could not send your report. Please try again.',
   )
 
-  if (!result.ok) return { ok: false, error: result.error }
+  if (!result.ok) {
+    return { ok: false, error: result.error }
+  }
 
   reported.value = new Set(reported.value).add(cardKey(input.deckId, input.cardId))
   return { ok: true, alreadyReported: result.data?.status === 'already_reported' }

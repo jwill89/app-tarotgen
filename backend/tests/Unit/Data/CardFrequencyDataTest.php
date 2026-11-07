@@ -26,7 +26,7 @@ final class CardFrequencyDataTest extends TestCase
     {
         $this->db = new PDO('sqlite::memory:');
         $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $this->db->exec((string)file_get_contents(dirname(__DIR__, 3) . '/db/schema.sql'));
+        $this->db->exec((string) file_get_contents(dirname(__DIR__, 3) . '/db/schema.sql'));
         $this->db->exec("INSERT INTO users (user_id, email, password_hash, display_name, is_active) VALUES (1, 'a@example.test', 'x', 'A', 1), (2, 'b@example.test', 'x', 'B', 1)");
         $this->data = new CardFrequencyData($this->db);
     }

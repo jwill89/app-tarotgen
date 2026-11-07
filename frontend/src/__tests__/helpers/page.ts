@@ -1,5 +1,5 @@
 import type { Mock } from 'vitest'
-import { defineComponent, h, type Component } from 'vue'
+import { defineComponent, h, nextTick, type Component } from 'vue'
 import { flushPromises } from '@vue/test-utils'
 import { TooltipProvider } from 'reka-ui'
 import type { Router } from 'vue-router'
@@ -46,10 +46,11 @@ export function button(name: string, root: ParentNode = document.body): HTMLButt
   const found = [...root.querySelectorAll('button')].filter(
     (b) => b.getAttribute('aria-label') === name || text(b) === name,
   )
-  if (found.length !== 1) {
+  const [only] = found
+  if (!only || found.length !== 1) {
     throw new Error(`Expected one button named "${name}", found ${found.length}`)
   }
-  return found[0]
+  return only
 }
 
 /** Whether a button named `name` is on screen under `root`. */
@@ -64,9 +65,11 @@ export function link(name: string, root: ParentNode = document.body): HTMLAnchor
   const found = [...root.querySelectorAll('a')].filter(
     (a) => (a.getAttribute('aria-label') ?? text(a)) === name,
   )
-  if (found.length !== 1)
+  const [only] = found
+  if (!only || found.length !== 1) {
     throw new Error(`Expected one link named "${name}", found ${found.length}`)
-  return found[0]
+  }
+  return only
 }
 
 /** The page's title: its one h1. */
@@ -88,7 +91,9 @@ export function confirmDialog(): HTMLElement | null {
 /** Answer the open confirm dialog with its confirm or its cancel button. */
 export async function answerConfirm(choice: 'confirm' | 'cancel'): Promise<void> {
   const open = confirmDialog()
-  if (!open) throw new Error('No confirm dialog is open')
+  if (!open) {
+    throw new Error('No confirm dialog is open')
+  }
   const { confirmLabel, cancelLabel } = useConfirm().state.value
   await click(button(choice === 'confirm' ? confirmLabel : cancelLabel, open))
 }
@@ -112,8 +117,11 @@ export function row(cell: string, root: ParentNode = document.body): HTMLTableRo
     (tr): tr is HTMLTableRowElement =>
       tr instanceof HTMLTableRowElement && [...tr.cells].some((td) => text(td) === cell),
   )
-  if (found.length !== 1) throw new Error(`Expected one row with "${cell}", found ${found.length}`)
-  return found[0]
+  const [only] = found
+  if (!only || found.length !== 1) {
+    throw new Error(`Expected one row with "${cell}", found ${found.length}`)
+  }
+  return only
 }
 
 /** Each body row of the table under `root`, as its cells' text. */
@@ -126,8 +134,11 @@ export function tableRows(root: ParentNode = document.body): string[][] {
 /** The column header labelled `label` under `root` (click it to sort). */
 export function header(label: string, root: ParentNode = document.body): HTMLElement {
   const found = [...root.querySelectorAll('th')].filter((th) => text(th) === label)
-  if (found.length !== 1) throw new Error(`Expected one "${label}" header, found ${found.length}`)
-  return found[0]
+  const [only] = found
+  if (!only || found.length !== 1) {
+    throw new Error(`Expected one "${label}" header, found ${found.length}`)
+  }
+  return only
 }
 
 /**
@@ -151,7 +162,7 @@ function isRequestInit(value: unknown): value is RequestInit {
 
 /** One column of the table under `root`, top to bottom. */
 export function column(index: number, root: ParentNode = document.body): string[] {
-  return tableRows(root).map((cells) => cells[index])
+  return tableRows(root).map((cells) => cells[index] ?? '')
 }
 
 /**
@@ -162,23 +173,32 @@ export function labelled(name: string): HTMLElement {
   const labels = [...document.body.querySelectorAll('label')].filter(
     (l) => text(l) === name || text(l).replace(/\s*\*$/, '') === name,
   )
-  if (labels.length > 1) throw new Error(`Expected one label "${name}", found ${labels.length}`)
-  if (labels.length === 1) {
-    const control = labels[0].htmlFor ? document.getElementById(labels[0].htmlFor) : null
-    if (!control) throw new Error(`Label "${name}" names no control`)
+  if (labels.length > 1) {
+    throw new Error(`Expected one label "${name}", found ${labels.length}`)
+  }
+  const [label] = labels
+  if (label) {
+    const control = label.htmlFor ? document.getElementById(label.htmlFor) : null
+    if (!control) {
+      throw new Error(`Label "${name}" names no control`)
+    }
     return control
   }
   const named = [...document.body.querySelectorAll<HTMLElement>('[aria-label]')].filter(
     (el) => el.getAttribute('aria-label') === name && !(el instanceof HTMLButtonElement),
   )
-  if (named.length !== 1)
+  const [control] = named
+  if (!control || named.length !== 1) {
     throw new Error(`Expected one control named "${name}", found ${named.length}`)
-  return named[0]
+  }
+  return control
 }
 
 /** The current value of a text field. */
 export function valueOf(el: HTMLElement): string {
-  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return el.value
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+    return el.value
+  }
   throw new Error(`<${el.tagName.toLowerCase()}> is not a text field`)
 }
 
@@ -199,6 +219,21 @@ export async function enterNumber(el: HTMLElement, value: number): Promise<void>
   await flushPromises()
 }
 
+/**
+ * Send `target` a pointer event built as the browser builds one, then let the
+ * re-render settle. Not `trigger()`: it assigns each option to the event after
+ * building it, and jsdom's PointerEvent inherits `button`, `clientX` and the
+ * modifier keys read-only from MouseEvent.
+ */
+export async function pointer(
+  target: { element: Element },
+  type: 'pointerdown' | 'pointermove' | 'pointerup',
+  init: PointerEventInit = {},
+): Promise<void> {
+  target.element.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, ...init }))
+  await nextTick()
+}
+
 /** Open a BaseSelect by its trigger and pick the option labelled `label`. */
 export async function choose(trigger: HTMLElement, label: string): Promise<void> {
   // Reka's Select opens on pointerdown and picks an option on pointerup, not click.
@@ -207,7 +242,9 @@ export async function choose(trigger: HTMLElement, label: string): Promise<void>
   const option = [...document.body.querySelectorAll('[role="option"]')].find(
     (o) => text(o) === label,
   )
-  if (!option) throw new Error(`No option "${label}" in the open select`)
+  if (!option) {
+    throw new Error(`No option "${label}" in the open select`)
+  }
   option.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'mouse' }))
   await flushPromises()
 }
@@ -251,5 +288,11 @@ export async function nameCards(names: string[]): Promise<void> {
   await enterNumber(labelled('Total Cards'), names.length)
   await click(button('Expand All'))
   const inputs = cardTitleInputs()
-  for (const [i, name] of names.entries()) await typeInto(inputs[i], name)
+  for (const [i, name] of names.entries()) {
+    const input = inputs[i]
+    if (!input) {
+      throw new Error(`No title field for card ${i + 1}`)
+    }
+    await typeInto(input, name)
+  }
 }

@@ -26,8 +26,7 @@ readonly class AccountAuth
     public function __construct(
         private UserRepository $users,
         private PluginTokenService $pluginTokens,
-    ) {
-    }
+    ) {}
 
     public function __invoke(Request $request, Handler $handler): ResponseInterface
     {

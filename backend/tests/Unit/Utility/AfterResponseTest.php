@@ -25,7 +25,7 @@ final class AfterResponseTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->log = (string)tempnam(sys_get_temp_dir(), 'tarot-after-response-log');
+        $this->log = (string) tempnam(sys_get_temp_dir(), 'tarot-after-response-log');
         $this->savedErrorLog = ini_set('error_log', $this->log);
     }
 
@@ -91,7 +91,7 @@ final class AfterResponseTest extends TestCase
         $after->run();
 
         $this->assertTrue($ran);
-        $this->assertStringContainsString('[AfterResponse] task failed: SMTP went away', (string)file_get_contents($this->log));
+        $this->assertStringContainsString('[AfterResponse] task failed: SMTP went away', (string) file_get_contents($this->log));
     }
 
     public function testTheSessionIsWrittenBeforeTheResponseIsHandedOver(): void
@@ -100,9 +100,7 @@ final class AfterResponseTest extends TestCase
         $stored = new ArrayObject();
         session_set_save_handler(new readonly class ($stored) implements SessionHandlerInterface {
             /** @param ArrayObject<string,string> $stored */
-            public function __construct(private ArrayObject $stored)
-            {
-            }
+            public function __construct(private ArrayObject $stored) {}
 
             public function open(string $path, string $name): bool
             {
@@ -139,7 +137,7 @@ final class AfterResponseTest extends TestCase
         session_id('after-response-test');
         session_start();
         // Strict mode (Session::start() turns it on, process-wide) may have issued another id.
-        $id = (string)session_id();
+        $id = (string) session_id();
         $_SESSION['user_id'] = 7;
 
         $seen = [];

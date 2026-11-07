@@ -38,14 +38,18 @@ function descriptionField(): HTMLElement {
   const field = document.body.querySelector<HTMLElement>(
     'textarea[placeholder="Describe the spread. Markdown is supported."]',
   )
-  if (!field) throw new Error('No description field')
+  if (!field) {
+    throw new Error('No description field')
+  }
   return field
 }
 
 /** Place the first card still waiting in the editor's "Unplaced Cards" tray. */
 async function placeNextCard(): Promise<void> {
   const token = document.body.querySelector<HTMLElement>('button[title^="Place card"]')
-  if (!token) throw new Error('No unplaced card to place')
+  if (!token) {
+    throw new Error('No unplaced card to place')
+  }
   await click(token)
 }
 

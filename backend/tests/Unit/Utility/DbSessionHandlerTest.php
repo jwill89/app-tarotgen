@@ -58,7 +58,7 @@ final class DbSessionHandlerTest extends TestCase
         $stmt = $this->pdo->prepare('SELECT expires FROM sessions WHERE id = :id');
         $stmt->execute([':id' => hash('sha256', $rawId)]);
         $val = $stmt->fetchColumn();
-        return $val === false ? null : (int)$val;
+        return $val === false ? null : (int) $val;
     }
 
     /** The user_id stored for $rawId's row (null: none, or no row). */
@@ -67,14 +67,14 @@ final class DbSessionHandlerTest extends TestCase
         $stmt = $this->pdo->prepare('SELECT user_id FROM sessions WHERE id = :id');
         $stmt->execute([':id' => hash('sha256', $rawId)]);
         $val = $stmt->fetchColumn();
-        return $val === false || $val === null ? null : (int)$val;
+        return $val === false || $val === null ? null : (int) $val;
     }
 
     private function rowCount(): int
     {
         $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM sessions');
         $stmt->execute();
-        return (int)$stmt->fetchColumn();
+        return (int) $stmt->fetchColumn();
     }
 
     public function testUnknownSessionReadsEmptyAndIsInvalid(): void
@@ -153,7 +153,7 @@ final class DbSessionHandlerTest extends TestCase
         $_SESSION = ['user_id' => 7];
         $this->handler->write(self::SID, 'user_id|i:7;');
         $this->pdo->exec('UPDATE sessions SET user_id = NULL');
-        $fresh = (int)$this->expiresOf(self::SID);
+        $fresh = (int) $this->expiresOf(self::SID);
 
         // Well inside the throttle window, where only the expiry would be skipped.
         $this->assertTrue($this->handler->updateTimestamp(self::SID, 'user_id|i:7;'));

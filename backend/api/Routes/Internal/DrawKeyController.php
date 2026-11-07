@@ -34,8 +34,7 @@ class DrawKeyController extends AbstractController
     public function __construct(
         private readonly DrawKeyService $drawKeys,
         private readonly TurnstileService $turnstile,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Post(
         path: '/plugin/draw-keys/authorize',
@@ -75,10 +74,10 @@ class DrawKeyController extends AbstractController
         $limiter->hit($ip);
 
         $body        = $this->parsedBody($request);
-        $challenge   = trim((string)($body['code_challenge'] ?? ''));
-        $method      = strtoupper(trim((string)($body['code_challenge_method'] ?? Pkce::METHOD)));
-        $redirectUri = trim((string)($body['redirect_uri'] ?? ''));
-        $state       = (string)($body['state'] ?? '');
+        $challenge   = trim((string) ($body['code_challenge'] ?? ''));
+        $method      = strtoupper(trim((string) ($body['code_challenge_method'] ?? Pkce::METHOD)));
+        $redirectUri = trim((string) ($body['redirect_uri'] ?? ''));
+        $state       = (string) ($body['state'] ?? '');
 
         if ($challenge === '' || $method !== Pkce::METHOD) {
             return $response->withJson(['error' => 'A valid S256 code_challenge is required.'], 400);
@@ -92,7 +91,7 @@ class DrawKeyController extends AbstractController
         // The point of the page: a person, not a script, asks for the key. Checked
         // after the cheap checks, so a malformed request costs no call to Cloudflare.
         if ($this->turnstile->isConfigured()) {
-            $token = (string)($body['turnstile_token'] ?? '');
+            $token = (string) ($body['turnstile_token'] ?? '');
             if (!$this->turnstile->verify($token, $ip)) {
                 return $response->withJson(['error' => 'Captcha verification failed. Please try again.'], 400);
             }
@@ -138,7 +137,7 @@ class DrawKeyController extends AbstractController
         $limiter->hit($ip);
 
         $body = $this->parsedBody($request);
-        $key  = $this->drawKeys->exchangeCode((string)($body['code'] ?? ''), (string)($body['code_verifier'] ?? ''));
+        $key  = $this->drawKeys->exchangeCode((string) ($body['code'] ?? ''), (string) ($body['code_verifier'] ?? ''));
         if ($key === null) {
             return $response->withJson(['error' => 'Invalid or expired authorization code.'], 400);
         }

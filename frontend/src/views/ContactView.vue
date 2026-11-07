@@ -63,6 +63,7 @@ function resetForm() {
 
 <template>
   <section class="section">
+    <!-- eslint-disable-next-line vue/no-static-inline-styles -- the page's own width: a class would lose to Bulma's .container:not(…) breakpoint rules (four classes' weight) on wide screens -->
     <div class="container" style="max-width: 720px">
       <PageHeader
         title="Contact Us"
@@ -76,7 +77,7 @@ function resetForm() {
             Your message has been received and we'll get back to you if a reply is needed.
           </p>
           <div class="buttons">
-            <button class="button is-link" @click="resetForm">
+            <button type="button" class="button is-link" @click="resetForm">
               <span class="icon"
                 ><FontAwesomeIcon :icon="byPrefixAndName.fas['paper-plane']"
               /></span>

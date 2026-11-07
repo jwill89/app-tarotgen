@@ -21,8 +21,7 @@ final readonly class SignInMethods
     public function __construct(
         private UserRepository $users,
         private PasskeyRepository $passkeys,
-    ) {
-    }
+    ) {}
 
     public function refuseDisablingPasswordLogin(int $userId): ?string
     {

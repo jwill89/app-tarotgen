@@ -53,12 +53,16 @@ async function deleteSystem(system: DeckSystem): Promise<void> {
     confirmLabel: 'Delete',
     danger: true,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
   const result = await api.del(
     endpoints.admin.deckSystems.byId(system.deck_system_id),
     'Deck system deleted.',
   )
-  if (result) await loadSystems()
+  if (result) {
+    await loadSystems()
+  }
 }
 
 onMounted(() => {

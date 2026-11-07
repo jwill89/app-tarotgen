@@ -58,7 +58,9 @@ async function arrive(router: Router, name: string): Promise<void> {
  */
 async function browse(...paths: string[]): Promise<Router> {
   const router = testWebRouter()
-  for (const path of paths.slice(0, -1)) await router.push(path)
+  for (const path of paths.slice(0, -1)) {
+    await router.push(path)
+  }
   await mountPage(RouterView, { router, path: paths[paths.length - 1] })
   return router
 }
@@ -460,8 +462,9 @@ describe('admin DeckSystemEditorView', () => {
 
       await answerConfirm('cancel')
 
+      // The address is put back on the editor once the browser has gone forward.
+      await vi.waitFor(() => expect(window.location.pathname).toBe(EDIT))
       expect(router.currentRoute.value.name).toBe('admin-deck-system-edit')
-      expect(window.location.pathname).toBe(EDIT)
       expect(valueOf(labelled('Name'))).toBe('Petit Lenormand')
     })
 
@@ -549,6 +552,7 @@ describe('admin DeckSystemEditorView', () => {
       expect(reloadIsHeldBack()).toBe(true)
 
       await click(button('Cancel'))
+      await vi.waitFor(() => expect(unsavedPrompt()).toBe(true))
       await answerConfirm('confirm')
       await arrive(router, 'admin-deck-systems')
       // The editor is gone, and its question with it.

@@ -35,7 +35,7 @@ final class DrawKeyServiceTest extends TestCase
     {
         $this->db = new PDO('sqlite::memory:');
         $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $this->db->exec((string)file_get_contents(dirname(__DIR__, 3) . '/db/schema.sql'));
+        $this->db->exec((string) file_get_contents(dirname(__DIR__, 3) . '/db/schema.sql'));
         $this->data = new DrawKeyData($this->db);
         $this->service = new DrawKeyService(new DrawKeyRepository($this->data));
     }
@@ -95,7 +95,7 @@ final class DrawKeyServiceTest extends TestCase
     public function testOfTwoRedemptionsRacingForOneCodeOnlyOneStoresAKey(): void
     {
         $this->service->createCode('challenge');
-        $id = (int)$this->value('SELECT id FROM plugin_draw_keys');
+        $id = (int) $this->value('SELECT id FROM plugin_draw_keys');
 
         $this->assertTrue($this->data->issueKey($id, hash('sha256', 'first')));
         $this->assertFalse($this->data->issueKey($id, hash('sha256', 'second')));
@@ -147,14 +147,14 @@ final class DrawKeyServiceTest extends TestCase
         $repository = new DrawKeyRepository($this->data);
 
         $this->assertSame(1, $repository->purgeUnredeemedCodes(dryRun: true));
-        $this->assertSame(4, (int)$this->value('SELECT count(*) FROM plugin_draw_keys'));
+        $this->assertSame(4, (int) $this->value('SELECT count(*) FROM plugin_draw_keys'));
 
         $this->assertSame(1, $repository->purgeUnredeemedCodes());
         $this->assertSame(
             [hash('sha256', 'pending')],
             array_column($this->rows('SELECT code_hash FROM plugin_draw_keys WHERE key_hash IS NULL'), 'code_hash')
         );
-        $this->assertSame(2, (int)$this->value('SELECT count(*) FROM plugin_draw_keys WHERE key_hash IS NOT NULL'));
+        $this->assertSame(2, (int) $this->value('SELECT count(*) FROM plugin_draw_keys WHERE key_hash IS NOT NULL'));
         $this->assertSame(0, $repository->purgeUnredeemedCodes());
     }
 

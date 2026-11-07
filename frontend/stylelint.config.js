@@ -1,7 +1,8 @@
-// Stylelint checks the styles for mistakes and enforces the palette rule; it
-// doesn't format them (Prettier does). So it extends the *recommended* configs —
-// invalid values, duplicates, deprecated keywords — not stylelint-config-standard,
-// whose notation and blank-line rules disagreed with 667 lines of working CSS.
+// Stylelint checks the styles for mistakes and holds the palette rule; it doesn't
+// format them (Prettier does). The shared CSS rules (shared-tooling's lint/web), in
+// the .vue files' style blocks as well. A rule is turned off here with its reason, or
+// at the one line it doesn't fit with the reason beside it.
+import { paletteRules } from '@jwill89/lint-web/stylelint'
 
 // AUDIT §4.6: a palette colour is defined once, in tokens.css, and used through
 // var(--myst-*) (a tint is color-mix(in srgb, var(--myst-*) N%, transparent)).
@@ -11,18 +12,20 @@ const PALETTE_MESSAGE =
   'Use a tokens.css colour (var(--myst-*), color-mix() for a tint); only neutral white/black may be written inline (AUDIT §4.6)'
 
 export default {
-  extends: ['stylelint-config-recommended'],
+  extends: ['@jwill89/lint-web/stylelint'],
   ignoreFiles: [
     // A trimmed copy of Bulma's helper classes, vendored as-is.
     'src/assets/bulma-helpers.css',
   ],
   rules: {
-    'color-no-hex': [true, { message: PALETTE_MESSAGE }],
+    ...paletteRules(PALETTE_MESSAGE),
+    // A tint here is color-mix() over the token, so tokens.css keeps no channel
+    // triplets (--x-rgb) to write rgb(var(--x-rgb) / a) with, which the shared rule
+    // allows. Only pure white and black may be written as rgb()/hsl().
     'declaration-property-value-disallowed-list': [
       {
         '/.*/': [
-          // rgb()/rgba()/hsl()/hsla() unless the channels are pure white or black.
-          '/\\b(?:rgba?|hsla?)\\((?!\\s*(?:255[\\s,]+255[\\s,]+255|0[\\s,]+0[\\s,]+0)[\\s,/])/',
+          '/\\b(?:rgba?|hsla?)\\((?!\\s*(?:255[\\s,]+255[\\s,]+255|0[\\s,]+0[\\s,]+0)[\\s,/)])/',
         ],
       },
       { message: PALETTE_MESSAGE },
@@ -32,6 +35,9 @@ export default {
     // findings here were unrelated selectors. The one real clash, Bulma's table
     // hover out-ranking ours, is fixed in style.css.
     'no-descending-specificity': null,
+    // A typeface's name is written as the foundry writes it, in the heading-font
+    // token too (the shared rule covers --font-* tokens only).
+    'value-keyword-case': ['lower', { ignoreProperties: ['/^--font-/', '--myst-heading-font'] }],
   },
   overrides: [
     {
@@ -43,16 +49,13 @@ export default {
       },
     },
     {
+      // bulma.scss configures the Bulma modules it builds from (AGENTS.md §5).
       files: ['**/*.scss'],
       extends: ['stylelint-config-recommended-scss'],
       rules: {
         // Blank `//` lines separate the paragraphs of one comment.
         'scss/comment-no-empty': null,
       },
-    },
-    {
-      files: ['**/*.vue'],
-      extends: ['stylelint-config-recommended-vue'],
     },
   ],
 }

@@ -6,9 +6,7 @@ use Tarot\Data\FavoriteDeckData;
 
 readonly class FavoriteDeckRepository
 {
-    public function __construct(private FavoriteDeckData $data)
-    {
-    }
+    public function __construct(private FavoriteDeckData $data) {}
 
     /** @return int[] */
     public function listByUser(int $userId): array

@@ -18,9 +18,7 @@ use OpenApi\Spec as OAS;
  */
 class DailyCardController extends AbstractController
 {
-    public function __construct(private readonly DailyCardService $dailyCards)
-    {
-    }
+    public function __construct(private readonly DailyCardService $dailyCards) {}
 
     #[OAS\Operation\Get(
         path: '/account/daily-cards',

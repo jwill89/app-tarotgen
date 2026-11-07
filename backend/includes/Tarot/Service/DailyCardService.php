@@ -35,8 +35,7 @@ class DailyCardService
         private readonly DailyCardRepository $dailyCards,
         private readonly ReadingService $readingService,
         private readonly ReadingRepository $readings,
-    ) {
-    }
+    ) {}
 
     /**
      * The user's daily cards in a month ("Y-m").
@@ -70,7 +69,7 @@ class DailyCardService
 
         $deckId = $params['deck_id'] ?? null;
         if (is_string($deckId) && ctype_digit($deckId)) {
-            $deckId = (int)$deckId;
+            $deckId = (int) $deckId;
         }
         if (!is_int($deckId) || $deckId < 1) {
             throw new ApiException('Choose a deck to draw from.', 400);

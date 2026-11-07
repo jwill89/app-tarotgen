@@ -89,7 +89,7 @@ final class ActivationTest extends HttpTestCase
     private function tokenFrom(mixed $link): string
     {
         $this->assertIsString($link);
-        parse_str((string)parse_url($link, PHP_URL_QUERY), $query);
+        parse_str((string) parse_url($link, PHP_URL_QUERY), $query);
         $this->assertIsString($query['token'] ?? null);
         return $query['token'];
     }

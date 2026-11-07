@@ -83,7 +83,7 @@ final class GoogleOAuthServiceTest extends TestCase
 
         $this->assertStringStartsWith('https://accounts.google.com/o/oauth2/v2/auth?', $url);
 
-        parse_str((string)parse_url($url, PHP_URL_QUERY), $q);
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $q);
         $this->assertSame('client-123.apps.googleusercontent.com', $q['client_id']);
         $this->assertSame('https://tarotgen.io/api/auth/google/callback', $q['redirect_uri']);
         $this->assertSame('code', $q['response_type']);
@@ -132,9 +132,7 @@ final class GoogleOAuthServiceTest extends TestCase
     private function answeredBy(array $body): GoogleOAuthService
     {
         return new class (json_encode($body, JSON_THROW_ON_ERROR)) extends GoogleOAuthService {
-            public function __construct(private readonly string $body)
-            {
-            }
+            public function __construct(private readonly string $body) {}
 
             #[\Override]
             protected function send(string $url, array $options): string
@@ -153,7 +151,7 @@ final class GoogleOAuthServiceTest extends TestCase
         // The raw URL must not contain the unencoded reserved characters...
         $this->assertStringNotContainsString('state=a b/c+d=e', $url);
         // ...but it must decode back to exactly what we passed in.
-        parse_str((string)parse_url($url, PHP_URL_QUERY), $q);
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $q);
         $this->assertSame($state, $q['state']);
     }
 }

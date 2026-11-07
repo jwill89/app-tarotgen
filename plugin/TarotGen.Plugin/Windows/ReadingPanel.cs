@@ -1,9 +1,5 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
@@ -68,12 +64,12 @@ public sealed class ReadingPanel
     public void OpenReading(string idOrUrl)
     {
         this.codeBuffer = idOrUrl;
-        StartLoad(idOrUrl);
+        this.StartLoad(idOrUrl);
     }
 
     public void Draw()
     {
-        DrawContent();
+        this.DrawContent();
 
         // Process a card-click from this frame, then render the lightbox popup.
         if (this.openLightboxRequest)
@@ -82,7 +78,7 @@ public sealed class ReadingPanel
             this.openLightboxRequest = false;
         }
 
-        DrawLightbox();
+        this.DrawLightbox();
     }
 
     private void DrawContent()
@@ -93,7 +89,7 @@ public sealed class ReadingPanel
         using (ImRaii.Disabled(this.loading || string.IsNullOrWhiteSpace(this.codeBuffer)))
         {
             if (Ui.Button("Open"))
-                StartLoad(this.codeBuffer);
+                this.StartLoad(this.codeBuffer);
         }
 
         ImGui.Separator();
@@ -115,11 +111,11 @@ public sealed class ReadingPanel
 
         if (this.reading.Locked)
         {
-            DrawLocked();
+            this.DrawLocked();
             return;
         }
 
-        DrawReading(this.reading);
+        this.DrawReading(this.reading);
     }
 
     private void DrawLocked()
@@ -131,7 +127,7 @@ public sealed class ReadingPanel
         using (ImRaii.Disabled(this.loading || string.IsNullOrEmpty(this.passwordBuffer)))
         {
             if (Ui.Button("Unlock"))
-                StartUnlock(this.reading!.ReadingId, this.passwordBuffer);
+                this.StartUnlock(this.reading!.ReadingId, this.passwordBuffer);
         }
     }
 
@@ -188,9 +184,9 @@ public sealed class ReadingPanel
         }
 
         if (info.Spread != null && info.Spread.Positions.Count > 0)
-            DrawSpread(info);
+            this.DrawSpread(info);
         else
-            DrawGrid(info);
+            this.DrawGrid(info);
     }
 
     // ── Spread reading: positioned canvas + per-position details ──────────────
@@ -206,7 +202,7 @@ public sealed class ReadingPanel
             ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable);
         if (!table)
         {
-            DrawSpreadCanvas(info, positions, cards);
+            this.DrawSpreadCanvas(info, positions, cards);
             Ui.Section(FontAwesomeIcon.ListUl, "Card Details");
             DrawDetails(positions, cards);
             return;
@@ -217,7 +213,7 @@ public sealed class ReadingPanel
         ImGui.TableNextRow();
 
         ImGui.TableNextColumn();
-        DrawSpreadCanvas(info, positions, cards);
+        this.DrawSpreadCanvas(info, positions, cards);
 
         ImGui.TableNextColumn();
         Ui.Section(FontAwesomeIcon.ListUl, "Card Details");
@@ -229,19 +225,19 @@ public sealed class ReadingPanel
         var fit = SpreadLayout.ComputeFit(positions);
         var sizePct = SpreadLayout.CardSizePct(fit);
 
-        float scale = ImGuiHelpers.GlobalScale;
-        float avail = ImGui.GetContentRegionAvail().X;
-        float canvas = Math.Clamp(avail, 180f, 460f * scale);
+        var scale = ImGuiHelpers.GlobalScale;
+        var avail = ImGui.GetContentRegionAvail().X;
+        var canvas = Math.Clamp(avail, 180f, 460f * scale);
 
         var origin = ImGui.GetCursorScreenPos();
         ImGui.InvisibleButton("##spreadcanvas", new Vector2(canvas, canvas));
-        bool canvasClicked = ImGui.IsItemClicked();
+        var canvasClicked = ImGui.IsItemClicked();
 
         var dl = ImGui.GetWindowDrawList();
         dl.AddRect(origin, origin + new Vector2(canvas, canvas), 0x22FFFFFFu, 6f);
 
-        float cardWpx = sizePct.X / 100f * canvas;
-        float cardHpx = sizePct.Y / 100f * canvas;
+        var cardWpx = sizePct.X / 100f * canvas;
+        var cardHpx = sizePct.Y / 100f * canvas;
 
         Vector2 CenterOf(SpreadPosition p)
         {
@@ -249,7 +245,7 @@ public sealed class ReadingPanel
             return origin + new Vector2(proj.X / 100f * canvas, proj.Y / 100f * canvas);
         }
 
-        for (int i = 0; i < positions.Count; i++)
+        for (var i = 0; i < positions.Count; i++)
         {
             var p = positions[i];
             var center = CenterOf(p);
@@ -262,7 +258,7 @@ public sealed class ReadingPanel
                 SpreadDraw.RotatedRect(dl, center, cardWpx, cardHpx, p.Rotation, 0x55FFFFFFu); // loading placeholder
         }
 
-        for (int i = 0; i < positions.Count; i++)
+        for (var i = 0; i < positions.Count; i++)
         {
             var center = CenterOf(positions[i]);
             var badge = center + new Vector2(-cardWpx / 2f + 9f * scale, -cardHpx / 2f + 9f * scale);
@@ -273,12 +269,12 @@ public sealed class ReadingPanel
         if (canvasClicked)
         {
             var mouse = ImGui.GetMousePos();
-            for (int i = positions.Count - 1; i >= 0; i--)
+            for (var i = positions.Count - 1; i >= 0; i--)
             {
                 if (SpreadDraw.HitTest(mouse, CenterOf(positions[i]), cardWpx, cardHpx, positions[i].Rotation)
                     && i < cards.Count)
                 {
-                    OpenLightbox(info.DeckId, cards[i], positions[i].Title);
+                    this.OpenLightbox(info.DeckId, cards[i], positions[i].Title);
                     break;
                 }
             }
@@ -287,7 +283,7 @@ public sealed class ReadingPanel
 
     private static void DrawDetails(List<SpreadPosition> positions, List<DrawCard> cards)
     {
-        for (int i = 0; i < positions.Count; i++)
+        for (var i = 0; i < positions.Count; i++)
         {
             var p = positions[i];
             var card = i < cards.Count ? cards[i] : null;
@@ -321,20 +317,20 @@ public sealed class ReadingPanel
     private void DrawGrid(ReadingInfo info)
     {
         var deck = this.api.DeckById(info.DeckId);
-        double aw = deck?.CardAspectW ?? 5.0;
-        double ah = deck?.CardAspectH ?? 8.6;
-        float scale = ImGuiHelpers.GlobalScale;
-        float cardW = 100f * scale;
-        float cardH = (float)(cardW * (ah / aw));
-        float spacing = ImGui.GetStyle().ItemSpacing.X;
-        float avail = ImGui.GetContentRegionAvail().X;
-        int perRow = Math.Max(1, (int)(avail / (cardW + spacing)));
+        var aw = deck?.CardAspectW ?? 5.0;
+        var ah = deck?.CardAspectH ?? 8.6;
+        var scale = ImGuiHelpers.GlobalScale;
+        var cardW = 100f * scale;
+        var cardH = (float)(cardW * (ah / aw));
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var avail = ImGui.GetContentRegionAvail().X;
+        var perRow = Math.Max(1, (int)(avail / (cardW + spacing)));
 
-        for (int i = 0; i < info.Draw.Count; i++)
+        for (var i = 0; i < info.Draw.Count; i++)
         {
             if (i % perRow != 0)
                 ImGui.SameLine();
-            DrawGridCard(info.DeckId, i + 1, info.Draw[i], cardW, cardH);
+            this.DrawGridCard(info.DeckId, i + 1, info.Draw[i], cardW, cardH);
         }
     }
 
@@ -345,7 +341,7 @@ public sealed class ReadingPanel
         var size = new Vector2(cardW, cardH);
         var topLeft = ImGui.GetCursorScreenPos();
         ImGui.InvisibleButton($"##gcard{deckId}_{order}_{card.CardId}", size);
-        bool clicked = ImGui.IsItemClicked();
+        var clicked = ImGui.IsItemClicked();
 
         var dl = ImGui.GetWindowDrawList();
         var tex = this.textures.GetCard(deckId, card.CardId);
@@ -371,7 +367,7 @@ public sealed class ReadingPanel
         ImGui.EndGroup();
 
         if (clicked)
-            OpenLightbox(deckId, card);
+            this.OpenLightbox(deckId, card);
     }
 
     // ── Lightbox ──────────────────────────────────────────────────────────────
@@ -408,17 +404,17 @@ public sealed class ReadingPanel
         }
 
         // Once the report goes through the card counts as reported, which hides the form.
-        bool reported = this.reportedCards.ContainsKey((lb.DeckId, lb.CardId));
-        bool showReportForm = this.reportFormOpen && !reported;
+        var reported = this.reportedCards.ContainsKey((lb.DeckId, lb.CardId));
+        var showReportForm = this.reportFormOpen && !reported;
 
         var tex = this.textures.GetCard(lb.DeckId, lb.CardId);
         if (tex != null)
         {
             var nat = tex.Size;
             // Give the report form room below the card while it's open.
-            float maxH = vp.WorkSize.Y * (showReportForm ? 0.5f : 0.82f);
-            float maxW = vp.WorkSize.X * 0.9f;
-            float scale = Math.Min(maxH / Math.Max(1f, nat.Y), maxW / Math.Max(1f, nat.X));
+            var maxH = vp.WorkSize.Y * (showReportForm ? 0.5f : 0.82f);
+            var maxW = vp.WorkSize.X * 0.9f;
+            var scale = Math.Min(maxH / Math.Max(1f, nat.Y), maxW / Math.Max(1f, nat.X));
             var display = new Vector2(nat.X * scale, nat.Y * scale);
 
             var uvMin = this.lightboxShowReversed ? new Vector2(1, 1) : Vector2.Zero;
@@ -456,7 +452,7 @@ public sealed class ReadingPanel
         }
 
         if (showReportForm)
-            DrawReportForm(lb);
+            this.DrawReportForm(lb);
 
         if (!string.IsNullOrEmpty(this.reportCardStatus))
             ImGui.TextDisabled(this.reportCardStatus);
@@ -469,13 +465,13 @@ public sealed class ReadingPanel
     /// </summary>
     private void DrawReportForm(LightboxCard lb)
     {
-        float scale = ImGuiHelpers.GlobalScale;
-        float width = Math.Max(ImGui.GetContentRegionAvail().X, 340f * scale);
+        var scale = ImGuiHelpers.GlobalScale;
+        var width = Math.Max(ImGui.GetContentRegionAvail().X, 340f * scale);
 
         ImGui.Spacing();
         ImGui.Separator();
         Ui.Label("What's wrong?");
-        for (int i = 0; i < CardReportReason.All.Count; i++)
+        for (var i = 0; i < CardReportReason.All.Count; i++)
         {
             var option = CardReportReason.All[i];
             if (ImGui.RadioButton($"{option.Label}##reason{i}", this.reportReason == i))
@@ -498,11 +494,11 @@ public sealed class ReadingPanel
             new Vector2(width, ImGui.GetTextLineHeight() * 4.5f));
         ImGui.TextDisabled($"{this.reportDetails.Length} / {CardReportReason.MaxDetailsLength}");
 
-        bool canSend = chosen != null && (!chosen.RequiresDetails || !string.IsNullOrWhiteSpace(this.reportDetails));
+        var canSend = chosen != null && (!chosen.RequiresDetails || !string.IsNullOrWhiteSpace(this.reportDetails));
         using (ImRaii.Disabled(this.reportingCard || !canSend))
         {
             if (Ui.PrimaryButton("Send report") && chosen != null)
-                StartReportCard(lb.DeckId, lb.CardId, lb.Name, chosen.Key, this.reportDetails.Trim());
+                this.StartReportCard(lb.DeckId, lb.CardId, lb.Name, chosen.Key, this.reportDetails.Trim());
         }
 
         ImGui.SameLine();

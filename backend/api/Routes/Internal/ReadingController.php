@@ -66,8 +66,7 @@ class ReadingController extends AbstractController
         private readonly DrawKeyService $drawKeys,
         private readonly TurnstileService $turnstile,
         private readonly AdminAuth $admin,
-    ) {
-    }
+    ) {}
 
     /**
      * @param array<string,string> $args
@@ -190,7 +189,7 @@ class ReadingController extends AbstractController
                 ->withHeader('Cache-Control', 'private, no-store');
         }
 
-        $password = (string)(($this->parsedBody($request))['password'] ?? '');
+        $password = (string) (($this->parsedBody($request))['password'] ?? '');
         if (!$this->readings->verifyPassword($reading_id, $password)) {
             return $response->withJson(['error' => 'Incorrect password.'], 401);
         }
@@ -388,7 +387,7 @@ class ReadingController extends AbstractController
         $existingSpread = is_array($info['spread'] ?? null) ? $info['spread'] : null;
         $spreadName = Input::string($params['spread_name'] ?? null, 100);
         if ($spreadName === '') {
-            $existingName = (string)($existingSpread['name'] ?? '');
+            $existingName = (string) ($existingSpread['name'] ?? '');
             $spreadName = $existingName !== '' ? $existingName : 'Free Draw Placement';
         }
         $snappedPositions = [];
@@ -398,7 +397,7 @@ class ReadingController extends AbstractController
                 return $response->withJson(['error' => 'Invalid position data.'], 400);
             }
 
-            $rotation = (int)($pos['rotation'] ?? 0) % 360;
+            $rotation = (int) ($pos['rotation'] ?? 0) % 360;
             if ($rotation < 0) {
                 $rotation += 360;
             }
@@ -406,8 +405,8 @@ class ReadingController extends AbstractController
             $snapped = [
                 'order'    => $idx + 1,
                 'title'    => Input::string($pos['title'] ?? null, 100),
-                'x'        => max(0.0, min(100.0, round((float)($pos['x'] ?? 50), 2))),
-                'y'        => max(0.0, min(100.0, round((float)($pos['y'] ?? 50), 2))),
+                'x'        => max(0.0, min(100.0, round((float) ($pos['x'] ?? 50), 2))),
+                'y'        => max(0.0, min(100.0, round((float) ($pos['y'] ?? 50), 2))),
                 'rotation' => $rotation,
             ];
 
@@ -422,9 +421,9 @@ class ReadingController extends AbstractController
         }
 
         $info['spread'] = [
-            'spread_id'   => (int)($existingSpread['spread_id'] ?? 0),
+            'spread_id'   => (int) ($existingSpread['spread_id'] ?? 0),
             'name'        => $spreadName,
-            'description' => (string)($existingSpread['description'] ?? ''),
+            'description' => (string) ($existingSpread['description'] ?? ''),
             'positions'   => $snappedPositions,
         ];
 
@@ -655,7 +654,7 @@ class ReadingController extends AbstractController
         }
 
         $ip = $this->clientIp($request);
-        if ($this->turnstile->verify((string)($this->parsedBody($request)['turnstile_token'] ?? ''), $ip)) {
+        if ($this->turnstile->verify((string) ($this->parsedBody($request)['turnstile_token'] ?? ''), $ip)) {
             return null;
         }
 

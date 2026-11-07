@@ -80,7 +80,7 @@ describe('BaseSelect', () => {
     const { wrapper, trigger } = await mountSelect(2)
     await open(trigger)
 
-    const rws = [...document.body.querySelectorAll<HTMLElement>('[role="option"]')][0]
+    const rws = [...document.body.querySelectorAll<HTMLElement>('[role="option"]')][0]!
     rws.focus()
     rws.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
     await flushPromises()

@@ -35,14 +35,18 @@ function emptiedBy(done: () => boolean) {
 /** The open preview of the Sola Busca submission. */
 function preview(): HTMLElement {
   const open = dialog('Sola Busca')
-  if (!open) throw new Error('The preview is not open')
+  if (!open) {
+    throw new Error('The preview is not open')
+  }
   return open
 }
 
 /** The preview's footer, where its own buttons are (the corner × is also "Close"). */
 function previewFooter(): HTMLElement {
   const footer = preview().querySelector('footer')
-  if (!footer) throw new Error('The preview has no footer')
+  if (!footer) {
+    throw new Error('The preview has no footer')
+  }
   return footer
 }
 
@@ -192,7 +196,9 @@ describe('admin DeckSystemSubmissionsView', () => {
 
       await click(button('Preview', row('Sola Busca')))
       const corner = preview().querySelector<HTMLElement>('.myst-modal-close')
-      if (!corner) throw new Error('The preview has no corner ×')
+      if (!corner) {
+        throw new Error('The preview has no corner ×')
+      }
       await click(corner)
       expect(dialog('Sola Busca')).toBeNull()
     })

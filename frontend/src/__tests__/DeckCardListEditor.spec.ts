@@ -44,7 +44,9 @@ async function mountEditor(
   const titleInputs = () => wrapper.findAll('input[placeholder="e.g. The Fool"]')
   const button = (label: string) => {
     const found = wrapper.findAll('button').find((b) => b.text() === label)
-    if (!found) throw new Error(`No "${label}" button`)
+    if (!found) {
+      throw new Error(`No "${label}" button`)
+    }
     return found
   }
   return { wrapper, editor, model, rows, titleInputs, button }
@@ -79,7 +81,7 @@ describe('DeckCardListEditor', () => {
   it('edits the card in the bound array as the user types', async () => {
     const { model, rows, titleInputs, wrapper } = await mountEditor([emptyCard(1), emptyCard(2)])
 
-    await titleInputs()[0].setValue('The Magician')
+    await titleInputs()[0]!.setValue('The Magician')
     const keywords = wrapper
       .findAll('input')
       .find((i) => i.attributes('placeholder') === 'Keywords...')
@@ -114,10 +116,10 @@ describe('DeckCardListEditor', () => {
   it('opens and closes a card from its header', async () => {
     const { wrapper, rows } = await mountEditor([emptyCard(1), emptyCard(2)])
 
-    await wrapper.findAll('.deck-card-header')[1].trigger('click')
+    await wrapper.findAll('.deck-card-header')[1]!.trigger('click')
     expect(rows().map((r) => r.open)).toEqual([true, true])
 
-    await wrapper.findAll('.deck-card-header')[0].trigger('click')
+    await wrapper.findAll('.deck-card-header')[0]!.trigger('click')
     expect(rows().map((r) => r.open)).toEqual([false, true])
   })
 
@@ -129,7 +131,7 @@ describe('DeckCardListEditor', () => {
 
     expect(rows().map((r) => r.open)).toEqual([false, true])
     // Reka mounts the newly opened card a frame later; the focus waits for it.
-    await vi.waitFor(() => expect(document.activeElement).toBe(titleInputs()[0].element))
+    await vi.waitFor(() => expect(document.activeElement).toBe(titleInputs()[0]!.element))
   })
 
   it('closes the last card with Done', async () => {
@@ -162,7 +164,7 @@ describe('DeckCardListEditor', () => {
     await flushPromises()
 
     expect(rows().map((r) => r.open)).toEqual([false, false, true])
-    await vi.waitFor(() => expect(document.activeElement).toBe(titleInputs()[0].element))
+    await vi.waitFor(() => expect(document.activeElement).toBe(titleInputs()[0]!.element))
   })
 
   it('reports that every card is named, so a page can use it as its check', async () => {

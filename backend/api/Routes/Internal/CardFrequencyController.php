@@ -17,9 +17,7 @@ class CardFrequencyController extends AbstractController
     /** The longest window ?days takes: ten years, well past any account's age. */
     private const int MAX_DAYS = 3650;
 
-    public function __construct(private readonly CardFrequencyRepository $frequency)
-    {
-    }
+    public function __construct(private readonly CardFrequencyRepository $frequency) {}
 
     #[OAS\Operation\Get(
         path: '/account/card-frequency',

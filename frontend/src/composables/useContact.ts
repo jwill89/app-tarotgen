@@ -34,7 +34,9 @@ export function useContact() {
       SEND_FAILED,
     )
 
-    if (res.ok) return { ok: true }
+    if (res.ok) {
+      return { ok: true }
+    }
     return { ok: false, error: res.status === 429 ? RATE_LIMITED : res.error }
   }
 

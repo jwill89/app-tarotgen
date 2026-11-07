@@ -3,7 +3,10 @@ import { h } from 'vue'
 import SortableTh from '@/components/admin/SortableTh.vue'
 import { mountWithApp, cleanup } from './helpers/app'
 
-type Sort = { activeKey: string | null; dir: 'asc' | 'desc' }
+interface Sort {
+  activeKey: string | null
+  dir: 'asc' | 'desc'
+}
 
 // A <th> only parses inside a table row.
 async function mountHeader(sort: Sort) {

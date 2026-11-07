@@ -63,11 +63,19 @@ function collect(): ReadingOptionFields {
     querent: querent.value,
   }
   for (const [key, value] of Object.entries(text)) {
-    if (value.trim() !== '') fields[key] = value.trim()
+    if (value.trim() !== '') {
+      fields[key] = value.trim()
+    }
   }
-  if (tags.value.length > 0) fields.tags = tags.value
-  if (visibility.value === 'password') fields.password = password.value
-  if (props.notes && readingNotes.value !== '') fields.reading_notes = readingNotes.value
+  if (tags.value.length > 0) {
+    fields.tags = tags.value
+  }
+  if (visibility.value === 'password') {
+    fields.password = password.value
+  }
+  if (props.notes && readingNotes.value !== '') {
+    fields.reading_notes = readingNotes.value
+  }
   return fields
 }
 
@@ -199,6 +207,6 @@ defineExpose({ collect, reset })
 
 <style scoped>
 .reading-owner-options {
-  border: 1px solid var(--myst-border, rgba(255, 255, 255, 0.12));
+  border: 1px solid var(--myst-border, rgb(255 255 255 / 12%));
 }
 </style>

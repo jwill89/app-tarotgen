@@ -45,11 +45,15 @@ const detailsPlaceholder = computed(
 
 // Reka's RadioGroup emits an untyped value; only accept a reason we know.
 function onReasonChange(value: unknown): void {
-  if (isReportReason(value)) reason.value = value
+  if (isReportReason(value)) {
+    reason.value = value
+  }
 }
 
 async function submit(): Promise<void> {
-  if (!canSubmit.value || reason.value === null) return
+  if (!canSubmit.value || reason.value === null) {
+    return
+  }
 
   submitting.value = true
   error.value = ''
@@ -67,8 +71,11 @@ async function submit(): Promise<void> {
     return
   }
 
-  if (outcome.alreadyReported) toastInfo("You've already reported this card recently. Thanks!")
-  else toastSuccess('Thanks! Your report has been sent.')
+  if (outcome.alreadyReported) {
+    toastInfo("You've already reported this card recently. Thanks!")
+  } else {
+    toastSuccess('Thanks! Your report has been sent.')
+  }
   emit('close')
 }
 </script>
@@ -76,7 +83,7 @@ async function submit(): Promise<void> {
 <template>
   <!-- Once something is typed, a stray backdrop click shouldn't throw it away. -->
   <BaseModal
-    :active="true"
+    active
     title="Report a problem"
     max-width="32rem"
     over-lightbox

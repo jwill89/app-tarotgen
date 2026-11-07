@@ -117,7 +117,9 @@ const input = (wrapper: VueWrapper, id: string) => wrapper.get<HTMLInputElement>
 const help = (wrapper: VueWrapper) => wrapper.findAll('.help').map((p) => p.text())
 const button = (wrapper: VueWrapper, name: string) => {
   const found = wrapper.findAll('button').find((b) => b.text() === name)
-  if (!found) throw new Error(`No "${name}" button`)
+  if (!found) {
+    throw new Error(`No "${name}" button`)
+  }
   return found
 }
 
@@ -144,7 +146,9 @@ async function generate(wrapper: VueWrapper): Promise<void> {
 /** A choice of the reading options' "Who Can Open It". */
 const segment = (wrapper: VueWrapper, label: string) => {
   const found = wrapper.findAll('.myst-segmented__btn').find((b) => b.text() === label)
-  if (!found) throw new Error(`No "${label}" choice`)
+  if (!found) {
+    throw new Error(`No "${label}" choice`)
+  }
   return found
 }
 
@@ -247,7 +251,7 @@ describe('NewReadingView', () => {
     await generate(wrapper)
 
     expect(sentFields(api)).toMatchObject({ number_of_cards: '5', use_reversals: 'true' })
-    expect(useRecentReadings().recent.value[0].summary).toBe('5 cards')
+    expect(useRecentReadings().recent.value[0]!.summary).toBe('5 cards')
   })
 
   it('sends a free draw "with placement" on to arrange the cards', async () => {
@@ -354,7 +358,7 @@ describe('NewReadingView', () => {
       spread_id: '3',
       position_titles: JSON.stringify(['', 'Right now', '']),
     })
-    expect(useRecentReadings().recent.value[0].summary).toBe('Past, Present, Future')
+    expect(useRecentReadings().recent.value[0]!.summary).toBe('Past, Present, Future')
   })
 
   it("draws into a signed-in user's own spread by its id", async () => {
@@ -485,7 +489,9 @@ describe('NewReadingView', () => {
         .mockReset()
         .mockImplementation((_el: HTMLElement, opts: Record<string, unknown>) => {
           const callback = opts.callback
-          if (typeof callback === 'function') solve = (token) => callback(token)
+          if (typeof callback === 'function') {
+            solve = (token) => callback(token)
+          }
           return 'widget-1'
         })
       turnstile.reset.mockReset()

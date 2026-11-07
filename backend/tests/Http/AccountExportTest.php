@@ -93,7 +93,7 @@ final class AccountExportTest extends HttpTestCase
         $this->assertNull($journal['readings'][0]['spread']);
         $this->assertSame('Deck #2', $journal['readings'][0]['deck_name']);
         // The view password is a flag, never its hash.
-        $this->assertStringNotContainsString('$2y$', (string)$response->getBody());
+        $this->assertStringNotContainsString('$2y$', (string) $response->getBody());
     }
 
     public function testJsonIsTheDefaultFormat(): void
@@ -129,7 +129,7 @@ final class AccountExportTest extends HttpTestCase
 
         $this->assertSame(200, $response->getStatusCode());
         $this->assertDownload($response, 'text/csv; charset=utf-8', 'csv');
-        $body = (string)$response->getBody();
+        $body = (string) $response->getBody();
         // A UTF-8 byte-order mark, so Excel doesn't read it in a legacy code page.
         $this->assertStringStartsWith("\u{FEFF}\"Reading ID\",", $body);
         $this->assertSame([
@@ -151,7 +151,7 @@ final class AccountExportTest extends HttpTestCase
         $this->journal('formula001', '=1+1', '@me', ['+tag']);
         $this->signInAs($this->userId);
 
-        $rows = $this->csvRows((string)$this->get('/account/readings/export?format=csv')->getBody());
+        $rows = $this->csvRows((string) $this->get('/account/readings/export?format=csv')->getBody());
 
         $this->assertSame(
             ["'=HYPERLINK(\"https://evil.example\",\"Open me\")", "'=1+1", "'@me", "'+tag", "'+Spread", "'\tTab", "'@Card", "'-1+2"],

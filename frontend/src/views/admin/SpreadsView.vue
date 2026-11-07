@@ -53,9 +53,13 @@ async function deleteSpread(spread: Spread): Promise<void> {
     confirmLabel: 'Delete',
     danger: true,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
   const result = await api.del(endpoints.admin.spreads.byId(spread.spread_id), 'Spread deleted.')
-  if (result) await loadSpreads()
+  if (result) {
+    await loadSpreads()
+  }
 }
 
 onMounted(() => {

@@ -166,9 +166,7 @@ final class AuthRegistrationTest extends HttpTestCase
         }));
         $this->replaceService(Mailer::class, new class ($steps) extends Mailer {
             /** @param ArrayObject<int,string> $steps */
-            public function __construct(private readonly ArrayObject $steps)
-            {
-            }
+            public function __construct(private readonly ArrayObject $steps) {}
 
             #[\Override]
             public function isConfigured(): bool
@@ -249,9 +247,7 @@ final class AuthRegistrationTest extends HttpTestCase
         $sent = new ArrayObject();
         $this->replaceService(Mailer::class, new class ($sent) extends Mailer {
             /** @param ArrayObject<int,array{string,string,string,string}> $sent */
-            public function __construct(private readonly ArrayObject $sent)
-            {
-            }
+            public function __construct(private readonly ArrayObject $sent) {}
 
             #[\Override]
             public function sendRegistrationAttempt(string $toEmail, string $toName, string $signInLink, string $resetLink): bool

@@ -98,7 +98,7 @@ class ReadingData extends AbstractData
         $stmt = $this->db->prepare('SELECT COUNT(*) FROM readings WHERE ' . $where);
         $stmt->execute($params);
 
-        return (int)$stmt->fetchColumn();
+        return (int) $stmt->fetchColumn();
     }
 
     /**
@@ -209,7 +209,7 @@ class ReadingData extends AbstractData
         foreach (['hide_user', 'is_private'] as $flag) {
             if (array_key_exists($flag, $fields)) {
                 $set[] = "{$flag} = :{$flag}";
-                $params[":{$flag}"] = (bool)$fields[$flag] ? 1 : 0;
+                $params[":{$flag}"] = (bool) $fields[$flag] ? 1 : 0;
             }
         }
         $tags = $fields['tags'] ?? null;
@@ -314,7 +314,7 @@ class ReadingData extends AbstractData
      */
     public function listAll(int $limit, int $offset): array
     {
-        $total = (int)$this->query('SELECT COUNT(*) FROM readings')->fetchColumn();
+        $total = (int) $this->query('SELECT COUNT(*) FROM readings')->fetchColumn();
 
         $rows = $this->fetchAllAs(
             "SELECT page.reading_id, page.reading_time, page.user_id, page.display_name, page.deck_id,

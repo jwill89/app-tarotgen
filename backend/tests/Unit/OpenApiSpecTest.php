@@ -34,7 +34,7 @@ final class OpenApiSpecTest extends TestCase
         self::assertTrue($result->isValid(), implode("\n", array_column($log->entries(), 'message')));
 
         $generated = json_decode($result->toJson(), true);
-        $committed = json_decode((string)file_get_contents($specPath), true);
+        $committed = json_decode((string) file_get_contents($specPath), true);
 
         self::assertSame(
             $committed,

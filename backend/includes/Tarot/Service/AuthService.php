@@ -48,8 +48,7 @@ class AuthService
         private readonly DbSessionHandler $sessions,
         private readonly AccountProtection $protection,
         private readonly AfterResponse $afterResponse,
-    ) {
-    }
+    ) {}
 
     /**
      * The password hashing algorithm: Argon2id when the PHP build supports it

@@ -134,7 +134,7 @@ describe('useUserSpreads loading and sharing', () => {
     const result = await copyPublicSpread(9)
 
     expect(result).toMatchObject({ ok: true, data: { name: 'Celtic (copy)' } })
-    expect(api.mock.calls[0][1]?.method).toBe('POST')
+    expect(api.mock.calls[0]![1]?.method).toBe('POST')
     expect(userSpreads.value.map((s) => s.user_spread_id)).toEqual([3, 1])
   })
 

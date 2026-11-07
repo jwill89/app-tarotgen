@@ -22,9 +22,13 @@ export function useUndoRedo(slots: unknown[], onRestore?: () => void, maxEntries
   const snapshot = (): string => JSON.stringify(slots)
 
   function record(): void {
-    if (restoring || suspended) return
+    if (restoring || suspended) {
+      return
+    }
     const snap = snapshot()
-    if (stack.value[pointer.value] === snap) return // no actual change
+    if (stack.value[pointer.value] === snap) {
+      return
+    } // no actual change
 
     // Drop any redo branch, then append the new state.
     stack.value.splice(pointer.value + 1)
@@ -50,15 +54,21 @@ export function useUndoRedo(slots: unknown[], onRestore?: () => void, maxEntries
   }
 
   function undo(): void {
-    if (!canUndo.value) return
+    const previous = stack.value[pointer.value - 1]
+    if (!canUndo.value || previous === undefined) {
+      return
+    }
     pointer.value--
-    applySnapshot(stack.value[pointer.value])
+    applySnapshot(previous)
   }
 
   function redo(): void {
-    if (!canRedo.value) return
+    const next = stack.value[pointer.value + 1]
+    if (!canRedo.value || next === undefined) {
+      return
+    }
     pointer.value++
-    applySnapshot(stack.value[pointer.value])
+    applySnapshot(next)
   }
 
   /** Seed (or re-seed) the history with the current state as the only entry. */

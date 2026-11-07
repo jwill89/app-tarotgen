@@ -49,7 +49,7 @@ export function parseChangelog(markdown: string): ChangelogRelease[] {
     if (!heading) {
       continue
     }
-    const label = heading[1].trim()
+    const label = (heading[1] ?? '').trim()
     const unreleased = label.toLowerCase() === 'unreleased'
     if (unreleased && !section.lines.some(isContent)) {
       continue
@@ -83,7 +83,7 @@ function sections(markdown: string): Section[] {
     }
     const heading = SECTION.exec(line)
     if (heading) {
-      found.push({ heading: heading[1], lines: [] })
+      found.push({ heading: heading[1] ?? '', lines: [] })
     } else if (marker) {
       fence = marker
       current?.lines.push(line)
@@ -102,10 +102,10 @@ function isContent(line: string): boolean {
 function withoutEdgeBlankLines(lines: string[]): string[] {
   let start = 0
   let end = lines.length
-  while (start < end && lines[start].trim() === '') {
+  while (start < end && lines[start]?.trim() === '') {
     start++
   }
-  while (end > start && lines[end - 1].trim() === '') {
+  while (end > start && lines[end - 1]?.trim() === '') {
     end--
   }
   return lines.slice(start, end)

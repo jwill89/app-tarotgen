@@ -36,8 +36,7 @@ class UserController extends AbstractController
         private readonly AuthService $auth,
         private readonly UserRepository $users,
         private readonly TurnstileService $turnstile,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Post(
         path: '/auth/register',
@@ -82,9 +81,9 @@ class UserController extends AbstractController
         }
 
         $params      = $this->parsedBody($request);
-        $email       = (string)($params['email'] ?? '');
-        $displayName = (string)($params['display_name'] ?? '');
-        $password    = (string)($params['password'] ?? '');
+        $email       = (string) ($params['email'] ?? '');
+        $displayName = (string) ($params['display_name'] ?? '');
+        $password    = (string) ($params['password'] ?? '');
 
         $result = $this->auth->register($email, $displayName, $password);
 
@@ -137,7 +136,7 @@ class UserController extends AbstractController
     public function activate(Request $request, Response $response): Response|ResponseInterface
     {
         $params = $this->parsedBody($request);
-        $token  = (string)($params['token'] ?? '');
+        $token  = (string) ($params['token'] ?? '');
 
         if ($this->auth->activate($token)) {
             return $response->withJson([
@@ -185,7 +184,7 @@ class UserController extends AbstractController
         }
 
         $params = $this->parsedBody($request);
-        $email  = (string)($params['email'] ?? '');
+        $email  = (string) ($params['email'] ?? '');
 
         $result = $this->auth->requestPasswordReset($email);
         $limiter->hit($ip);
@@ -243,8 +242,8 @@ class UserController extends AbstractController
     public function resetPassword(Request $request, Response $response): Response|ResponseInterface
     {
         $params   = $this->parsedBody($request);
-        $token    = (string)($params['token'] ?? '');
-        $password = (string)($params['password'] ?? '');
+        $token    = (string) ($params['token'] ?? '');
+        $password = (string) ($params['password'] ?? '');
 
         $result = $this->auth->resetPassword($token, $password);
 
@@ -303,14 +302,14 @@ class UserController extends AbstractController
         }
 
         $params     = $this->parsedBody($request);
-        $email      = (string)($params['email'] ?? '');
-        $password   = (string)($params['password'] ?? '');
+        $email      = (string) ($params['email'] ?? '');
+        $password   = (string) ($params['password'] ?? '');
         $rememberMe = Input::bool($params['remember_me'] ?? null);
 
         // Bot/abuse guard: when Turnstile is configured, a valid challenge token
         // is required before we even check credentials.
         if ($this->turnstile->isConfigured()) {
-            $token = (string)($params['turnstile_token'] ?? '');
+            $token = (string) ($params['turnstile_token'] ?? '');
             if (!$this->turnstile->verify($token, $ip)) {
                 $limiter->hit($ip);
                 return $response->withJson(['error' => 'Captcha verification failed. Please try again.'], 400);

@@ -32,15 +32,16 @@ It is a **single-page app (SPA) frontend + REST API backend**:
 |-------------|---------|
 | Frontend    | Vue `^3.5`, vue-router `^5.1`, TypeScript `~6.0` (`vue-tsc ^3.3`), Vite `^8`, Bulma `^1.0`, Reka UI `^2.10` |
 | Editor/MD   | TipTap `^3.25` (`@tiptap/*`), `marked`, `dompurify`, `turndown` |
-| Icons       | FontAwesome **Pro v7**, self-hosted via the per-style packages (`@fortawesome/pro-{solid,regular,duotone}-svg-icons` + free `@fortawesome/free-brands-svg-icons`) + `@fortawesome/fontawesome-svg-core`. Needs `.npmrc` to install — see §6. |
-| FE testing  | Vitest `^5` with `happy-dom` + `@vue/test-utils` (components/views), coverage via `@vitest/coverage-v8` (floor in `vite.config.ts`); Playwright `^1` smoke run (`e2e/`) |
-| FE linting  | ESLint `^10` (flat config: `eslint-plugin-vue`, `@vue/eslint-config-typescript`, `eslint-plugin-vuejs-accessibility`), Stylelint `^17` (recommended + Vue/SCSS, palette rule), Knip (unused code/deps), Prettier |
+| Shared      | **shared-tooling v1.3.0**, the git submodule at `shared/` (`shared/README.md`): the lint configs, test settings, CI workflows, repo files and the deploy module (`SharedDeploy`) every jwill89 project shares. A clone needs `git submodule update --init` first. |
+| Icons       | FontAwesome **Pro v7**, self-hosted via the per-style packages (`@fortawesome/pro-{solid,regular,duotone}-svg-icons` + free `@fortawesome/free-brands-svg-icons`) + `@fortawesome/fontawesome-svg-core`. Needs the Font Awesome token in `~/.npmrc` to install — see §6. |
+| FE testing  | Vitest `^5` on `jsdom` with shared-tooling's settings (`vitestDefaults`) + `@vue/test-utils` (components/views), coverage via `@vitest/coverage-v8` (floor in `vite.config.ts`); Playwright `^1` end-to-end suite (`e2e/`) on shared-tooling's settings, with axe (`@jwill89/test-a11y`) |
+| FE linting  | ESLint `^10`, Prettier, Stylelint `^17` and the tsconfigs all extend shared-tooling's `@jwill89/lint-web` (`shared/lint/web`: ESLint with `eslint-plugin-vue`, typescript-eslint's strict type-checked set, `eslint-plugin-vuejs-accessibility` and `curly`; Stylelint's standard + Vue configs; tsconfigs with `noUncheckedIndexedAccess`), plus this app's own rules (SCSS, the palette rule); Knip (unused code/deps) |
 | Backend     | PHP `>=8.5`, Slim 4 (`slim/slim`, `slim/http`, `slim/psr7`), `php-di/slim-bridge` |
 | Auth/email  | `lbuchs/webauthn` (passkeys), `phpmailer/phpmailer` (SMTP) |
 | BE testing  | PHPUnit `^13` |
-| BE linting  | `friendsofphp/php-cs-fixer` (PER-CS 3.0, `.php-cs-fixer.dist.php`), PHPStan `^2` (level 8 + strict, deprecation and PHPUnit rules, baselined), Rector (PHP 8.5 + dead-code sets), composer-unused + composer-require-checker, composer-normalize |
-| Plugin      | **FFXIV Dalamud plugin** (`plugin/`) — C# / **.NET 10** (`net10.0-windows`), Dalamud **API 15** (`Dalamud.NET.Sdk/15.0.0`), ImGui via `Dalamud.Bindings.ImGui`. Windows-only, built independently — see §12. |
-| Misc tooling| Python scripts for deck image cleanup (`scripts/`) |
+| BE linting  | `friendsofphp/php-cs-fixer` (PER-CS 3.0, `.php-cs-fixer.dist.php`), PHPStan `^2` (level 8 + strict, deprecation and PHPUnit rules, baselined), Rector (PHP 8.5 + dead-code sets), each starting from shared-tooling's `shared/lint/php`; composer-unused + composer-require-checker, composer-normalize |
+| Plugin      | **FFXIV Dalamud plugin** (`plugin/`) — C# / **.NET 10** (`net10.0-windows`), Dalamud **API 15** (`Dalamud.NET.Sdk/15.0.0`), ImGui via `Dalamud.Bindings.ImGui`; analyzers and code style from `shared/lint/dotnet`. Windows-only, built independently — see §12. |
+| Misc tooling| Python scripts for deck image cleanup (`scripts/`); `Taskfile.yml` ([Task](https://taskfile.dev)) for the day-to-day commands |
 
 ---
 
@@ -51,21 +52,21 @@ The repo is split into **`frontend/`** (Vue/Vite, the npm project root) and
 `frontend/`, all backend paths under `backend/`. The deploy script (`scripts/deploy.ps1`)
 flattens both into the live server's single flat web root.
 
-```
+```text
 /
 ├── frontend/               # Vue 3 SPA — run npm from here
 │   ├── index.html          # SPA entry HTML (Vite).
 │   ├── package.json        # Frontend scripts & deps.
 │   ├── vite.config.ts      # Vite + Vitest config (alias @ -> src, /api + /assets proxy, manualChunks).
 │   ├── config/             # Vite plugins: changelog-plugin.ts serves the root CHANGELOG.md as `virtual:changelog`.
-│   ├── eslint.config.ts    # ESLint flat config: the shared @jwill89/eslint-config + project rules.
-│   ├── eslint-config/      # Git submodule holding that shared config (`git submodule update --init`).
-│   ├── stylelint.config.js # Stylelint: recommended configs + the palette rule (§5).
+│   ├── eslint.config.ts    # ESLint flat config: the shared @jwill89/lint-web (shared/lint/web) + project rules.
+│   ├── prettier.config.js  # Prettier: the shared settings, as they are.
+│   ├── stylelint.config.js # Stylelint: the shared config + SCSS and the palette rule (§5).
 │   ├── knip.ts             # Knip: unused files/exports/deps; entry points it can't infer.
-│   ├── playwright.config.ts # The smoke run (§8); e2e/ holds its spec and PHP server scripts.
+│   ├── playwright.config.ts # The end-to-end suite (§8), on shared/test/e2e; e2e/ holds its specs and PHP server scripts.
 │   ├── .nvmrc              # Node version (CI reads it too).
-│   ├── tsconfig*.json       # TS project config.
-│   ├── .npmrc              # FontAwesome Pro registry token (gitignored).
+│   ├── tsconfig*.json       # TS project config, extending the shared @jwill89/lint-web ones.
+│   ├── .npmrc              # Font Awesome registry scopes + install-links (tracked; the token is in ~/.npmrc, §6).
 │   ├── public/             # PWA assets (manifest, sw, icons), robots.txt, sitemap.xml, fonts/.
 │   └── src/                # Frontend source (alias `@` -> src).
 │       ├── main.ts         #   App bootstrap (mounts after session revalidation).
@@ -85,11 +86,12 @@ flattens both into the live server's single flat web root.
 │   ├── og.php              # Serves the SPA shell for every page: per-response CSP nonce + /reading/{id} share meta.
 │   ├── dev-router.php      # Local PHP built-in-server router (composer dev); mimics .htaccess.
 │   ├── .htaccess           # Web-root rewrites (api/ → static files → every page via og.php).
-│   ├── composer.json       # Backend deps, PSR-4 autoload, `composer test`/`stan`/`dev`.
+│   ├── composer.json       # Backend deps, PSR-4 autoload, `composer test`/`stan`/`dev`/`migrate`.
+│   ├── phinx.php           # Phinx config: db/migrations/ against Paths::database() (§7).
 │   ├── phpunit.xml         # PHPUnit config (unit + http suites).
-│   ├── phpstan.neon        # PHPStan config (level 8 + strict rules); phpstan-baseline.neon holds pre-existing findings.
-│   ├── .php-cs-fixer.dist.php # Code style (PER-CS 3.0 + house tweaks): `composer lint` / `lint:fix`.
-│   ├── rector.php          # Rector: PHP 8.5 + dead-code sets (`composer rector`, `rector:check`).
+│   ├── phpstan.neon        # PHPStan: the shared level 8 (shared/lint/php) + strict rules; phpstan-baseline.neon holds pre-existing findings.
+│   ├── .php-cs-fixer.dist.php # Code style (the shared PER-CS 3.0 rules + PHP 8.5 migration set): `composer lint` / `lint:fix`.
+│   ├── rector.php          # Rector: the shared dead-code set + PHP 8.5 (`composer rector`, `rector:check`).
 │   ├── composer-require-checker.json # Symbols used but deliberately not required (swagger-php, dev-only).
 │   ├── .env / .env.example # Environment (gitignored / template).
 │   ├── api/                # HTTP API entry point (Slim).
@@ -101,22 +103,27 @@ flattens both into the live server's single flat web root.
 │   ├── includes/Tarot/     # Domain code (PSR-4 `Tarot\`): Config, Database, Data,
 │   │                       #   Repository, Service, Structure, Exception, Utility.
 │   ├── tests/{Unit,Http}/  # PHPUnit tests (namespace `Tarot\Tests\`) — see §8.
-│   ├── bin/                # Dev-only, not deployed: openapi.php (`composer docs`), coverage-check.php.
+│   ├── bin/                # Dev-only, not deployed: openapi.php (`composer docs`).
 │   ├── scripts/            # PHP/Python CLI utils (make_admin.php, gen_icons.php, indexnow.php, *.py).
-│   ├── db/                 # SQLite DB + one-off migration scripts (gitignored).
+│   ├── db/                 # migrations/ (Phinx) + schema.sql (generated from them); the SQLite DB
+│   │                       #   and the retired one-off scripts beside them are gitignored (§7).
 │   ├── assets/decks/{id}/  # Per-deck card images (Card_XXXX.png, Card_Back.png) (gitignored).
 │   └── vendor/             # Composer deps (generated).
 │
 ├── plugin/                 # FFXIV Dalamud plugin — self-contained C# subproject (§12).
 │   ├── TarotGen.Plugin.sln
+│   ├── Directory.Build.props #  Imports the shared analyzers and C# code style (shared/lint/dotnet).
 │   └── TarotGen.Plugin/    #   C# project (net10.0-windows, Dalamud.NET.Sdk); packaged by DalamudPackager.
 │
-├── scripts/deploy.ps1      # Build & deploy orchestration (frontend + backend + plugin).
-├── PSScriptAnalyzerSettings.psd1 # Lint settings for scripts/*.ps1 (CI "Scripts" job).
-├── .editorconfig           # Editor defaults for the repo (plugin/.editorconfig adds the C# rules).
+├── shared/                 # Git submodule: shared-tooling v1.3.0 (`git submodule update --init`).
+├── scripts/deploy.ps1      # Build & deploy orchestration (frontend + backend + plugin), on shared/deploy/pwsh.
+├── scripts/server/tarotgen.cron # /etc/cron.d/tarotgen (retention); the backend deploy installs it.
+├── Taskfile.yml            # `task` commands; includes shared/repo/Taskfile.yml as shared:*.
+├── .editorconfig / .gitattributes # From shared/repo; the repo's own lines go below the project marker.
+├── .markdownlint-cli2.jsonc # markdownlint: the shared config (shared/lint/markdown) + this repo's ignores.
 ├── .github/                # CI, plugin, CodeQL workflows; dependabot.yml.
 ├── README.md               # Human-facing quick orientation.
-├── .gitignore / .gitattributes
+├── .gitignore
 └── (frontend/dist, */node_modules — generated)
 ```
 
@@ -127,7 +134,7 @@ flattens both into the live server's single flat web root.
 Data flows through clearly separated layers. **Respect these boundaries** — do
 not skip layers (e.g. don't run SQL from a controller).
 
-```
+```text
 HTTP Request
    → Middleware (OriginGuard, UserAuth/AdminAuth)
    → Controller (api/Routes/Internal/*)   — request parsing, HTTP responses
@@ -160,6 +167,7 @@ HTTP Request
   through the same PDO: `app.php` hands it to `Session::useDatabase()`.
 
 ### Routing
+
 All routes are declared in `api/app.php` (base path `/api`), grouped by
 resource. Admin routes are under `/admin` and guarded by `AdminAuth`; account
 self-service routes under `/account` are guarded by `UserAuth`. Trailing-slash
@@ -173,6 +181,7 @@ toggle, `DELETE` removes (→`204`). Non-CRUD state transitions are
 endpoints stay action-oriented under `/auth/*`.
 
 ### API docs (OpenAPI + Scalar)
+
 Endpoints are documented with **swagger-php 7** spec attributes
 (`use OpenApi\Spec as OAS`; `#[OAS\Operation\Get(...)]`, `new OAS\MediaType\Json(...)`)
 on the controllers, plus `#[OAS\Schema]` on the `Structure` classes. `composer docs`
@@ -199,6 +208,7 @@ sends its own enforced CSP (`SCALAR_BUNDLE` / `SCALAR_SRI` on `ApiDocsController
 upgrade, change the version and recompute the sha384 of that exact file.
 
 ### Auth & security
+
 - Sessions use PHP sessions hardened in `index.php` (HttpOnly, SameSite=Lax,
   Secure in production). Admin access requires a **user account with the
   `is_admin` flag** — there is no shared admin password. Grant it with
@@ -230,7 +240,7 @@ upgrade, change the version and recompute the sha384 of that exact file.
   listener: `POST /plugin/draw-keys/authorize` → `/token`), are stored hashed in
   `plugin_draw_keys`, open nothing but draws (their readings are guests') and
   are rate-limited per key and per IP (`DrawKeyService`). Without Turnstile (dev,
-  the tests, the smoke run) nothing more is needed.
+  the tests, the end-to-end suite) nothing more is needed.
 - `OriginGuard` middleware is CSRF defense-in-depth (rejects cross-origin
   state-changing requests). Added last so it runs outermost.
 - CORS is **opt-in** via `APP_ORIGIN` (never `*` with credentialed cookies).
@@ -238,6 +248,7 @@ upgrade, change the version and recompute the sha384 of that exact file.
 - In production the DI container is compiled to disk and error detail is hidden.
 
 ### og.php (every page) and the Content-Security-Policy
+
 Every page route is rewritten to `og.php`, which serves the built `dist/index.html`
 with two things only a server can add (the shell is never cached, so this costs a
 little PHP per navigation):
@@ -317,6 +328,13 @@ little PHP per navigation):
   palette colour is `color-mix(in srgb, var(--myst-gold) 12%, transparent)` —
   never an `rgba()` copy of the token's channels; Stylelint enforces it (no hex,
   and outside `tokens.css` only pure white/black may be written as `rgb()`).
+  Text on a gold fill (an `is-link` button) is dark ink, as on the aqua primary
+  (`--bulma-link-invert-l` in `tokens.css`): Bulma's white read at 2.4:1. The
+  quietest text, Bulma's `.has-text-grey` (hints, empty states), reads
+  `--myst-text-grey` (`tokens.css` overrides the class): Bulma's fixed `#69748c`
+  read 2.7–4.2:1 here, and the token reaches 4.5:1 on every surface, a hovered
+  `--myst-surface-3` included; print has its own, darker value. The end-to-end
+  suite holds the main pages to WCAG 2.2 AA (§8).
   Bulma is a modular build
   (`src/assets/bulma.scss`): only the modules in use, and only the dark theme's
   variables; a Bulma class that does nothing is probably a module that isn't
@@ -349,10 +367,20 @@ little PHP per navigation):
 
 Run from the project root. Shell is **PowerShell** on Windows; chain with `;`.
 
+A fresh clone needs the shared-tooling submodule before anything builds:
+`git submodule update --init` (or clone with `--recurse-submodules`).
+
+`Taskfile.yml` runs the same commands from the repo root: `task` alone lists them;
+`task setup`, `task dev` (both servers), `task lint`, `task test`, `task check` (lint,
+audit and every test), `task deploy:*`. It includes the shared tasks as `shared:*`
+(`task shared:lint:scripts`, `shared:lint:md`, `shared:repo:check`,
+`shared:version:check`, `shared:update`).
+
 ### Frontend (npm) — run from `frontend/`
+
 ```powershell
 cd frontend
-npm install            # install deps (requires frontend/.npmrc with the FA Pro registry token — see below)
+npm install            # install deps (needs the Font Awesome token in ~/.npmrc and the shared/ submodule — see below)
 npm run dev            # Vite dev server :5173 (proxies /api and /assets to localhost:80)
 npm run build          # production build to frontend/dist/
 npm run preview        # preview the production build
@@ -364,40 +392,55 @@ npm run knip           # unused files, exports and dependencies (knip.ts)
 npm test               # vitest run (single pass)
 npm run test:watch     # vitest watch mode
 npm run test:coverage  # vitest + coverage; fails below the floor in vite.config.ts
-npm run test:e2e       # Playwright smoke run on the built app (npm run build first; see §8)
+npm run test:e2e       # Playwright: builds the SPA, then the end-to-end suite on it and the real API (§8)
 npm run gen:types      # regenerate src/types/api.generated.ts from backend/openapi.json
+npm run gen:check      # gen:types, then fail if the committed api.generated.ts differs (CI)
 ```
 
-> **`frontend/.npmrc` is required to `npm install`.** The icon packages come from a
-> private FontAwesome registry, so install needs a local `frontend/.npmrc` (gitignored)
-> holding the registry auth token. Without it, the `@fortawesome/*` packages
-> won't resolve.
-
-> **After moving the `eslint-config` submodule, run `npm install` in `frontend/`
-> and commit `package-lock.json` with it.** The lockfile records the config's
-> dependency and peer ranges, so a config that raises them (as `e3787b1` raised
-> ESLint to `^10.14.0`) leaves the lock out of sync, and CI's `npm ci` refuses to
-> install. Keep `frontend/package.json`'s own `eslint`/`prettier`/`typescript`
-> ranges at the config's peers.
+> **The Font Awesome token goes in `~/.npmrc`.** The icon packages come from a
+> private FontAwesome registry. `frontend/.npmrc` is tracked and holds no secret:
+> it maps the `@fortawesome` and `@awesome.me` scopes to that registry and sets
+> `install-links=true`. The token itself goes in your user `~/.npmrc`
+> (`//npm.fontawesome.com/:_authToken=…`); without it, the `@fortawesome/*`
+> packages won't resolve. CI writes it from the `FONTAWESOME_NPM_TOKEN` secret.
+>
+> **`@jwill89/lint-web` and `@jwill89/test-a11y` install from the submodule**
+> (`file:../shared/lint/web`, `file:../shared/test/a11y`), as copies
+> (`install-links`), so their own plugins come with them. Moving `shared/` to
+> another release is `task shared:update -- v1.4.0`: it checks the tag out,
+> points every shared workflow's `@v…` at it, re-syncs `.editorconfig` and
+> `.gitattributes`, and re-installs both packages. Review the diff and commit it
+> as one change, `package-lock.json` included, or CI's `npm ci` refuses the
+> stale lock. CI's docs job fails when the submodule and the workflow refs name
+> different releases. Keep `frontend/package.json`'s own
+> `eslint`/`prettier`/`stylelint`/`typescript` ranges within lint-web's peers.
 
 ### Backend (composer / php) — run from `backend/`
+
 ```powershell
 cd backend
 composer install       # install PHP deps
 composer dev           # PHP built-in server on :80 via dev-router.php (the API backend)
 composer test          # run PHPUnit (auto-discovers backend/phpunit.xml)
-composer test:coverage # PHPUnit + coverage; fails below the floor in bin/coverage-check.php
+composer test:coverage # PHPUnit + coverage; fails below 95% of lines or 88% of methods (shared/test/php/coverage-check.php)
 composer stan          # PHPStan static analysis (backend/phpstan.neon, level 8, --memory-limit=512M baked in)
 composer lint          # php-cs-fixer check (the code style CI enforces)
 composer lint:fix      # php-cs-fixer fix (apply it)
 composer rector        # Rector: current PHP idioms, dead code out (rector.php); rector:check lists without changing
 composer deps:check    # composer-unused + composer-require-checker (every package used, every use declared)
-composer normalize     # composer.json key order/format (CI runs it with --dry-run)
+composer normalize     # composer.json key order/format
+composer normalize:check # the same with --dry-run: fails if composer.json isn't normalized (CI)
 composer docs          # regenerate backend/openapi.json from the swagger-php attributes
+composer docs:check    # docs, then fail if the committed openapi.json differs (CI)
+composer migrate       # run the pending migrations (db/migrations/) on Paths::database() (§7)
+composer migrate:status # which migrations have run there
+php scripts/dump_schema.php # regenerate db/schema.sql from the migrations (§7)
 vendor\bin\phpunit     # run PHPUnit directly
 ```
 
-> PHPStan runs at **level 8** plus `phpstan-strict-rules` (no `empty()`, no short
+> PHPStan runs at **level 8** (from `shared/lint/php/phpstan.neon`, which
+> `phpstan.neon` includes; a project may raise it, never lower it) plus
+> `phpstan-strict-rules` (no `empty()`, no short
 > ternary, boolean-only conditions, no useless casts), `phpstan-deprecation-rules`
 > and `phpstan-phpunit`, loaded by `phpstan/extension-installer`. A baseline
 > (`phpstan-baseline.neon`, one entry) holds a pre-existing finding, so
@@ -415,7 +458,7 @@ vendor\bin\phpunit     # run PHPUnit directly
 
 To serve the full app locally, run **two processes in two terminals**: from
 `backend/` run `composer dev` (the PHP backend on port 80) and from `frontend/` run
-`npm run dev` (the Vite SPA on :5173). The Vite proxy forwards `/api` and `/assets`
+`npm run dev` (the Vite SPA on :5173); `task dev` starts both. The Vite proxy forwards `/api` and `/assets`
 to `http://localhost:80`, where `dev-router.php` reproduces the production
 `.htaccess` routing (`/api/*` → `api/index.php`, files under `/assets/*` served from
 disk) for PHP's built-in server, which has no `.htaccess`. Any PHP host serving
@@ -429,7 +472,7 @@ disk) for PHP's built-in server, which has no `.htaccess`. Any PHP host serving
 > symbols by name (the tool matches exactly); a new `OAS\*` attribute type fails
 > `composer deps:check` until it is added there. So is `fastcgi_finish_request`,
 > which PHP-FPM itself provides (no package or extension declares it).
-
+>
 > **Gotcha — don't `import` files under `/assets` in Vue.** `/assets` is proxied
 > to the PHP host, so referencing e.g. the brand logo as `<img src="/assets/...">`
 > would make `@vitejs/plugin-vue` compile it into an asset-module import that
@@ -437,16 +480,27 @@ disk) for PHP's built-in server, which has no `.htaccess`. Any PHP host serving
 > string instead (`const brandLogo = '/assets/favicon.png'`; `:src="brandLogo"`).
 
 ### Always do after changes
+
 - After editing **frontend** TS/Vue: run `npm run type-check`, `npm run lint`,
   `npm run lint:css` (styles), `npm run knip`, and the relevant `npm test` specs.
 - After editing **backend** PHP: run `composer test`, `composer stan`,
   `composer lint`, and `composer rector:check`; after touching `composer.json` or
   adding a dependency, `composer deps:check` and `composer normalize`.
-- After editing **`scripts/*.ps1`**: `Invoke-ScriptAnalyzer -Path scripts/deploy.ps1
-  -Settings PSScriptAnalyzerSettings.psd1` (CI's "Scripts" job). Keep the scripts
-  ASCII, so Windows PowerShell 5.1 reads them without a BOM.
+- After editing **`scripts/*.ps1`**: `task lint:scripts`, which runs
+  `shared/lint/pwsh/Invoke-ScriptLint.ps1`: PSScriptAnalyzer with the shared
+  settings on every tracked PowerShell file (CI's `scripts` job runs the same
+  script). Install PSScriptAnalyzer once with `Install-PSResource
+  PSScriptAnalyzer -Version 1.25.0 -Scope CurrentUser`. The deploy script needs
+  PowerShell 7.4 (`pwsh`).
+- After editing **Markdown**: `task shared:lint:md` (`npx --yes
+  markdownlint-cli2@0.24.0` from the repo root, CI's `docs` job).
+- `task lint` runs every lint and static check above (not the tests), plus the
+  plugin's `dotnet format` and the checks that `.editorconfig`, `.gitattributes`
+  and the workflow refs match `shared/`; `task check` adds the audits and every
+  test.
 
 ### Deployment
+
 The site runs on a DigitalOcean droplet (Apache on the event MPM + **PHP 8.5
 FPM**, since 2026-11-03; one pool shared with the droplet's other PHP sites) at
 `/var/www/tarotgen.io`, a single **flat** web root. OPcache re-checks files every
@@ -454,70 +508,160 @@ FPM**, since 2026-11-03; one pool shared with the droplet's other PHP sites) at
 FPM; `.htaccess` `php_value` lines would be ignored under FPM (there are none).
 PHP errors land in `/var/log/apache2/error.log` (`AH01071 … PHP message:`) and
 `/var/log/php8.5-fpm.log`, beside the other sites': filter by `/var/www/tarotgen.io`. `scripts/deploy.ps1` flattens
-`frontend/dist` and the `backend/` runtime files into it (PowerShell; uses PuTTY
-`pscp`/`plink` with the DigitalOcean `.ppk` key):
+`frontend/dist` and the `backend/` runtime files into it. It is built on
+shared-tooling's **SharedDeploy** module (`shared/deploy/pwsh`, whose README
+describes each function) and needs PowerShell 7.4 and PuTTY's `plink` 0.85 or
+later (`pscp` is no longer used), with the DigitalOcean `.ppk` key, loaded into
+Pageant first if it has a passphrase. The SSH user must be root.
 
 ```powershell
-.\scripts\deploy.ps1                    # frontend (default): npm build + atomic dist swap
-.\scripts\deploy.ps1 -Target backend    # PHP code; runs composer install on the droplet if composer.lock changed
-.\scripts\deploy.ps1 -Target both       # frontend and backend, in one upload and one install
+.\scripts\deploy.ps1                    # frontend (default): npm build + dist swapped in by renames
+.\scripts\deploy.ps1 -Target backend    # PHP code built whole on the droplet, DB snapshot, swap, then phinx migrate
+.\scripts\deploy.ps1 -Target both       # backend, then frontend, in one upload and one remote run
 .\scripts\deploy.ps1 -Target plugin     # build the plugin (Release) + publish to its custom Dalamud repo (§12)
 .\scripts\deploy.ps1 -SkipBuild         # deploy existing dist/ without rebuilding
+.\scripts\deploy.ps1 -Target backend -NoDbPull # don't copy the live DB into backend/db/tarotdb.db afterwards
 ```
+
+Settings resolve from the parameter, then `$env:DEPLOY_*`, then the gitignored
+`scripts/deploy.config.ps1` (copy `scripts/deploy.config.example.ps1`; `-ConfigPath`
+names another file): `VpsHost`, `VpsUser` (no default: it must be set somewhere),
+`KeyPath`, `WebRoot`, and `SiteUrl`, the public address the smoke check fetches and
+the plugin's download links are built from (default `https://tarotgen.io`).
+`-NoBackup` removes the rollback copies once the run succeeds on the host, so a
+failed smoke check then only stops the run; the database snapshot is still taken.
+`Get-Help .\scripts\deploy.ps1 -Full` walks through the whole run.
 
 The script flattens the repo into the server layout and **never** uploads the
 server-side data: `.env` and the database (which live **outside the web root**, in
-`TAROT_DATA_DIR` = `/var/lib/tarotgen` — see §9) or `assets/decks/`. Everything the
-script does upload lands in the document root, so `backend/.htaccess` must keep
-refusing `db/`, `includes/`, `vendor/`, `scripts/`, `.deploy/`, `.env*` and
-`composer.*` (they were once served verbatim). Frontend keeps a `dist.old` rollback;
-backend archives the previous code to `.deploy/backend-prev.tgz`. The `plugin`
-target is independent — it uploads `latest.zip` / `icon.png` / `repo.json` to
-`$WebRoot/plugin`.
+`TAROT_DATA_DIR` = `/var/lib/tarotgen` — see §9), `assets/decks/` or the retired
+one-off scripts in `db/`. Everything the script does upload lands in the document
+root, so `backend/.htaccess` must keep refusing `db/`, `includes/`, `vendor/`,
+`scripts/`, `.deploy/`, `.env*`, `composer.*` and `phinx.php` (they were once
+served verbatim); the deploy swaps the `.htaccess` in first, so its rules are in
+place before the files they guard.
 
-Each target is packed into one tarball (Windows `tar.exe`, ustar format). A run
-then makes exactly **two SSH connections**, which keeps it under `ufw limit ssh`
-(6 connections in 30s) with no pauses. One `pscp` uploads every tarball to the SSH
-user's home directory, outside the web root. One `plink` verifies their SHA-256
-sums, then unpacks and swaps each target in. A bad checksum stops the run before
-anything is touched. Unpacked files get root ownership, 644/755 modes and the
-extraction time, as the old per-file upload left them. Per-file uploading cost
-~0.15 s a file (240 files ≈ 35 s); the tarballs total ~0.8 MB.
+**One archive, one connection, one remote run.** Everything a run ships goes into
+one archive (Windows `tar.exe`, ustar), packed before anything connects, so a
+broken build changes nothing. The run holds **one SSH connection** (`plink
+-share`) from the upload to the database pull, plus one more only if it drops and
+reconnects, which keeps it under `ufw limit ssh` (6 connections in 30 s). The
+archive streams to the SSH user's home; one remote run checks its SHA-256 and
+file count before anything changes, then runs each target's step, API first (a
+new backend is additive to the old SPA; a new SPA may call endpoints an old
+backend lacks):
 
-**Automation.** `.github/workflows/ci.yml` (frontend, backend, the Playwright
-smoke run, scripts, then the release tag, which waits for all four),
-`plugin.yml` (when `plugin/` changes) and `codeql.yml` (frontend, plugin and
-workflows; CodeQL has no PHP). `.github/dependabot.yml` opens weekly grouped
-updates for npm, Composer, NuGet and Actions; TypeScript's major is held (see
-§2). Dependabot can't read Actions secrets: `FONTAWESOME_NPM_TOKEN` and
-`ESLINT_CONFIG_TOKEN` also exist as **Dependabot** secrets (both checked out by
-CI on its pull requests). Every update job clones the repo with the private
-`eslint-config` submodule, so each ecosystem lists the `github` git registry;
-the Font Awesome registry needs its `scope` (`@fortawesome`), because the
-repo's `.npmrc` is gitignored.
+- **backend:** the database and the host's tools (`composer`, `php`, `sqlite3`,
+  `gzip`, `runuser`) are checked first. The new code is built whole in
+  `.deploy/next`: the upload, a copy of the live `vendor/` with `composer install
+  --no-dev --optimize-autoloader` run on it (every deploy, so new code never runs
+  on an old vendor; starting from the copy, it fetches only what `composer.lock`
+  changed), and the retired scripts in `db/` carried over (§7). Then the database
+  is snapshotted (below) and every entry swapped in by renames, the previous ones
+  kept in `.deploy/backend-prev`. Then, from the web root:
+  `runuser -u www-data -- env TAROT_DATA_DIR=/var/lib/tarotgen php vendor/bin/phinx migrate`.
+  If it fails, the previous code goes back, and Phinx's message, the snapshot and
+  the exact `gunzip -c` command that restores it are printed. The database itself
+  is never put back automatically.
+- **frontend:** `dist` swapped in by renames, the previous kept as `dist.old`.
+- **plugin:** refuses a version not higher than the published `repo.json`'s
+  (checked here before the build, too), then swaps `$WebRoot/plugin` in, the
+  previous kept as `plugin.old`.
 
-**A release with a migration** runs it on production first (backup, then
-`runuser -u www-data -- php db/migrate_x.php`), then deploys (§10 "Schema
-changes").
+**The snapshot** before the migrations is
+`/var/lib/tarotgen/db/tarotdb.db.pre-<yyyyMMdd-HHmmss, UTC>.gz`, written as
+www-data: `sqlite3 .backup` to a partial file, `PRAGMA integrity_check`, gzip,
+`gzip -t`, then the rename; the newest three are kept. It is taken before the
+swap, so a snapshot that fails changes nothing. The restore command the deploy
+prints, with the site's writes stopped:
+`runuser -u www-data -- sh -c 'rm -f <db>-wal <db>-shm && gunzip -c <snapshot> > <db>'`,
+where `<db>` is `/var/lib/tarotgen/db/tarotdb.db`.
 
-**Backups.** `/etc/cron.d/tarotgen` runs `/usr/local/sbin/tarotgen-backup` at 03:17
-UTC: an online `.backup` of the DB, integrity-checked, gzipped into
-`/var/backups/tarotgen/nightly/` (root-only, newest 14 kept). Sources live in
-`scripts/server/` (not deployed by `deploy.ps1`; install them by hand, LF line
-endings). Check runs with `journalctl -t tarotgen-backup`. Restore: stop writes,
-`gunzip -c <backup> > /var/lib/tarotgen/db/tarotdb.db` as www-data, delete any
-stale `tarotdb.db-wal`/`-shm` beside it. Take a manual run before migrations:
-`sudo tarotgen-backup`.
+**The smoke check** then fetches the site from this machine, through Cloudflare
+(`SiteUrl`), each URL with a fresh `?deploy=` token so no edge-cached answer
+stands in for the origin's. With the backend, `/api/decks` must list a deck (the
+API and the database answer). `/` must answer; with the frontend it must name this
+build's entry script, which must load. With the plugin, `repo.json` must carry
+this release's `?v=`. If a check fails, what the run changed goes back, the plugin
+and the frontend first, then the code. The database stays as the migrations left
+it, and the snapshot's restore line is printed.
 
-**Retention.** Only if that backup succeeds, the same cron line runs
-`backend/scripts/retention.php` as www-data (`scripts/` ships with `-Target
-backend`): it deletes **guest** readings (`user_id IS NULL`) older than 365 days —
+**After it passes**, a backend deploy takes three more steps on the same
+connection:
+
+1. **The daily backup** is installed, or found unchanged (see "Backups").
+2. **The old nightly backup is retired:** `/etc/cron.d/tarotgen` becomes
+   `scripts/server/tarotgen.cron` where it differs, and
+   `/usr/local/sbin/tarotgen-backup` is removed.
+3. **The live database is pulled** into `backend/db/tarotdb.db`, the one the app
+   opens locally, keeping the three previous local copies (`-NoDbPull` skips it).
+
+**Automation.** `.github/workflows/ci.yml` calls shared-tooling's reusable
+workflows at `@v1.3.0`, the release the submodule holds:
+
+- `frontend` (`web.yml`): an `npm audit` of what ships, then `gen:check`,
+  `type-check`, `lint`, `lint:css`, `knip`, `format:check`, `test:coverage` and
+  `build`;
+- `backend` (`php.yml`): `audit`, `validate`, `docs:check`, `normalize:check`,
+  `deps:check`, `lint`, `rector:check`, `test:coverage` (pcov) and `stan`;
+- `e2e` (`e2e.yml`, after those two): the Playwright suite (§8);
+- `plugin` (`dotnet.yml`): the Release build with warnings as errors, and
+  `dotnet format` (§12);
+- `scripts` (`pwsh.yml`): PSScriptAnalyzer on every tracked script;
+- `docs` (`docs.yml`): markdownlint, `.editorconfig` and `.gitattributes` against
+  `shared/repo`, and every workflow ref against the submodule's release.
+
+TarotGen's own `release` job waits for all six. `plugin.yml` only packages the
+plugin (`latest.zip` + manifest, kept a week) when `plugin/`, `shared`,
+`.editorconfig` or the workflow itself changes, and `codeql.yml` is unchanged
+(frontend, plugin and workflows; CodeQL has no PHP). shared-tooling is public, so
+the workflows check the submodule out with the default token.
+`.github/dependabot.yml` opens weekly grouped updates for npm, Composer, NuGet
+and Actions; TypeScript's major is held (see §2). Dependabot can't read Actions
+secrets: `FONTAWESOME_NPM_TOKEN` also exists as a **Dependabot** secret, for its
+npm job and for CI on its pull requests, and the Font Awesome registry is
+declared there with its `scope` (`@fortawesome`), since the tracked `.npmrc`
+holds no token. CI no longer uses `ESLINT_CONFIG_TOKEN`; `dependabot.yml` still
+lists a `github` git registry on it for every ecosystem, from when the
+`eslint-config` submodule was private.
+
+**A release with a migration** needs nothing by hand: the backend deploy
+snapshots the database and runs `phinx migrate` as above (§7, §10 "Schema
+changes"), once the release's `phinx.php`, `db/migrations/` and a `vendor/` with
+Phinx are in place.
+
+**Backups.** `tarotgen-backup.timer`, installed and kept by the backend deploy
+(SharedDeploy's `Install-BackupTimer`), runs `tarotgen-backup.service` as
+www-data at 10:00 UTC daily (up to 15 minutes' spread; a missed run happens at the
+next boot). Its job (`/usr/local/libexec/shared-deploy/tarotgen-backup`) copies
+the live DB with `VACUUM INTO`, checks it with `PRAGMA integrity_check`, gzips it
+(`gzip -t`) and keeps it as
+`/var/lib/tarotgen/db/backups/tarotgen-YYYY-MM-DD.db.gz` (UTC date) for **28
+days**. Check runs with `journalctl -u tarotgen-backup`. Take one by hand (before
+a migration run by hand, say) with `sudo systemctl start tarotgen-backup`, which
+replaces that day's copy. Restore: stop writes, then as www-data delete
+`tarotdb.db-wal`/`-shm` beside the DB and `gunzip -c <copy> >
+/var/lib/tarotgen/db/tarotdb.db` (the job's header on the host has the line with
+its paths). The copies stay on the droplet; the copy off it is each deploy's
+database pull. The old nightly copies in `/var/backups/tarotgen/nightly` stay
+until the owner deletes them: check `journalctl -u tarotgen-backup` first, then
+`sudo rm -r /var/backups/tarotgen/nightly`.
+
+**Retention.** `/etc/cron.d/tarotgen` (`scripts/server/tarotgen.cron`, root:root
+644, LF; the backend deploy installs it whenever it differs) runs
+`backend/scripts/retention.php` as www-data at 10:30 UTC, after the backup's
+window, and only if today's backup exists, so there is always a copy from before
+it; otherwise it logs that it skipped. (`scripts/` ships with `-Target backend`;
+the deploy stops before changing anything if the cron file doesn't name the web
+root's `scripts/retention.php` and the backups' folder.) It deletes **guest** readings (`user_id IS NULL`) older than 365 days —
 readings made while signed in, on the site or via a linked plugin, are never
 touched — and those past the earlier expiry a guest chose; deletes plugin draw-key
 codes that expired unredeemed (`plugin_draw_keys` rows with no key; issued keys
 stay); then runs `ANALYZE` (not `PRAGMA optimize`: prod's SQLite 3.45 ignores its
-check-every-table bit). The window is stated on the privacy page
-(`PrivacyPolicyView.vue`, "Data Retention"); change both together. Check runs with
+check-every-table bit). The window and the backups' period are stated on the
+privacy page (`PrivacyPolicyView.vue`, "Data Retention"); `PrivacyPolicyView.spec.ts`
+checks them against `retention.php` and the deploy's `Install-BackupTimer` (its
+`-Keep`, else the module's 28 days), so change them together. Check runs with
 `journalctl -t tarotgen-retention`; preview with `runuser -u www-data -- php
 scripts/retention.php --dry-run`.
 
@@ -531,33 +675,70 @@ scripts/retention.php --dry-run`.
   journaling is enabled, and `busy_timeout` is set. `Connection` opens the file
   read-write but **never creates it**: a missing DB (e.g. a mis-set
   `TAROT_DATA_DIR`) is an error, not a new empty database.
-- **Schema changes** are applied via the one-off scripts in `db/`
-  (`migrate_*.php`, `add_*`, `drop_*`). They are plain PHP run from the CLI:
-  `php db/migrate_xxx.php`. There is no automated migration framework — add a new
-  `migrate_*.php` script following the existing pattern when you change schema.
-- `php db/check_state.php` prints current tables/schema for inspection.
-- The DB path is absolute (`Paths::database()`), so scripts work regardless of the
-  working directory. On the droplet the migration scripts still sit in
-  `<WebRoot>/db/` (they need `../vendor/autoload.php`; `.htaccess` blocks the
-  folder) and reach the real DB through `TAROT_DATA_DIR`, which `/etc/environment`
-  sets for SSH sessions. **Run anything that writes in the live DB's directory as
-  `www-data`** (`runuser -u www-data -- php db/migrate_x.php`, same for
-  `sqlite3`), so every file created there (a `.backup` copy, a stray new DB)
-  stays owned by the web-server user that has to read and write it.
-- **Rebuilding the schema:** the committed `db/schema.sql` recreates the full
-  structure — `sqlite3 db/tarotdb.db < db/schema.sql`. Regenerate it after a
-  migration with `php scripts/dump_schema.php` so the committed schema stays in
-  sync. The live `tarotdb.db` is gitignored and remains the source of truth for
-  *data*; the `migrate_*.php` scripts are unordered one-offs that assume earlier
-  state, so still treat the DB file as precious and back it up before migrating.
+- **Schema changes are Phinx migrations** (`robmorgan/phinx`, since 2026-11-06), in
+  `db/migrations/` (committed), run in order and recorded in the DB's `phinxlog`
+  table. `phinx.php` points Phinx at `Paths::database()`, so `TAROT_DATA_DIR`
+  picks the same file for the site, the scripts and the migrations; it opens the
+  file `mode=rw`, so like `Connection` it **never creates a database** (a wrong
+  path is an error). `composer migrate` runs what is pending, `composer
+  migrate:status` lists what has run. A new local DB: create an empty file
+  (`New-Item db/tarotdb.db`), then `composer migrate`.
+- **The baseline** (`20261106000000_baseline.php` + its frozen `.sql`) is the schema
+  the old one-off scripts had built, which production has. On an empty DB it
+  builds it, seeds included. On any other DB it checks that every table and index
+  it defines is there as defined (layout and identifier quotes aside), changes
+  nothing and is recorded as run; anything else (a partly migrated or drifted DB,
+  another app's DB) is **refused** with a list of what is missing or different,
+  and nothing is recorded. A local dev DB that missed one of the old scripts gets
+  that refusal: bring it up with the old script, or start from an empty file.
+  `20261106000001_drop_retired_tables.php` then drops the share-relay and
+  changelog tables `IF EXISTS` (AUDIT §2.1, §9.13; the docs say production
+  already lost them, so there it does nothing).
+- **Adding a migration:** `vendor\bin\phinx create AddThingToReadings` writes
+  `db/migrations/<UTC timestamp>_add_thing_to_readings.php` with an empty
+  `change()`. For SQL, replace it with `up()` (`$this->execute(...)`) and a
+  `down()` where the change can be undone, else have `down()` throw
+  `IrreversibleMigrationException` (rolling back on production means restoring
+  the backup). **Never edit a migration that has run on production** — add
+  another. Each runs in one transaction, so one that throws leaves nothing
+  behind. Phinx's connection has foreign keys **off**, and `PRAGMA foreign_keys`
+  can't change inside the transaction: a table rebuild (create, copy, drop,
+  rename) must end with `PRAGMA foreign_key_check` and throw if it returns rows.
+  Then run it (`composer migrate`), regenerate `db/schema.sql` (below) and commit
+  both. Test it against a DB built from the old `schema.sql`
+  (`tests/Unit/Database/BaselineMigrationTest.php` shows how).
+- **`db/schema.sql` is generated, never edited:** `php scripts/dump_schema.php` runs
+  every migration on an empty throwaway DB and writes what they built (objects in
+  creation order, then each table's seed rows). It never reads your local DB, so
+  local drift can't leak into it. The tests load it; `SchemaTest` fails when it
+  isn't exactly what the migrations build.
+- **On the droplet** the backend deploy runs them, after its snapshot (§6
+  "Deployment"): from the web root,
+  `runuser -u www-data -- env TAROT_DATA_DIR=/var/lib/tarotgen php vendor/bin/phinx migrate`.
+  By hand, run the same line after a backup (`sudo systemctl start
+  tarotgen-backup`); `TAROT_DATA_DIR` also comes from `/etc/environment` in SSH
+  sessions, but pass it explicitly anywhere else.
+  **Run anything that writes in the live DB's directory as `www-data`** (Phinx,
+  `sqlite3`, a script), so every file created there (a `.backup` copy, the
+  `-wal`/`-shm` files) stays owned by the web-server user that has to read and
+  write it.
+- The old one-off scripts (`db/migrate_*.php`, `add_*`, `drop_*`, plus
+  `check_state.php` and friends) stay where they are, gitignored, locally and in
+  `<WebRoot>/db/` on the droplet. They are retired: the baseline is their end
+  state, and nothing new goes there. The live `tarotdb.db` remains the source of
+  truth for *data*, so treat it as precious and back it up before migrating.
 
 ---
 
 ## 8. Testing conventions
 
 - **Frontend (Vitest):** specs live flat in `src/__tests__/*.spec.ts`, named after
-  the unit. Config in `vite.config.ts` (`environment: happy-dom`, `restoreMocks`,
-  `unstubGlobals`, setup file `vitest.setup.ts`). Composables and utils are tested
+  the unit. Config in `vite.config.ts`: shared-tooling's `vitestDefaults`
+  (`shared/test/web/vitest.js`: `jsdom`, `restoreMocks`, `unstubGlobals`, v8
+  coverage over all of `src`) with this app's floor and setup file,
+  `vitest.setup.ts`, which also stands in for what browsers have and jsdom
+  lacks (`scrollIntoView`, pointer capture, `ResizeObserver`, `scrollTo`, the
+  Clipboard and Credential Management APIs). Composables and utils are tested
   as units; components and views with `@vue/test-utils` through
   `src/__tests__/helpers/app.ts`: `mountWithApp` (as `main.ts` mounts: the global
   FontAwesome components and a router on the real route table,
@@ -568,17 +749,28 @@ scripts/retention.php --dry-run`.
   `testUser` and `signIn`. Module-level state (the signed-in user, toasts,
   favourites) lasts a whole spec file: reset it in `beforeEach`.
   `npm run test:coverage` fails below the floor in `vite.config.ts`.
-- **Smoke run (Playwright, `npm run test:e2e`, CI job "Smoke"):** `e2e/smoke.spec.ts`
-  draws a reading, reports a card and finds the report as admin, on the **built**
-  app: `npm run build` first. `playwright.config.ts` starts PHP's built-in server
-  with `e2e/server/router.php` (`backend/.htaccess`'s routing: the SPA through
-  `og.php` and its CSP, `/api` through the Slim app), after `e2e/server/prepare.php`
-  seeds a throwaway `TAROT_DATA_DIR` (temp dir) and copies `dist/` to
+- **End-to-end suite (Playwright, `npm run test:e2e`, CI job `e2e`):** 18 tests on
+  the built app and the real API. `e2e/pages.spec.ts` opens each of the main
+  pages by its address, checks its heading and what the server sent for it, and
+  requires it to pass axe at WCAG 2.2 AA (`@jwill89/test-a11y`) with no page error
+  or CSP refusal (`e2e/breakage.ts`). `e2e/smoke.spec.ts` draws a reading as a
+  guest, reports a card and finds the report as admin. `playwright.config.ts`
+  spreads shared-tooling's `playwrightDefaults` (`shared/test/e2e/playwright.js`:
+  tests in `e2e/`, one worker in order, one retry in CI, a trace kept when a test
+  fails, and the browser already installed: Edge locally on Windows, the runner's
+  Chrome in CI, so none is downloaded). Its web server builds the SPA (`vite
+  build`, so no `npm run build` first), runs `e2e/server/prepare.php`, then
+  starts PHP's built-in server on `127.0.0.1:8123` with `e2e/server/router.php`
+  (`backend/.htaccess`'s routing: the SPA through `og.php` and its CSP, `/api`
+  through the Slim app). `prepare.php` makes a throwaway `TAROT_DATA_DIR` in the
+  OS temp dir (`tarotgen-e2e`; it refuses a path inside `backend/db/`) with a
+  `.env` and a database the migrations build, seeded with a deck system, a deck,
+  a spread, a guest's reading and an admin, and copies `dist/` to
   `backend/dist/` (gitignored), where `og.php` reads the shell. The server runs
-  with `sys_temp_dir` inside that data dir, so the file-backed rate limiters start
-  empty each run (earlier local runs can't trip them). Locally on Windows it
-  drives the installed Edge; CI installs Chromium. `--repeat-each=5` is a good
-  flakiness check; a step must tolerate a retry's extra data.
+  with `sys_temp_dir` inside that data dir, so the file-backed rate limiters
+  start empty each run (earlier local runs can't trip them).
+  `--repeat-each=5` is a good flakiness check; a step must tolerate a retry's
+  extra data.
 - **Backend (PHPUnit):** namespace `Tarot\Tests\`, two suites. Config
   (`phpunit.xml`) treats warnings/deprecations/notices as failures
   (`failOnWarning/Deprecation/Notice`) — keep tests clean.
@@ -599,12 +791,18 @@ scripts/retention.php --dry-run`.
     status codes, error bodies, auth and anything that crosses layers.
     `replaceService()` swaps in a stand-in for something that talks to the outside
     world (Google, SMTP) before the first request.
+  - `tests/Unit/Database/` runs the real migrations (`Tarot\Database\Schema::migrate()`,
+    phinx.php's settings) on scratch files: `SchemaTest` holds `db/schema.sql` to
+    what they build, `BaselineMigrationTest` holds the baseline to leaving a DB
+    built from `schema.sql` exactly as it was, and to refusing a partial one.
   - PHPStan analyses `tests/` too, at the same level as the app, and
     `phpunit.xml` fails the run on PHPUnit's own deprecations, notices and
     warnings, so a deprecated PHPUnit API is caught as soon as it's used and a
     PHPUnit major is a bump and a run.
     `composer test:coverage` (CI) fails when line or method coverage drops below
-    the floor in `bin/coverage-check.php`; locally it needs Xdebug or pcov.
+    the floors its last command passes to shared-tooling's
+    `shared/test/php/coverage-check.php` (`--lines=95 --methods=88`, in
+    `composer.json`); locally it needs Xdebug or pcov.
 - **Every change ships with its tests** — routes, services, composables,
   components and views alike, and a bug fix with the test that would have caught
   it. What each needs is in §10; the coverage floors never go down.
@@ -620,8 +818,9 @@ scripts/retention.php --dry-run`.
   set by `SetEnv` in the Apache vhost (web), `/etc/environment` (SSH sessions) and
   `/etc/cron.d/tarotgen` (cron). Unset locally, where it falls back to `backend/`.
   Nothing private may live in the web root (AUDIT.md §1.0).
-- Separately, a gitignored **`.npmrc`** at `frontend/` must hold the FontAwesome
-  Pro registry auth token for `npm install` to resolve the icon packages (see §6).
+- Separately, your user **`~/.npmrc`** must hold the FontAwesome Pro registry
+  auth token for `npm install` to resolve the icon packages; the tracked
+  `frontend/.npmrc` holds only the registry scopes (see §6).
 - Key vars: `APP_ENV` (`development`/`production`, case-insensitive),
   `APP_ORIGIN` (CORS), `APP_URL` (links in emails), `SMTP_*` / `MAIL_*`
   (transactional email), `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI` (optional
@@ -640,8 +839,8 @@ scripts/retention.php --dry-run`.
 - **Every change ships with its tests — no exceptions for small features.**
   Coverage is held high on purpose (AUDIT §8: ~96% of backend lines, ~97% of
   frontend lines), and the floors in `vite.config.ts` and
-  `backend/bin/coverage-check.php` **never go down**; raise them when coverage
-  rises. For each change:
+  `backend/composer.json` (`test:coverage`) **never go down**; raise them when
+  coverage rises. For each change:
   - **Backend:** an HTTP test (`tests/Http`) for every new or changed route —
     the success path with `assertDocumented()`, its 400s, 401/403, 404, and
     what lands in the database — plus unit tests for new service or Data logic.
@@ -688,16 +887,16 @@ scripts/retention.php --dry-run`.
   is still just `password_hash`, and `visibility` is worked out in the SELECT)
   and an **expired** guest reading (`expires_at`) are a 404 to everyone but the
   owner, with generic share meta.
-- **Schema changes are additive and migrate before deploy:** a new
-  `db/migrate_*.php` (idempotent; **migrations are never committed** — `db/` is
-  gitignored apart from `schema.sql`, so don't un-ignore one, and don't add a
-  committed test that needs one: verify it against a throwaway copy of the old
-  schema instead; it's copied to the droplet by hand), `db/schema.sql` edited by hand (never
-  regenerated wholesale from a local DB — that drops a table and reorders; it
-  also seeds the starting `spread_categories`, the one reference data a fresh
-  database needs), and
-  run on production **before** the backend deploy that needs it. Design it so
-  the old code keeps working on the new schema.
+- **Schema changes are additive Phinx migrations** (§7): a new file in
+  `db/migrations/`, committed with the `db/schema.sql` that `php
+  scripts/dump_schema.php` regenerates from it (`schema.sql` is never edited by
+  hand, and a migration that has run on production is never changed: add
+  another), and a test against a DB built from the previous schema. The backend
+  deploy runs it on production as `www-data`, after a snapshot (§6
+  "Deployment"). Design it so the old
+  code keeps working on the new schema, and drop something only in a release
+  after the code stopped using it. Seed rows a fresh database needs (the starting
+  `spread_categories`) belong in a migration too.
 - **Product boundaries (the owner's, after talking with practitioners):** the
   site is a tool for readers — no card interpretations and no AI readings.
   Reversals are an **on/off toggle**, never a rate or percentage setting:
@@ -726,7 +925,10 @@ scripts/retention.php --dry-run`.
   `vendor\bin\phpunit -d date.timezone=Pacific/Kiritimati` (UTC+14).
 - **Comments** in this codebase explain *why*, not *what* — follow that style.
 - **PSR-4 / PER-CS 3.0** for PHP (`composer lint:fix`). **Strict TypeScript**
-  (`strict: true`) — keep `npm run type-check` clean. Augment a module's types
+  (`strict: true`, plus the shared `noUncheckedIndexedAccess`: an index into an
+  array or record may find nothing, and its type says so) — keep `npm run
+  type-check` clean. The shared ESLint config sets `curly: all`, so every `if`,
+  `else` and loop body takes braces. Augment a module's types
   (`declare module 'vue' { … }`) only in a file that is itself a module (has a
   top-level import/export, like `src/global-components.d.ts`): in a script file
   such as `vite-env.d.ts` the block *replaces* the module, which once silently
@@ -761,7 +963,7 @@ scripts/retention.php --dry-run`.
 | Change shared API types             | `src/types/index.ts` |
 | Use a new icon                      | register it in `src/fontawesome.ts` (import + `library.add`) |
 | Change/add a heading font           | `public/fonts/` + `src/assets/fonts.css` + `--myst-heading-font` in `src/assets/tokens.css` |
-| Change a DB schema                  | new `db/migrate_*.php` script |
+| Change a DB schema                  | new migration in `db/migrations/` (`vendor\bin\phinx create`), then `php scripts/dump_schema.php` (§7) |
 | Grant admin                         | `php scripts/make_admin.php <email>` |
 | Adjust auth/session/CSRF            | `api/app.php` (middleware) + `api/index.php` (cookie params) + `api/Routes/Middleware/*` |
 
@@ -781,13 +983,21 @@ and it has its own version, package, and release channel.
   which emits `bin/Release/TarotGen.Plugin/latest.zip` + manifest. The plugin
   **version** comes from `<Version>` in the `.csproj` — bump it to make Dalamud
   offer an update to installed testers.
-- **Analysis:** every build runs the recommended .NET analyzers and the
-  `.editorconfig` style rules (`plugin/.editorconfig`), with **warnings as
-  errors** (NuGet vulnerability advisories excepted, so a new advisory can't block
-  a release). `dotnet format plugin/TarotGen.Plugin/TarotGen.Plugin.csproj
-  --verify-no-changes` checks the formatting. CI (`.github/workflows/plugin.yml`)
-  builds on Linux whenever `plugin/` changes: the Dalamud distribution goes into
-  `DALAMUD_HOME`, and `EnableWindowsTargeting` lets the Windows target build there.
+- **Analysis:** every build runs shared-tooling's .NET analyzers (recommended
+  level) and C# code style (`shared/lint/dotnet`: `analyzers.props` and
+  `.globalconfig`), which `plugin/Directory.Build.props` imports, so the build
+  needs the `shared/` submodule. The `.csproj` keeps **warnings as errors**
+  (`TreatWarningsAsErrors`, for every build, local and deploy too), with the
+  NuGet vulnerability advisories NU1901–NU1904 left as warnings, so a new
+  advisory can't block a release (AUDIT §6.3). `dotnet format
+  plugin/TarotGen.Plugin/TarotGen.Plugin.csproj --verify-no-changes` checks the
+  formatting. CI's `plugin` job (shared-tooling's `dotnet.yml`) runs the Release
+  build with warnings as errors and `dotnet format` on every push and pull
+  request; `.github/workflows/plugin.yml` only packages it (`latest.zip` +
+  manifest, as a week-long artifact) when `plugin/`, `shared` or `.editorconfig`
+  changes. Both build on Linux: the Dalamud distribution goes into
+  `DALAMUD_HOME`, and `EnableWindowsTargeting` lets the Windows target build
+  there.
 - **Distribute:** `scripts/deploy.ps1 -Target plugin` builds Release and uploads
   `latest.zip` / `icon.png` / a generated `repo.json` (the pluginmaster) to
   `$WebRoot/plugin`. Testers add `https://tarotgen.io/plugin/repo.json` as a
@@ -813,4 +1023,3 @@ and it has its own version, package, and release channel.
   read in `Draw`); read local-player identity from `IPlayerState` (v15 removed
   `IClientState.LocalPlayer`). See [`plugin/README.md`](plugin/README.md) for the
   build/install walkthrough and the in/out-of-scope feature list.
-

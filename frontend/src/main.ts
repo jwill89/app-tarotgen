@@ -44,7 +44,9 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 /** Fade out and remove the index.html boot loader once the app is on screen. */
 function hideBootLoader(): void {
   const el = document.getElementById('app-loading')
-  if (!el) return
+  if (!el) {
+    return
+  }
   el.classList.add('is-hiding')
   el.addEventListener('transitionend', () => el.remove(), { once: true })
   // Fallback in case the transition is skipped (e.g. reduced-motion / no repaint).
@@ -74,7 +76,9 @@ markAuthChecked()
 const authChecked = fetchMe()
 
 async function boot(): Promise<void> {
-  if (authDecidesRouting) await authChecked
+  if (authDecidesRouting) {
+    await authChecked
+  }
   // Wait for the initial route's lazily-loaded component (and its guards) to
   // resolve before mounting, so the app shell and the view paint together
   // rather than the background/navbar flashing in ahead of the content.

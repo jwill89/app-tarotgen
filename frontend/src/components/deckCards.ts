@@ -48,7 +48,9 @@ export function emptyCard(cardId: number): DeckSystemCard {
 export function resizeCards(cards: DeckSystemCard[], total: number): DeckSystemCard[] {
   const count = Math.max(1, total)
   const next = cards.slice(0, count)
-  for (let i = next.length; i < count; i++) next.push(emptyCard(i + 1))
+  for (let i = next.length; i < count; i++) {
+    next.push(emptyCard(i + 1))
+  }
   return next
 }
 

@@ -68,8 +68,8 @@ class SpecialCardData extends AbstractData
      */
     public function store(array $data): ?SpecialCard
     {
-        $deck_id = (int)($data['deck_id'] ?? 0);
-        $card_id = (int)($data['card_id'] ?? 0);
+        $deck_id = (int) ($data['deck_id'] ?? 0);
+        $card_id = (int) ($data['card_id'] ?? 0);
 
         $stmt = $this->db->prepare(
             "INSERT INTO special_cards

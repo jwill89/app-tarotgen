@@ -16,14 +16,18 @@ function button(name: string): HTMLButtonElement {
   const found = [...document.body.querySelectorAll('button')].find(
     (b) => text(b) === name || b.getAttribute('aria-label') === name,
   )
-  if (!found) throw new Error(`No "${name}" button`)
+  if (!found) {
+    throw new Error(`No "${name}" button`)
+  }
   return found
 }
 
 function labelled(label: string): HTMLElement {
   const el = [...document.body.querySelectorAll('label')].find((l) => text(l) === label)
   const control = el && document.getElementById(el.htmlFor)
-  if (!control) throw new Error(`Nothing is labelled "${label}"`)
+  if (!control) {
+    throw new Error(`Nothing is labelled "${label}"`)
+  }
   return control
 }
 

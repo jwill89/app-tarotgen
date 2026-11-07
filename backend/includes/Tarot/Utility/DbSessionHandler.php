@@ -45,9 +45,7 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
      */
     private const int WRITE_THROTTLE = 300;
 
-    public function __construct(private PDO $db)
-    {
-    }
+    public function __construct(private PDO $db) {}
 
     #[\Override]
     public function open(string $path, string $name): bool
@@ -72,7 +70,7 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
             $stmt->execute([':id' => $this->key($id), ':now' => time()]);
             $data = $stmt->fetchColumn();
 
-            return $data === false ? '' : (string)$data;
+            return $data === false ? '' : (string) $data;
         } catch (Throwable $e) {
             // A storage hiccup should degrade to "not logged in", never 500 the
             // entire site on every request.
@@ -128,7 +126,7 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
 
         $live = $this->db->prepare('SELECT COUNT(*) FROM sessions WHERE user_id = :user AND id <> :except AND expires > :now');
         $live->execute($params + [':now' => time()]);
-        $ended = (int)$live->fetchColumn();
+        $ended = (int) $live->fetchColumn();
 
         $this->db->prepare('DELETE FROM sessions WHERE user_id = :user AND id <> :except')->execute($params);
 
@@ -162,7 +160,7 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
                 'SELECT 1 FROM sessions WHERE id = :id AND expires > :now'
             );
             $stmt->execute([':id' => $this->key($id), ':now' => time()]);
-            return (bool)$stmt->fetchColumn();
+            return (bool) $stmt->fetchColumn();
         } catch (Throwable $e) {
             error_log('DbSessionHandler::validateId failed: ' . $e->getMessage());
             return false;
@@ -192,8 +190,8 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
             $current = $sel->fetch(PDO::FETCH_NUM);
             if (
                 is_array($current)
-                && ($newExp - (int)$current[0]) < self::WRITE_THROTTLE
-                && ($current[1] === null ? null : (int)$current[1]) === $userId
+                && ($newExp - (int) $current[0]) < self::WRITE_THROTTLE
+                && ($current[1] === null ? null : (int) $current[1]) === $userId
             ) {
                 return true;
             }

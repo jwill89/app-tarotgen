@@ -8,7 +8,11 @@ import { button as bodyButton, choose, labelled, typeInto, valueOf } from './hel
 import type { Spread, SpreadCategory, SpreadPosition } from '@/types'
 
 /** What the editor emits on save, as far as these tests read it. */
-type Saved = { name: string; positions: SpreadPosition[]; category_id?: number }
+interface Saved {
+  name: string
+  positions: SpreadPosition[]
+  category_id?: number
+}
 
 const threeCard: Spread = {
   spread_id: 3,
@@ -58,7 +62,9 @@ async function mountEditor(
           b.attributes('aria-label') === name ||
           b.attributes('title') === name,
       )
-    if (!found) throw new Error(`No "${name}" button`)
+    if (!found) {
+      throw new Error(`No "${name}" button`)
+    }
     return found
   }
   const click = async (name: string) => {
@@ -101,8 +107,7 @@ describe('SpreadEditor', () => {
     expect(document.getElementById(captionId)?.textContent).toBe('Description (Markdown)')
   })
 
-  // Sanitizing is renderMarkdown's (markdown.spec.ts, under jsdom: DOMPurify
-  // doesn't strip anything under happy-dom).
+  // Sanitizing is renderMarkdown's (markdown.spec.ts).
   it('previews the description as rendered markdown', async () => {
     const { wrapper, click } = await mountEditor(threeCard)
 
@@ -212,7 +217,9 @@ describe('SpreadEditor', () => {
     const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]')
     expect(dialog?.textContent).toContain('Position #1')
     const input = dialog?.querySelector<HTMLInputElement>('input')
-    if (!input) throw new Error('No position title input')
+    if (!input) {
+      throw new Error('No position title input')
+    }
     input.value = 'The Heart of It'
     input.dispatchEvent(new Event('input'))
     input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter' }))
@@ -247,7 +254,7 @@ describe('SpreadEditor', () => {
   it("shows a loaded position's description in its dialog, and drops one cleared", async () => {
     const { editor, click } = await mountEditor(threeCard)
     // Select the first card (Past) on the canvas, then edit it.
-    const past = [...document.body.querySelectorAll<HTMLElement>('.spread-card--editor')][0]
+    const past = [...document.body.querySelectorAll<HTMLElement>('.spread-card--editor')][0]!
     past.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }))
     past.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
     await flushPromises()

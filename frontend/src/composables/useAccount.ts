@@ -54,12 +54,18 @@ export function useAccount() {
     const offset = (Math.max(1, page) - 1) * perPage
     const query = new URLSearchParams({ limit: String(perPage), offset: String(offset) })
     for (const [key, value] of Object.entries(filters)) {
-      if (value !== undefined && value !== null && value !== '') query.set(key, String(value))
+      if (value !== undefined && value !== null && value !== '') {
+        query.set(key, String(value))
+      }
     }
-    if (query.has('from') || query.has('to')) query.set('tz', timeZone())
+    if (query.has('from') || query.has('to')) {
+      query.set('tz', timeZone())
+    }
 
     const res = await apiRequest<AccountReading[]>(`${endpoints.account.readings}?${query}`)
-    if (!res.ok) return { ok: false, error: res.error }
+    if (!res.ok) {
+      return { ok: false, error: res.error }
+    }
 
     // get() returns null when absent, and Number(null) is 0 — parse only a real value.
     const header = res.headers?.get('X-Total-Count')
@@ -117,8 +123,12 @@ export function useAccount() {
       sendJson('PATCH', { display_name: displayName }),
       'Could not update display name.',
     )
-    if (!res.ok) return { ok: false, error: res.error }
-    if (res.data.user) currentUser.value = res.data.user
+    if (!res.ok) {
+      return { ok: false, error: res.error }
+    }
+    if (res.data.user) {
+      currentUser.value = res.data.user
+    }
     return { ok: true }
   }
 
@@ -163,7 +173,9 @@ export function useAccount() {
       sendJson('DELETE', { password }),
       'Could not delete account.',
     )
-    if (!res.ok) return { ok: false, error: res.error }
+    if (!res.ok) {
+      return { ok: false, error: res.error }
+    }
     currentUser.value = null
     return { ok: true }
   }

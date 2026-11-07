@@ -21,22 +21,22 @@ describe('resizeCards', () => {
   it('seeds an empty list with sequential card ids', () => {
     const cards = resizeCards([], 78)
     expect(cards).toHaveLength(78)
-    expect(cards[0].card_id).toBe(1)
-    expect(cards[77].card_id).toBe(78)
+    expect(cards[0]!.card_id).toBe(1)
+    expect(cards[77]!.card_id).toBe(78)
   })
 
   it('grows without disturbing the rows already typed', () => {
     const cards = resizeCards([], 2)
-    cards[0].name = 'The Fool'
-    cards[1].name = 'The Magician'
+    cards[0]!.name = 'The Fool'
+    cards[1]!.name = 'The Magician'
 
     const grown = resizeCards(cards, 4)
 
     expect(grown).toHaveLength(4)
-    expect(grown[0].name).toBe('The Fool')
-    expect(grown[1].name).toBe('The Magician')
-    expect(grown[2].name).toBe('')
-    expect(grown[3].card_id).toBe(4)
+    expect(grown[0]!.name).toBe('The Fool')
+    expect(grown[1]!.name).toBe('The Magician')
+    expect(grown[2]!.name).toBe('')
+    expect(grown[3]!.card_id).toBe(4)
   })
 
   it('preserves object identity when growing, so open inputs are not remounted', () => {
@@ -47,10 +47,10 @@ describe('resizeCards', () => {
 
   it('truncates from the end when shrinking', () => {
     const cards = resizeCards([], 5)
-    cards[0].name = 'kept'
+    cards[0]!.name = 'kept'
     const shrunk = resizeCards(cards, 2)
     expect(shrunk).toHaveLength(2)
-    expect(shrunk[0].name).toBe('kept')
+    expect(shrunk[0]!.name).toBe('kept')
   })
 
   it('never drops below a single row', () => {
@@ -68,16 +68,16 @@ describe('resizeCards', () => {
 describe('missingNameCount / allCardsNamed', () => {
   it('counts blank and whitespace-only names as missing', () => {
     const cards = resizeCards([], 3)
-    cards[0].name = 'The Fool'
-    cards[1].name = '   '
+    cards[0]!.name = 'The Fool'
+    cards[1]!.name = '   '
     expect(missingNameCount(cards)).toBe(2)
     expect(allCardsNamed(cards)).toBe(false)
   })
 
   it('is satisfied once every card has a non-blank name', () => {
     const cards = resizeCards([], 2)
-    cards[0].name = 'The Fool'
-    cards[1].name = 'The Magician'
+    cards[0]!.name = 'The Fool'
+    cards[1]!.name = 'The Magician'
     expect(missingNameCount(cards)).toBe(0)
     expect(allCardsNamed(cards)).toBe(true)
   })

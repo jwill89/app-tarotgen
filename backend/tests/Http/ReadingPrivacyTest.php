@@ -215,7 +215,7 @@ final class ReadingPrivacyTest extends HttpTestCase
             $this->assertSame(
                 ['error' => 'A reading made without an account can be kept for 1, 7 or 30 days, or the usual year.'],
                 $this->assertJsonResponse(400, $response),
-                (string)$days
+                (string) $days
             );
         }
         $this->assertSame(0, $this->rowCount('readings'));

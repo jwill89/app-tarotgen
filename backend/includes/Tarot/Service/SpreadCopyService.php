@@ -19,8 +19,7 @@ class SpreadCopyService
     public function __construct(
         private readonly SpreadRepository $spreads,
         private readonly UserSpreadRepository $userSpreads,
-    ) {
-    }
+    ) {}
 
     /**
      * The new personal spread: the public one's description and positions (with

@@ -72,8 +72,8 @@ describe('useLayoutTools — centerAll', () => {
     expect(slots[0]).toEqual({ x: 40, y: 45 })
     expect(slots[1]).toEqual({ x: 60, y: 55 })
     // Relative spacing preserved.
-    expect(slots[1].x - slots[0].x).toBe(20)
-    expect(slots[1].y - slots[0].y).toBe(10)
+    expect(slots[1]!.x - slots[0]!.x).toBe(20)
+    expect(slots[1]!.y - slots[0]!.y).toBe(10)
   })
 })
 
@@ -86,7 +86,7 @@ describe('useLayoutTools — align', () => {
     const { tools } = setup(slots)
     tools.setSelection([0])
     tools.align('left')
-    expect(slots[0].x).toBe(10) // unchanged
+    expect(slots[0]!.x).toBe(10) // unchanged
   })
 
   it('aligns left edges to the minimum x', () => {
@@ -163,11 +163,11 @@ describe('useLayoutTools — distribute (V-shape grouping fix)', () => {
     tools.distribute('v')
 
     // Three groups (y≈0, y≈5, y≈30) distributed between 0 and 30 → 0, 15, 30.
-    expect(slots[0].y).toBe(0)
-    expect(slots[1].y).toBe(0) // pair stays matched, NOT split to 7.5
-    expect(slots[2].y).toBe(15) // apex
-    expect(slots[3].y).toBe(30)
-    expect(slots[4].y).toBe(30) // pair stays matched
+    expect(slots[0]!.y).toBe(0)
+    expect(slots[1]!.y).toBe(0) // pair stays matched, NOT split to 7.5
+    expect(slots[2]!.y).toBe(15) // apex
+    expect(slots[3]!.y).toBe(30)
+    expect(slots[4]!.y).toBe(30) // pair stays matched
     // x values are untouched by a vertical distribute.
     expect(slots.map((s) => s.x)).toEqual([40, 60, 50, 40, 60])
   })
@@ -183,9 +183,9 @@ describe('useLayoutTools — distribute (V-shape grouping fix)', () => {
     tools.setSelection([0, 1, 2, 3])
     tools.distribute('v')
     // Groups: {0,0.5}, {20}, {40} → distributed 0, 20, 40.
-    expect(slots[0].y).toBe(0)
-    expect(slots[1].y).toBe(0)
-    expect(slots[2].y).toBe(20)
-    expect(slots[3].y).toBe(40)
+    expect(slots[0]!.y).toBe(0)
+    expect(slots[1]!.y).toBe(0)
+    expect(slots[2]!.y).toBe(20)
+    expect(slots[3]!.y).toBe(40)
   })
 })

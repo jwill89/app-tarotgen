@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
@@ -110,7 +106,7 @@ public sealed class MainWindow : Window, IDisposable
     public override void Draw()
     {
         if (!this.catalogRequested)
-            StartCatalogLoad();
+            this.StartCatalogLoad();
 
         // First-run onboarding — shown once, ever. The popup id must match the
         // PopupModal below exactly (### makes only the trailing id part hash).
@@ -126,7 +122,7 @@ public sealed class MainWindow : Window, IDisposable
         {
             this.drawKeyNoticeShown = true;
             if (this.api.CanDraw)
-                MarkDrawKeyNoticeSeen();
+                this.MarkDrawKeyNoticeSeen();
             else
                 ImGui.OpenPopup("Drawing now needs a draw key###drawKeyNotice");
         }
@@ -148,7 +144,7 @@ public sealed class MainWindow : Window, IDisposable
                 using (var t = ImRaii.TabItem("New Reading", newReadingFlags))
                 {
                     if (t)
-                        DrawNewReadingTab();
+                        this.DrawNewReadingTab();
                 }
 
                 // My Readings requires an actual linked TarotGen account (not a guest).
@@ -156,7 +152,7 @@ public sealed class MainWindow : Window, IDisposable
                 {
                     using var t = ImRaii.TabItem("My Readings");
                     if (t)
-                        DrawMyReadingsTab();
+                        this.DrawMyReadingsTab();
                 }
 
                 var settingsFlags = this.switchToSettingsTab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
@@ -164,19 +160,19 @@ public sealed class MainWindow : Window, IDisposable
                 using (var t = ImRaii.TabItem("Settings", settingsFlags))
                 {
                     if (t)
-                        DrawSettingsTab();
+                        this.DrawSettingsTab();
                 }
             }
         }
 
-        DrawOnboarding();
-        DrawDrawKeyNotice();
+        this.DrawOnboarding();
+        this.DrawDrawKeyNotice();
     }
 
     private void DrawOnboarding()
     {
         var vp = ImGui.GetMainViewport();
-        float scale = ImGuiHelpers.GlobalScale;
+        var scale = ImGuiHelpers.GlobalScale;
         ImGui.SetNextWindowPos(vp.WorkPos + (vp.WorkSize / 2f), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
         ImGui.SetNextWindowSize(new Vector2(440 * scale, 0), ImGuiCond.Appearing);
 
@@ -204,12 +200,12 @@ public sealed class MainWindow : Window, IDisposable
         if (Ui.PrimaryButton("Connect to TarotGen.io"))
         {
             this.linkService.StartLink();
-            CompleteOnboarding();
+            this.CompleteOnboarding();
         }
 
         ImGui.SameLine();
         if (Ui.Button("Maybe later"))
-            CompleteOnboarding();
+            this.CompleteOnboarding();
     }
 
     private void CompleteOnboarding()
@@ -224,7 +220,7 @@ public sealed class MainWindow : Window, IDisposable
     private void DrawDrawKeyNotice()
     {
         var vp = ImGui.GetMainViewport();
-        float scale = ImGuiHelpers.GlobalScale;
+        var scale = ImGuiHelpers.GlobalScale;
         ImGui.SetNextWindowPos(vp.WorkPos + (vp.WorkSize / 2f), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
         ImGui.SetNextWindowSize(new Vector2(460 * scale, 0), ImGuiCond.Appearing);
 
@@ -256,7 +252,7 @@ public sealed class MainWindow : Window, IDisposable
             this.drawKeys.StartGetKey();
             // Its progress and any error show on the New Reading tab.
             this.switchToNewReadingTab = true;
-            CloseDrawKeyNotice();
+            this.CloseDrawKeyNotice();
         }
 
         ImGui.SameLine();
@@ -264,17 +260,17 @@ public sealed class MainWindow : Window, IDisposable
         {
             this.linkService.StartLink();
             this.switchToSettingsTab = true;
-            CloseDrawKeyNotice();
+            this.CloseDrawKeyNotice();
         }
 
         ImGui.SameLine();
         if (Ui.Button("Later"))
-            CloseDrawKeyNotice();
+            this.CloseDrawKeyNotice();
     }
 
     private void CloseDrawKeyNotice()
     {
-        MarkDrawKeyNoticeSeen();
+        this.MarkDrawKeyNoticeSeen();
         ImGui.CloseCurrentPopup();
     }
 
@@ -298,17 +294,17 @@ public sealed class MainWindow : Window, IDisposable
         {
             ImGui.TextColored(ErrorColor, this.catalogError);
             if (Ui.Button("Retry"))
-                StartCatalogLoad();
+                this.StartCatalogLoad();
             return;
         }
 
         Ui.Section(FontAwesomeIcon.LayerGroup, "Deck");
         using (Ui.Body())
         {
-            DrawDeckCombo();
+            this.DrawDeckCombo();
             if (this.selectedDeck is { AdditionalCards: > 0 })
             {
-                bool additional = this.config.UseAdditionalCards;
+                var additional = this.config.UseAdditionalCards;
                 if (ImGui.Checkbox($"Include this deck's {this.selectedDeck.AdditionalCards} extra card(s)", ref additional))
                     this.config.UseAdditionalCards = additional;
             }
@@ -317,33 +313,33 @@ public sealed class MainWindow : Window, IDisposable
         Ui.Section(FontAwesomeIcon.Table, "Spread");
         using (Ui.Body())
         {
-            DrawSpreadCombo();
+            this.DrawSpreadCombo();
             if (this.selectedSpread != null)
                 DrawSpreadDetailsColumns(this.selectedSpread);
             else
-                DrawFreeDrawCount();
+                this.DrawFreeDrawCount();
         }
 
         Ui.Section(FontAwesomeIcon.SlidersH, "Options");
         using (Ui.Body())
         {
-            bool reversals = this.config.UseReversals;
+            var reversals = this.config.UseReversals;
             if (ImGui.Checkbox("Reversed cards", ref reversals))
                 this.config.UseReversals = reversals;
 
             if (this.api.IsLinked)
-                DrawOwnerOptions();
+                this.DrawOwnerOptions();
             else
                 Ui.Help("Link your account (Settings tab) to set a title, hide your name, or add a password.");
         }
 
         ImGui.Spacing();
-        DrawGenerateButton();
+        this.DrawGenerateButton();
     }
 
     private void DrawOwnerOptions()
     {
-        float scale = ImGuiHelpers.GlobalScale;
+        var scale = ImGuiHelpers.GlobalScale;
         ImGui.SetNextItemWidth(-1);
         ImGui.InputTextWithHint("##rtitle", "Reading title (optional)", ref this.newReadingTitle, 100);
         ImGui.Checkbox("Hide my name", ref this.hideUser);
@@ -355,15 +351,15 @@ public sealed class MainWindow : Window, IDisposable
     {
         if (!this.api.CanDraw)
         {
-            DrawGetKeyPrompt();
+            this.DrawGetKeyPrompt();
             return;
         }
 
-        float scale = ImGuiHelpers.GlobalScale;
+        var scale = ImGuiHelpers.GlobalScale;
         using (ImRaii.Disabled(this.generating || this.selectedDeck == null))
         {
             if (Ui.PrimaryButton("Generate Reading", new Vector2(-1, 36 * scale)))
-                StartGenerate();
+                this.StartGenerate();
         }
 
         if (this.generating)
@@ -412,7 +408,7 @@ public sealed class MainWindow : Window, IDisposable
         if (!combo)
             return;
 
-        bool first = true;
+        var first = true;
         foreach (var group in this.deckGroups)
         {
             if (!first)
@@ -425,7 +421,7 @@ public sealed class MainWindow : Window, IDisposable
                 var extra = d.AdditionalCards > 0 ? $"  (+{d.AdditionalCards})" : string.Empty;
                 var artist = string.IsNullOrWhiteSpace(d.Artist) ? string.Empty : $"   ·  {d.Artist}";
                 if (ImGui.Selectable($"{d.Name}{artist}{extra}##deck{d.DeckId}", d == this.selectedDeck))
-                    SelectDeck(d);
+                    this.SelectDeck(d);
             }
         }
     }
@@ -452,9 +448,9 @@ public sealed class MainWindow : Window, IDisposable
             return;
 
         if (ImGui.Selectable("Free draw", this.selectedSpread == null))
-            SelectSpread(null);
+            this.SelectSpread(null);
 
-        DrawSpreadItems("spread", s => s == this.selectedSpread, SelectSpread);
+        this.DrawSpreadItems("spread", s => s == this.selectedSpread, this.SelectSpread);
     }
 
     /// <summary>
@@ -482,7 +478,7 @@ public sealed class MainWindow : Window, IDisposable
 
     private void DrawFreeDrawCount()
     {
-        int max = MaxCardsForDeck();
+        var max = this.MaxCardsForDeck();
         if (this.freeDrawCount > max)
             this.freeDrawCount = max;
         ImGui.SetNextItemWidth(200 * ImGuiHelpers.GlobalScale);
@@ -528,15 +524,15 @@ public sealed class MainWindow : Window, IDisposable
 
         var fit = SpreadLayout.ComputeFit(positions);
         var sizePct = SpreadLayout.CardSizePct(fit);
-        float scale = ImGuiHelpers.GlobalScale;
-        float canvas = Math.Clamp(ImGui.GetContentRegionAvail().X, 120f, 440f * scale);
+        var scale = ImGuiHelpers.GlobalScale;
+        var canvas = Math.Clamp(ImGui.GetContentRegionAvail().X, 120f, 440f * scale);
 
         var origin = ImGui.GetCursorScreenPos();
         ImGui.Dummy(new Vector2(canvas, canvas));
         var dl = ImGui.GetWindowDrawList();
         dl.AddRect(origin, origin + new Vector2(canvas, canvas), 0x22FFFFFFu, 4f);
-        float cardWpx = sizePct.X / 100f * canvas;
-        float cardHpx = sizePct.Y / 100f * canvas;
+        var cardWpx = sizePct.X / 100f * canvas;
+        var cardHpx = sizePct.Y / 100f * canvas;
 
         foreach (var p in positions)
         {
@@ -558,10 +554,10 @@ public sealed class MainWindow : Window, IDisposable
         }
 
         if (!this.myReadingsRequested)
-            StartLoadMyReadings();
+            this.StartLoadMyReadings();
 
         if (Ui.Button("Refresh"))
-            StartLoadMyReadings();
+            this.StartLoadMyReadings();
         ImGui.SameLine();
         ImGui.SetNextItemWidth(-1);
         ImGui.InputTextWithHint("##filter", "Filter by title, deck, or ID…", ref this.myReadingsFilter, 100);
@@ -579,7 +575,7 @@ public sealed class MainWindow : Window, IDisposable
         }
 
         var q = this.myReadingsFilter.Trim();
-        var rows = this.myReadings.Where(r => Matches(r, q)).ToList();
+        var rows = this.myReadings.Where(r => this.Matches(r, q)).ToList();
         if (rows.Count == 0)
         {
             ImGui.TextDisabled(q.Length > 0 ? "No readings match your filter." : "No saved readings yet.");
@@ -602,11 +598,11 @@ public sealed class MainWindow : Window, IDisposable
             ImGui.TableNextRow();
             ImGui.TableNextColumn();
             if (ImGui.Selectable($"{ReadingFormat.Title(r)}##row{r.ReadingId}", false, ImGuiSelectableFlags.SpanAllColumns))
-                ShowReading(r.ReadingId);
+                this.ShowReading(r.ReadingId);
             ImGui.TableNextColumn();
             ImGui.TextUnformatted(r.ReadingId);
             ImGui.TableNextColumn();
-            ImGui.TextUnformatted(DeckName(r));
+            ImGui.TextUnformatted(this.DeckName(r));
             ImGui.TableNextColumn();
             ImGui.TextUnformatted(r.ReadingTime ?? string.Empty);
         }
@@ -618,7 +614,7 @@ public sealed class MainWindow : Window, IDisposable
             return true;
         return ReadingFormat.Title(r).Contains(query, StringComparison.OrdinalIgnoreCase)
             || r.ReadingId.Contains(query, StringComparison.OrdinalIgnoreCase)
-            || DeckName(r).Contains(query, StringComparison.OrdinalIgnoreCase);
+            || this.DeckName(r).Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 
     private string DeckName(Reading r)
@@ -632,7 +628,7 @@ public sealed class MainWindow : Window, IDisposable
     private void DrawSettingsTab()
     {
         // ── Defaults ────────────────────────────────────────────────────────
-        bool defaultsOpen = Ui.CollapsingSection(FontAwesomeIcon.Bookmark, "Defaults");
+        var defaultsOpen = Ui.CollapsingSection(FontAwesomeIcon.Bookmark, "Defaults");
         ImGui.SameLine();
         Ui.HelpMarker(
             "The deck, spread, and card count a New Reading starts on. Your picks on the "
@@ -640,14 +636,14 @@ public sealed class MainWindow : Window, IDisposable
         if (defaultsOpen)
         {
             using (Ui.Body())
-                DrawDefaultsSection();
+                this.DrawDefaultsSection();
         }
 
         // ── Connection ──────────────────────────────────────────────────────
         if (Ui.CollapsingSection(FontAwesomeIcon.Plug, "Connection"))
         {
             using (Ui.Body())
-                DrawConnectionSection();
+                this.DrawConnectionSection();
         }
 
         // ── Links (never collapsed, per request) ────────────────────────────
@@ -669,20 +665,20 @@ public sealed class MainWindow : Window, IDisposable
         }
 
         Ui.Label("Default deck");
-        DrawDefaultDeckCombo();
+        this.DrawDefaultDeckCombo();
         Ui.Label("Default spread");
-        DrawDefaultSpreadCombo();
+        this.DrawDefaultSpreadCombo();
         Ui.Label("Default cards on free draw");
         ImGui.SetNextItemWidth(200 * ImGuiHelpers.GlobalScale);
         ImGui.SliderInt("##defcards", ref this.defaultFreeDrawCount, 1, 78);
         if (ImGui.IsItemDeactivatedAfterEdit())
-            SaveDefaults();
+            this.SaveDefaults();
 
         // Defaults already save on change; this button + confirmation is purely for
         // peace of mind, so it can never be "unsaved".
         ImGui.Spacing();
         if (Ui.Button("Save defaults"))
-            SaveDefaults();
+            this.SaveDefaults();
         if ((DateTime.UtcNow - this.defaultsSavedAt).TotalSeconds < 2.5)
         {
             ImGui.SameLine();
@@ -707,7 +703,7 @@ public sealed class MainWindow : Window, IDisposable
         if (!combo)
             return;
 
-        bool first = true;
+        var first = true;
         foreach (var group in this.deckGroups)
         {
             if (!first)
@@ -740,9 +736,9 @@ public sealed class MainWindow : Window, IDisposable
             return;
 
         if (ImGui.Selectable("Free draw", this.config.DefaultSpreadId == null))
-            SaveDefaultSpread(null);
+            this.SaveDefaultSpread(null);
 
-        DrawSpreadItems("dspread", s => s.SpreadId == this.config.DefaultSpreadId, s => SaveDefaultSpread(s.SpreadId));
+        this.DrawSpreadItems("dspread", s => s.SpreadId == this.config.DefaultSpreadId, s => this.SaveDefaultSpread(s.SpreadId));
     }
 
     private void SaveDefaultSpread(int? spreadId)
@@ -818,7 +814,9 @@ public sealed class MainWindow : Window, IDisposable
                         new Vector4(0.20f, 0.47f, 0.58f, 1f),
                         new Vector4(0.30f, 0.62f, 0.74f, 1f),
                         new Vector4(0.16f, 0.40f, 0.50f, 1f)))
+                {
                     Util.OpenLink(Configuration.SiteUrl);
+                }
 
                 ImGui.TableNextColumn();
                 ImGui.AlignTextToFramePadding();
@@ -829,7 +827,9 @@ public sealed class MainWindow : Window, IDisposable
                         new Vector4(0.72f, 0.18f, 0.20f, 1f),
                         new Vector4(0.86f, 0.26f, 0.28f, 1f),
                         new Vector4(0.60f, 0.14f, 0.16f, 1f)))
+                {
                     Util.OpenLink("https://mathdad.me");
+                }
             }
         }
 
@@ -843,7 +843,7 @@ public sealed class MainWindow : Window, IDisposable
     {
         if (this.selectedDeck == null)
             return 78;
-        int total = this.selectedDeck.EffectiveTotalCards;
+        var total = this.selectedDeck.EffectiveTotalCards;
         if (this.config.UseAdditionalCards)
             total += this.selectedDeck.AdditionalCards;
         return Math.Max(1, total);
@@ -913,7 +913,7 @@ public sealed class MainWindow : Window, IDisposable
             .Select(g =>
             {
                 var ordered = g.OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase).ToList();
-                int total = ordered[0].EffectiveTotalCards;
+                var total = ordered[0].EffectiveTotalCards;
                 var header = $"{g.Key.ToUpperInvariant()}  ·  {total} cards";
                 return new DeckGroup(header, ordered);
             })
@@ -925,7 +925,7 @@ public sealed class MainWindow : Window, IDisposable
         if (this.selectedDeck == null)
             return;
 
-        bool linked = this.api.IsLinked;
+        var linked = this.api.IsLinked;
         var request = new GenerateRequest
         {
             DeckId = this.selectedDeck.DeckId,

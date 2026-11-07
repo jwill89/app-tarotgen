@@ -43,7 +43,9 @@ const modalHtml = computed(() => renderMarkdown(viewingContact.value?.message ??
 
 async function fetchContacts() {
   const data = await api.get<Contact[]>(endpoints.admin.contacts.list(showRead.value))
-  if (data) contacts.value = data
+  if (data) {
+    contacts.value = data
+  }
 }
 
 async function toggleRead(contact: Contact) {
@@ -53,7 +55,9 @@ async function toggleRead(contact: Contact) {
     is_read: newRead,
   })
   busyId.value = null
-  if (result) await fetchContacts()
+  if (result) {
+    await fetchContacts()
+  }
 }
 
 function toggleShowRead() {
@@ -70,7 +74,12 @@ onMounted(fetchContacts)
     subtitle="Review messages submitted through the contact form."
   >
     <template #actions>
-      <button class="button" :class="showRead ? 'is-link' : ''" @click="toggleShowRead">
+      <button
+        type="button"
+        class="button"
+        :class="showRead ? 'is-link' : ''"
+        @click="toggleShowRead"
+      >
         <span class="icon"
           ><FontAwesomeIcon
             :icon="showRead ? byPrefixAndName.fas['eye'] : byPrefixAndName.fas['eye-slash']"

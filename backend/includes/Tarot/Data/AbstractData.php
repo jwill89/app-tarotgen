@@ -39,9 +39,7 @@ abstract class AbstractData
      */
     private const int FETCH_MODE = PDO::FETCH_CLASS | PDO::FETCH_PROPS_LATE;
 
-    public function __construct(protected readonly PDO $db)
-    {
-    }
+    public function __construct(protected readonly PDO $db) {}
 
     /**
      * Run a parameterless query and return the executed statement.
@@ -129,9 +127,9 @@ abstract class AbstractData
             $fields[] = "{$key} = :{$key}";
 
             if (in_array($key, $boolCols, true)) {
-                $params[":{$key}"] = (int)(bool)$value;
+                $params[":{$key}"] = (int) (bool) $value;
             } elseif (in_array($key, $intCols, true)) {
-                $params[":{$key}"] = (int)$value;
+                $params[":{$key}"] = (int) $value;
             } else {
                 $params[":{$key}"] = $value;
             }

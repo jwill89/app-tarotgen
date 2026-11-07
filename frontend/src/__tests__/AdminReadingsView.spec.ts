@@ -66,20 +66,25 @@ const list = (rows: ReadingSummary[]) => ({
 })
 
 const summary = () =>
-  document.body.textContent.match(/Showing .*? readings \(page \d+ of \d+\)/)?.[0]
+  /Showing .*? readings \(page \d+ of \d+\)/.exec(document.body.textContent)?.[0]
 
 /** The page-number controls, above (0) or below (1) the table. */
 function pager(index: 0 | 1): HTMLElement {
   const lists = document.body.querySelectorAll<HTMLElement>('.pagination-list-reka')
-  if (lists.length !== 2) throw new Error(`Expected two pagers, found ${lists.length}`)
-  return lists[index]
+  const list = lists[index]
+  if (!list || lists.length !== 2) {
+    throw new Error(`Expected two pagers, found ${lists.length}`)
+  }
+  return list
 }
 
 function perPageSelect(): HTMLElement {
   const trigger = document.body.querySelector<HTMLElement>(
     '[role="combobox"][aria-label="Per page"]',
   )
-  if (!trigger) throw new Error('No per-page select')
+  if (!trigger) {
+    throw new Error('No per-page select')
+  }
   return trigger
 }
 
@@ -90,7 +95,7 @@ describe('admin ReadingsView', () => {
     // A failed call is mirrored to the console by useToasts; keep the run quiet.
     vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.spyOn(console, 'warn').mockImplementation(() => {})
-    // Paging from the bottom controls scrolls back up; happy-dom has no layout to scroll.
+    // Paging from the bottom controls scrolls back up; jsdom has no layout to scroll.
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   })
   afterEach(cleanup)

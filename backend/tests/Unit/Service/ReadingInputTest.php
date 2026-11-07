@@ -24,10 +24,10 @@ final class ReadingInputTest extends TestCase
         $this->assertSame('What now?', ReadingInput::question('  What now?  '));
         $this->assertNull(ReadingInput::question('   '));
         $this->assertNull(ReadingInput::question(['not', 'text']));
-        $this->assertSame(500, mb_strlen((string)ReadingInput::question(str_repeat('ä', 501))));
+        $this->assertSame(500, mb_strlen((string) ReadingInput::question(str_repeat('ä', 501))));
         $this->assertSame('Sam', ReadingInput::querent(' Sam '));
         $this->assertSame('42', ReadingInput::querent(42));
-        $this->assertSame(100, mb_strlen((string)ReadingInput::querent(str_repeat('x', 101))));
+        $this->assertSame(100, mb_strlen((string) ReadingInput::querent(str_repeat('x', 101))));
     }
 
     /**
@@ -87,7 +87,7 @@ final class ReadingInputTest extends TestCase
         foreach ([1, 7, 30, '30'] as $days) {
             $expires = ReadingInput::expiresAt($days);
             $this->assertIsString($expires);
-            $this->assertEqualsWithDelta(time() + (int)$days * 86400, strtotime($expires . ' UTC'), 5, (string)$days);
+            $this->assertEqualsWithDelta(time() + (int) $days * 86400, strtotime($expires . ' UTC'), 5, (string) $days);
             $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $expires);
         }
 
@@ -161,7 +161,7 @@ final class ReadingInputTest extends TestCase
             'q' => '  ' . str_repeat('x', 120), 'deck_id' => '12', 'spread' => ' Celtic Cross ', 'tag' => ' #Career ', 'daily' => 'exclude',
         ]);
 
-        $this->assertSame(100, mb_strlen((string)$filter->text));
+        $this->assertSame(100, mb_strlen((string) $filter->text));
         $this->assertSame(12, $filter->deckId);
         $this->assertSame('Celtic Cross', $filter->spread);
         $this->assertSame('career', $filter->tag);

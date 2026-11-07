@@ -159,7 +159,7 @@ final class SpreadCategoriesTest extends HttpTestCase
         $response = $this->request('DELETE', '/admin/spread-categories/6');
 
         $this->assertSame(204, $response->getStatusCode());
-        $this->assertSame('', (string)$response->getBody());
+        $this->assertSame('', (string) $response->getBody());
         $this->assertSame(array_slice(self::STARTING, 0, 5), array_column($this->rows('SELECT name FROM spread_categories ORDER BY sort_order'), 'name'));
         $this->assertSame(['error' => 'Category not found.'], $this->assertJsonResponse(404, $this->request('DELETE', '/admin/spread-categories/6')));
     }

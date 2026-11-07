@@ -8,7 +8,9 @@ const userSpreads: Ref<UserSpread[]> = ref([])
 export function useUserSpreads() {
   async function fetchUserSpreads(): Promise<void> {
     const data = await apiFetch<UserSpread[]>(endpoints.account.spreads)
-    if (data) userSpreads.value = data
+    if (data) {
+      userSpreads.value = data
+    }
   }
 
   /** The whole result, so a refused save can say why (the server's message). */
@@ -23,7 +25,9 @@ export function useUserSpreads() {
       sendJson('POST', payload),
       'Failed to save the spread. Please try again.',
     )
-    if (res.ok) userSpreads.value = [res.data, ...userSpreads.value]
+    if (res.ok) {
+      userSpreads.value = [res.data, ...userSpreads.value]
+    }
     return res
   }
 
@@ -45,7 +49,9 @@ export function useUserSpreads() {
 
   async function deleteUserSpread(id: number): Promise<boolean> {
     const res = await apiRequest(endpoints.account.spreadById(id), { method: 'DELETE' })
-    if (!res.ok) return false
+    if (!res.ok) {
+      return false
+    }
     userSpreads.value = userSpreads.value.filter((s) => s.user_spread_id !== id)
     return true
   }
@@ -65,7 +71,9 @@ export function useUserSpreads() {
       { method: 'POST' },
       "Couldn't copy the spread. Please try again.",
     )
-    if (res.ok) userSpreads.value = [res.data, ...userSpreads.value]
+    if (res.ok) {
+      userSpreads.value = [res.data, ...userSpreads.value]
+    }
     return res
   }
 

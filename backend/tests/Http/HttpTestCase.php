@@ -80,12 +80,12 @@ abstract class HttpTestCase extends TestCase
 
         // Expected failures (Slim's error logging, the mailer reporting that SMTP is
         // unconfigured) would otherwise print to the test output.
-        $this->errorLog = (string)tempnam(sys_get_temp_dir(), 'tarot-http-log');
+        $this->errorLog = (string) tempnam(sys_get_temp_dir(), 'tarot-http-log');
         $this->savedErrorLog = ini_set('error_log', $this->errorLog);
 
         $this->db = new PDO('sqlite::memory:');
         $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $this->db->exec((string)file_get_contents(dirname(__DIR__, 2) . '/db/schema.sql'));
+        $this->db->exec((string) file_get_contents(dirname(__DIR__, 2) . '/db/schema.sql'));
         $this->db->exec('PRAGMA foreign_keys = ON');
 
         $builder = new ContainerBuilder();
@@ -226,7 +226,7 @@ abstract class HttpTestCase extends TestCase
      */
     protected function assertJsonResponse(int $status, ResponseInterface $response): array
     {
-        $body = (string)$response->getBody();
+        $body = (string) $response->getBody();
         $this->assertSame($status, $response->getStatusCode(), "Unexpected status; body: {$body}");
         $this->assertStringStartsWith('application/json', $response->getHeaderLine('Content-Type'));
 
@@ -303,7 +303,7 @@ abstract class HttpTestCase extends TestCase
      */
     protected function assertDocumented(string $method, string $path, int $status, array $payload): void
     {
-        $schema = self::spec()['paths'][$path][$method]['responses'][(string)$status]['content']['application/json']['schema'] ?? null;
+        $schema = self::spec()['paths'][$path][$method]['responses'][(string) $status]['content']['application/json']['schema'] ?? null;
         $this->assertIsArray($schema, "{$method} {$path} documents no JSON body for {$status}");
 
         $problems = [];
@@ -329,7 +329,7 @@ abstract class HttpTestCase extends TestCase
     private function schemaProblems(array $schema, array $payload): array
     {
         if (isset($schema['$ref'])) {
-            $ref = (string)$schema['$ref'];
+            $ref = (string) $schema['$ref'];
             $schema = self::spec()['components']['schemas'][basename($ref)] ?? null;
             if (!is_array($schema)) {
                 return ["no schema {$ref}"];
@@ -342,7 +342,7 @@ abstract class HttpTestCase extends TestCase
             $merged = ['properties' => [], 'required' => []];
             foreach ($schema['allOf'] as $member) {
                 if (isset($member['$ref'])) {
-                    $ref = (string)$member['$ref'];
+                    $ref = (string) $member['$ref'];
                     $member = self::spec()['components']['schemas'][basename($ref)] ?? null;
                     if (!is_array($member)) {
                         return ["no schema {$ref}"];
@@ -391,7 +391,7 @@ abstract class HttpTestCase extends TestCase
     private static function spec(): array
     {
         if (self::$spec === []) {
-            $spec = json_decode((string)file_get_contents(dirname(__DIR__, 2) . '/openapi.json'), true, 512, JSON_THROW_ON_ERROR);
+            $spec = json_decode((string) file_get_contents(dirname(__DIR__, 2) . '/openapi.json'), true, 512, JSON_THROW_ON_ERROR);
             self::$spec = is_array($spec) ? $spec : [];
         }
         return self::$spec;

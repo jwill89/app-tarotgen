@@ -16,12 +16,16 @@ export function useAdminDeckSystems() {
 
   async function loadSystems(): Promise<void> {
     const data = await api.get<DeckSystem[]>(endpoints.admin.deckSystems.list)
-    if (data) systems.value = data
+    if (data) {
+      systems.value = data
+    }
   }
 
   async function loadPending(): Promise<void> {
     const data = await api.get<DeckSystem[]>(endpoints.admin.deckSystems.pending)
-    if (data) pending.value = data
+    if (data) {
+      pending.value = data
+    }
   }
 
   return { systems, pending, loadSystems, loadPending }

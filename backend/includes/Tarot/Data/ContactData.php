@@ -42,14 +42,14 @@ class ContactData extends AbstractData
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             ':user_id' => $data['user_id'] ?? null,
-            ':name'    => mb_substr(trim((string)($data['name'] ?? '')), 0, 200),
-            ':email'   => mb_substr(trim((string)($data['email'] ?? '')), 0, 320),
-            ':message' => trim((string)($data['message'] ?? '')),
+            ':name'    => mb_substr(trim((string) ($data['name'] ?? '')), 0, 200),
+            ':email'   => mb_substr(trim((string) ($data['email'] ?? '')), 0, 320),
+            ':message' => trim((string) ($data['message'] ?? '')),
         ]);
 
         return $this->fetchOne(
             self::SELECT . ' WHERE c.contact_id = :contact_id',
-            [':contact_id' => (int)$this->db->lastInsertId()],
+            [':contact_id' => (int) $this->db->lastInsertId()],
             Contact::class
         );
     }
@@ -79,6 +79,6 @@ class ContactData extends AbstractData
      */
     public function countUnread(): int
     {
-        return (int)$this->query("SELECT COUNT(*) FROM contacts WHERE is_read = 0")->fetchColumn();
+        return (int) $this->query("SELECT COUNT(*) FROM contacts WHERE is_read = 0")->fetchColumn();
     }
 }

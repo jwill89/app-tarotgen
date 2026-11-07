@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 import { statSync } from 'node:fs'
 import { changelogPlugin } from './config/changelog-plugin.ts'
+import { vitestDefaults } from '../shared/test/web/vitest.js'
 
 /**
  * Append a cache-busting `?v=<mtime>` to a project-root asset's URL so social
@@ -63,25 +64,20 @@ export default defineConfig({
       },
     },
   },
-  test: {
-    environment: 'happy-dom',
-    setupFiles: ['./vitest.setup.ts'],
+  // The shared test settings (shared-tooling's test/web): jsdom, mocks and stubbed
+  // globals put back after each test, and v8 coverage over all of src, untested
+  // files included, so the numbers say how much of the app the specs reach.
+  // `npm run test:coverage` fails below the floor: a little under what the specs
+  // reach (5.4.0, 2026-10-30: 97.1 / 93.5 / 95.8 / 97.9%; 10.5% of lines before
+  // AUDIT §8). Raise it as specs land; never lower it.
+  test: vitestDefaults({
+    environment: 'jsdom',
     include: ['src/**/*.spec.ts'],
-    restoreMocks: true,
-    unstubGlobals: true,
-    // `npm run test:coverage`. Measured over all of src, untested files included,
-    // so the numbers say how much of the app the specs reach.
-    coverage: {
-      provider: 'v8',
-      include: ['src/**/*.{ts,vue}'],
-      exclude: ['src/__tests__/**', 'src/types/**', 'src/**/*.d.ts'],
-      reporter: ['text-summary', 'html'],
-      // The floor, a little under what the specs reach (5.4.0, 2026-10-30: 97.1 /
-      // 93.5 / 95.8 / 97.9%; 10.5% of lines before AUDIT §8). Raise it as specs
-      // land; never lower it.
-      thresholds: { statements: 96, branches: 92, functions: 95, lines: 97 },
-    },
-  },
+    setupFiles: ['./vitest.setup.ts'],
+    floor: { statements: 96, branches: 92, functions: 95, lines: 97 },
+    // The hand-written API types: declarations only, nothing to run.
+    coverageExclude: ['src/types/**'],
+  }),
   build: {
     outDir: 'dist',
     assetsDir: '_app',

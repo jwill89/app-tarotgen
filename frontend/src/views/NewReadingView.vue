@@ -53,7 +53,7 @@ const selectedSpreadOption = ref<SpreadOption | null>(null)
 const freeDrawChosen = ref(true)
 
 const freeDrawModeOptions = [
-  { value: 'standard', label: 'Standard', icon: byPrefixAndName.fas['shuffle'] },
+  { value: 'standard', label: 'Standard', icon: byPrefixAndName.fas.shuffle },
   { value: 'placement', label: 'With Placement', icon: byPrefixAndName.fas['hand-pointer'] },
 ]
 
@@ -90,7 +90,9 @@ let spreadRequestOpen = Number.isInteger(requestedSpread) && requestedSpread > 0
 watch(
   spreadOptions,
   (options) => {
-    if (!spreadRequestOpen) return
+    if (!spreadRequestOpen) {
+      return
+    }
     const match = options.find((o) => o.type === 'public' && o.spread_id === requestedSpread)
     if (match) {
       spreadRequestOpen = false
@@ -131,14 +133,18 @@ watch(
 )
 
 const selectedDeck = computed(() => {
-  if (form.deckId === null) return null
+  if (form.deckId === null) {
+    return null
+  }
   return decks.value.find((d) => d.deck_id === form.deckId) ?? null
 })
 
 // Free-draw max: the deck's system total, plus its extras only when that toggle is on.
 const maxCards = computed(() => {
   const d: Deck | null = selectedDeck.value
-  if (!d) return 78
+  if (!d) {
+    return 78
+  }
   const baseCards = d.system_total_cards || 78
   return baseCards + (form.useAdditionalCards ? d.additional_cards : 0)
 })
@@ -151,7 +157,9 @@ watch(maxCards, (max) => {
 })
 
 const selectedSpread = computed(() => {
-  if (!selectedSpreadOption.value) return null
+  if (!selectedSpreadOption.value) {
+    return null
+  }
   return {
     spread_id: selectedSpreadOption.value.spread_id ?? 0,
     user_spread_id: selectedSpreadOption.value.user_spread_id,
@@ -187,7 +195,9 @@ const spreadDescriptionHtml = computed(() =>
 )
 
 const selectedSpreadPositions = computed(() => {
-  if (!selectedSpread.value) return []
+  if (!selectedSpread.value) {
+    return []
+  }
   return [...selectedSpread.value.positions].sort((a, b) => a.order - b.order)
 })
 
@@ -424,6 +434,7 @@ async function submitNewReading() {
             <div class="field">
               <div class="buttons">
                 <button
+                  type="button"
                   class="button is-primary"
                   :disabled="challengePending"
                   @click="submitNewReading"
@@ -431,7 +442,7 @@ async function submitNewReading() {
                   <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards']" /></span>
                   <span>Generate New Draw</span>
                 </button>
-                <button class="button" @click="resetForm">
+                <button type="button" class="button" @click="resetForm">
                   <span class="icon"
                     ><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-left']"
                   /></span>

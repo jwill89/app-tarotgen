@@ -41,8 +41,7 @@ class AccountController extends AbstractController
         private readonly FavoriteDeckRepository $favoriteDecks,
         private readonly DeckRepository $decks,
         private readonly JournalExport $journal,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Get(
         path: '/account/readings',
@@ -105,12 +104,12 @@ class AccountController extends AbstractController
             return $response->withJson($this->readings->listByUser($userId, filter: $filter));
         }
 
-        $limit  = min(self::READINGS_PAGE_MAX, max(1, (int)$params['limit']));
-        $offset = max(0, (int)($params['offset'] ?? 0));
+        $limit  = min(self::READINGS_PAGE_MAX, max(1, (int) $params['limit']));
+        $offset = max(0, (int) ($params['offset'] ?? 0));
 
         return $response
             ->withJson($this->readings->listByUser($userId, $limit, $offset, $filter))
-            ->withHeader('X-Total-Count', (string)$this->readings->countByUser($userId, $filter));
+            ->withHeader('X-Total-Count', (string) $this->readings->countByUser($userId, $filter));
     }
 
     #[OAS\Operation\Get(
@@ -370,7 +369,7 @@ class AccountController extends AbstractController
         $body = $this->parsedBody($request);
 
         if (array_key_exists('display_name', $body)) {
-            $result = $this->auth->changeDisplayName($this->userId($request), (string)$body['display_name']);
+            $result = $this->auth->changeDisplayName($this->userId($request), (string) $body['display_name']);
             if (!$result['ok']) {
                 return $response->withJson(['error' => $result['error'] ?? 'Could not update display name.'], 422);
             }
@@ -413,8 +412,8 @@ class AccountController extends AbstractController
     public function changePassword(Request $request, Response $response): Response|ResponseInterface
     {
         $body    = $this->parsedBody($request);
-        $current = (string)($body['current_password'] ?? '');
-        $new     = (string)($body['new_password'] ?? '');
+        $current = (string) ($body['current_password'] ?? '');
+        $new     = (string) ($body['new_password'] ?? '');
 
         $result = $this->auth->changePassword($this->userId($request), $current, $new, Session::id());
         if (!$result['ok']) {
@@ -476,7 +475,7 @@ class AccountController extends AbstractController
     )]
     public function deleteAccount(Request $request, Response $response): Response|ResponseInterface
     {
-        $password = (string)(($this->parsedBody($request))['password'] ?? '');
+        $password = (string) (($this->parsedBody($request))['password'] ?? '');
 
         $result = $this->auth->deleteAccount($this->userId($request), $password);
         if (!$result['ok']) {
@@ -539,7 +538,7 @@ class AccountController extends AbstractController
     public function createSpread(Request $request, Response $response): Response|ResponseInterface
     {
         $params    = $this->parsedBody($request);
-        $name      = trim((string)($params['name'] ?? ''));
+        $name      = trim((string) ($params['name'] ?? ''));
         $positions = $params['positions'] ?? [];
 
         if ($name === '' || !is_array($positions) || count($positions) === 0) {
@@ -588,7 +587,7 @@ class AccountController extends AbstractController
     )]
     public function updateSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $spreadId = (int)($args['user_spread_id'] ?? 0);
+        $spreadId = (int) ($args['user_spread_id'] ?? 0);
         $changes  = array_intersect_key($this->parsedBody($request), array_flip(['name', 'description', 'positions']));
 
         if ($changes === []) {
@@ -597,7 +596,7 @@ class AccountController extends AbstractController
 
         // Saved trimmed, so a blank name would leave the spread nameless — which
         // creating one refuses.
-        if (array_key_exists('name', $changes) && (!is_scalar($changes['name']) || trim((string)$changes['name']) === '')) {
+        if (array_key_exists('name', $changes) && (!is_scalar($changes['name']) || trim((string) $changes['name']) === '')) {
             return $response->withJson(['error' => 'A spread needs a name.'], 400);
         }
 
@@ -639,7 +638,7 @@ class AccountController extends AbstractController
     )]
     public function deleteSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $spreadId = (int)($args['user_spread_id'] ?? 0);
+        $spreadId = (int) ($args['user_spread_id'] ?? 0);
 
         if (!$this->userSpreads->delete($this->userId($request), $spreadId)) {
             return $response->withJson(['error' => 'Spread not found.'], 404);
@@ -676,7 +675,7 @@ class AccountController extends AbstractController
     )]
     public function submitSpreadAsPublic(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $spreadId = (int)($args['user_spread_id'] ?? 0);
+        $spreadId = (int) ($args['user_spread_id'] ?? 0);
         $spread   = $this->userSpreads->get($this->userId($request), $spreadId);
 
         if ($spread === null) {
@@ -740,8 +739,8 @@ class AccountController extends AbstractController
     public function addFavorite(Request $request, Response $response): Response|ResponseInterface
     {
         $params     = $this->parsedBody($request);
-        $spreadType = (string)($params['spread_type'] ?? '');
-        $spreadId   = (int)($params['spread_id'] ?? 0);
+        $spreadType = (string) ($params['spread_type'] ?? '');
+        $spreadId   = (int) ($params['spread_id'] ?? 0);
 
         if (!in_array($spreadType, ['public', 'personal'], true) || $spreadId < 1) {
             return $response->withJson(['error' => 'Invalid spread type or ID.'], 400);
@@ -775,7 +774,7 @@ class AccountController extends AbstractController
     public function removeFavorite(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $spreadType = $args['spread_type'] ?? '';
-        $spreadId   = (int)($args['spread_id'] ?? 0);
+        $spreadId   = (int) ($args['spread_id'] ?? 0);
 
         if (!in_array($spreadType, ['public', 'personal'], true) || $spreadId < 1) {
             return $response->withJson(['error' => 'Invalid spread type or ID.'], 400);
@@ -827,7 +826,7 @@ class AccountController extends AbstractController
     public function addFavoriteDeck(Request $request, Response $response): Response|ResponseInterface
     {
         $params = $this->parsedBody($request);
-        $deckId = (int)($params['deck_id'] ?? 0);
+        $deckId = (int) ($params['deck_id'] ?? 0);
 
         // An unknown deck (e.g. one deleted while the page was open) would fail the
         // favourite's foreign key, which surfaced as a 500. A pending submission
@@ -860,7 +859,7 @@ class AccountController extends AbstractController
     )]
     public function removeFavoriteDeck(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $deckId = (int)($args['deck_id'] ?? 0);
+        $deckId = (int) ($args['deck_id'] ?? 0);
 
         if ($deckId < 1) {
             return $response->withJson(['error' => 'Invalid deck ID.'], 400);

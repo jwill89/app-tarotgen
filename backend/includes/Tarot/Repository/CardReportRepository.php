@@ -8,9 +8,7 @@ use Tarot\Structure\CardReportReason;
 
 readonly class CardReportRepository
 {
-    public function __construct(private CardReportData $data)
-    {
-    }
+    public function __construct(private CardReportData $data) {}
 
     /** A null $reason records a report from a client that predates reasons. */
     public function report(

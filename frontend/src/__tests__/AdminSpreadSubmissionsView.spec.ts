@@ -39,7 +39,9 @@ const loads = (pending: PendingSpread[] = []) => ({
 /** The open preview of the Crossroads submission. */
 function preview(): HTMLElement {
   const open = dialog('Crossroads')
-  if (!open) throw new Error('The preview is not open')
+  if (!open) {
+    throw new Error('The preview is not open')
+  }
   return open
 }
 
@@ -116,7 +118,9 @@ describe('admin SpreadSubmissionsView', () => {
 
     // The footer's Close, not the corner ×, which shares its name.
     const footer = preview().querySelector('footer')
-    if (!footer) throw new Error('The preview has no footer')
+    if (!footer) {
+      throw new Error('The preview has no footer')
+    }
     await click(button('Close', footer))
 
     expect(dialog('Crossroads')).toBeNull()
@@ -128,7 +132,9 @@ describe('admin SpreadSubmissionsView', () => {
     await click(button('Preview', row('Crossroads')))
 
     const corner = preview().querySelector<HTMLElement>('.myst-modal-close')
-    if (!corner) throw new Error('The preview has no corner ×')
+    if (!corner) {
+      throw new Error('The preview has no corner ×')
+    }
     await click(corner)
 
     expect(dialog('Crossroads')).toBeNull()

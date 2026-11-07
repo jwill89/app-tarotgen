@@ -38,9 +38,9 @@ async function fetchDeckSystems() {
     return
   }
   deckSystems.value = systems
-  if (systems.length > 0 && deckSystemId.value === null) {
-    const rws = systems.find((s) => s.short_name === 'RWS')
-    deckSystemId.value = rws ? rws.deck_system_id : systems[0].deck_system_id
+  const fallback = systems.find((s) => s.short_name === 'RWS') ?? systems[0]
+  if (fallback && deckSystemId.value === null) {
+    deckSystemId.value = fallback.deck_system_id
   }
 }
 
@@ -216,6 +216,7 @@ async function submitDeck() {
 
               <div class="field">
                 <button
+                  type="button"
                   class="button is-primary"
                   :class="{ 'is-loading': submitting }"
                   :disabled="submitting"

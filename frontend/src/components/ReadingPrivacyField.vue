@@ -29,9 +29,9 @@ const captionId = useId()
 const showPassword = ref(false)
 
 const options: { value: Visibility; label: string; icon: IconDefinition }[] = [
-  { value: 'link', label: visibilityLabels.link, icon: byPrefixAndName.fas['link'] },
-  { value: 'password', label: visibilityLabels.password, icon: byPrefixAndName.fas['key'] },
-  { value: 'private', label: visibilityLabels.private, icon: byPrefixAndName.fas['lock'] },
+  { value: 'link', label: visibilityLabels.link, icon: byPrefixAndName.fas.link },
+  { value: 'password', label: visibilityLabels.password, icon: byPrefixAndName.fas.key },
+  { value: 'private', label: visibilityLabels.private, icon: byPrefixAndName.fas.lock },
 ]
 
 // A password typed and then abandoned for another choice isn't sent later.

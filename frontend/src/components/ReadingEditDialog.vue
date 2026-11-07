@@ -64,7 +64,9 @@ const errorMsg = ref('')
 watch(
   () => props.reading,
   (r) => {
-    if (!r) return
+    if (!r) {
+      return
+    }
     form.reading_name = r.reading_name ?? ''
     form.question = r.question ?? ''
     form.querent = r.querent ?? ''
@@ -79,7 +81,9 @@ watch(
 )
 
 async function save(): Promise<void> {
-  if (!props.reading) return
+  if (!props.reading) {
+    return
+  }
   saving.value = true
   errorMsg.value = ''
   const res = await updateReading(props.reading.reading_id, {
@@ -182,8 +186,13 @@ async function save(): Promise<void> {
     </div>
 
     <template #footer>
-      <button class="button" @click="emit('close')">Cancel</button>
-      <button class="button is-success" :class="{ 'is-loading': saving }" @click="save">
+      <button type="button" class="button" @click="emit('close')">Cancel</button>
+      <button
+        type="button"
+        class="button is-success"
+        :class="{ 'is-loading': saving }"
+        @click="save"
+      >
         <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['floppy-disk']" /></span>
         <span>Save</span>
       </button>

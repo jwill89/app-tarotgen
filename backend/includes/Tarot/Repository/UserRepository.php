@@ -8,9 +8,7 @@ use Tarot\Structure\UserCredentials;
 
 readonly class UserRepository
 {
-    public function __construct(private UserData $data)
-    {
-    }
+    public function __construct(private UserData $data) {}
 
     /** @return User[] */
     public function getAll(): array

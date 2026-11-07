@@ -66,7 +66,7 @@ class PasskeyData extends AbstractData
             ':sc'   => $signCount,
             ':now'  => Clock::now(),
         ]);
-        return (int)$this->db->lastInsertId();
+        return (int) $this->db->lastInsertId();
     }
 
     /**
@@ -109,6 +109,6 @@ class PasskeyData extends AbstractData
     {
         $stmt = $this->db->prepare('SELECT COUNT(*) FROM user_passkeys WHERE user_id = :uid');
         $stmt->execute([':uid' => $userId]);
-        return (int)$stmt->fetchColumn();
+        return (int) $stmt->fetchColumn();
     }
 }

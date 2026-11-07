@@ -7,9 +7,7 @@ use Tarot\Structure\DrawKeyCode;
 
 readonly class DrawKeyRepository
 {
-    public function __construct(private DrawKeyData $data)
-    {
-    }
+    public function __construct(private DrawKeyData $data) {}
 
     public function storeCode(string $codeHash, string $codeChallenge, string $codeExpiresAt): void
     {

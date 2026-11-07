@@ -22,14 +22,6 @@ import {
 } from 'reka-ui'
 import type { DeckSystemCard } from '@/types'
 
-const cards = defineModel<DeckSystemCard[]>({ required: true })
-
-const uid = useId()
-/** A per-card field id: one editor lists many cards. */
-function fieldId(index: number, field: string): string {
-  return `${uid}-${String(index)}-${field}`
-}
-
 const props = withDefaults(
   defineProps<{
     title?: string
@@ -47,6 +39,14 @@ const props = withDefaults(
     initialOpen: () => ['0'],
   },
 )
+
+const cards = defineModel<DeckSystemCard[]>({ required: true })
+
+const uid = useId()
+/** A per-card field id: one editor lists many cards. */
+function fieldId(index: number, field: string): string {
+  return `${uid}-${String(index)}-${field}`
+}
 
 defineSlots<{
   /** Helper copy between the toolbar and the list. */
@@ -84,7 +84,9 @@ function focusCard(index: number): void {
       el.focus()
       return
     }
-    if (attempts++ < 10) requestAnimationFrame(tryFocus)
+    if (attempts++ < 10) {
+      requestAnimationFrame(tryFocus)
+    }
   }
   void nextTick(tryFocus)
 }
@@ -110,7 +112,9 @@ function collapseAll(): void {
 /** Expand + focus the first unnamed card. False when every card is named. */
 function revealFirstMissing(): boolean {
   const index = cards.value.findIndex((c) => c.name.trim() === '')
-  if (index < 0) return false
+  if (index < 0) {
+    return false
+  }
   if (!openCards.value.includes(String(index))) {
     openCards.value = [...openCards.value, String(index)]
   }
@@ -294,6 +298,7 @@ defineExpose({ expandAll, collapseAll, revealFirstMissing })
 .deck-system-cards.is-scrollable {
   max-height: var(--deck-cards-max-height, 600px);
   overflow-y: auto;
+
   /* Keeps a row's focus ring off the scroll container's edge. */
   padding-right: 0.25rem;
 }

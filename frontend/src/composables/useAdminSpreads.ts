@@ -17,17 +17,23 @@ export function useAdminSpreads() {
 
   async function loadSpreads(): Promise<void> {
     const data = await api.get<Spread[]>(endpoints.admin.spreads.list)
-    if (data) spreads.value = data
+    if (data) {
+      spreads.value = data
+    }
   }
 
   async function loadCategories(): Promise<void> {
     const data = await api.get<SpreadCategory[]>(endpoints.admin.spreadCategories.list)
-    if (data) categories.value = data
+    if (data) {
+      categories.value = data
+    }
   }
 
   async function loadPending(): Promise<void> {
     const data = await api.get<PendingSpread[]>(endpoints.admin.pendingSpreads.list)
-    if (data) pending.value = data
+    if (data) {
+      pending.value = data
+    }
   }
 
   return { spreads, categories, pending, loadSpreads, loadCategories, loadPending }

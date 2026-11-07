@@ -7,9 +7,7 @@ use Tarot\Structure\FavoriteSpread;
 
 readonly class FavoriteSpreadRepository
 {
-    public function __construct(private FavoriteSpreadData $data)
-    {
-    }
+    public function __construct(private FavoriteSpreadData $data) {}
 
     /**
      * List all favorite entries for a user.

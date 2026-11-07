@@ -1,14 +1,16 @@
 # Backend (PHP) — generated deps, server-side data, local config
 /backend/vendor/
 /backend/assets/
-# Ignore the live DB + one-off migration scripts, but keep the committed schema.
+# Ignore the live DB and the retired one-off scripts, but keep the Phinx
+# migrations and the schema generated from them.
 /backend/db/*
+!/backend/db/migrations/
 !/backend/db/schema.sql
 /backend/.phpunit.cache/
 /backend/.php-cs-fixer.cache
 /backend/.env
 
-# Frontend (Vue) — generated deps + build output, private registry token
+# Frontend (Vue) — generated deps + build output
 /frontend/node_modules/
 /frontend/dist/
 /frontend/coverage/
@@ -16,8 +18,6 @@
 /frontend/playwright-report/
 # The Playwright smoke run copies the built SPA here, where og.php reads it.
 /backend/dist/
-# Holds the FontAwesome private-registry auth token — never commit.
-/frontend/.npmrc
 
 # Local deploy settings (server IP, SSH key path, web root) — never commit.
 # Copy scripts/deploy.config.example.ps1 to create it.

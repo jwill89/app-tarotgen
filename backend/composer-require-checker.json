@@ -27,5 +27,5 @@
     "fastcgi_finish_request"
   ],
   "php-core-extensions": ["Core", "date", "json", "hash", "pcre", "Phar", "Reflection", "SPL", "random", "standard"],
-  "scan-files": ["api/*.php", "og.php", "scripts/*.php"]
+  "scan-files": ["api/*.php", "db/migrations/*.php", "og.php", "phinx.php", "scripts/*.php"]
 }

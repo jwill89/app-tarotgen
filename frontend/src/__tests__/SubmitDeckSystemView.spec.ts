@@ -116,7 +116,9 @@ describe('SubmitDeckSystemView', () => {
     const [keywords] = [...document.body.querySelectorAll('label')]
       .filter((l) => l.textContent.trim() === 'Keywords')
       .map((l) => document.getElementById(l.htmlFor))
-    if (!keywords) throw new Error('No Keywords field for the first card')
+    if (!keywords) {
+      throw new Error('No Keywords field for the first card')
+    }
     await typeInto(keywords, 'beginnings')
     await click(submitButton())
 

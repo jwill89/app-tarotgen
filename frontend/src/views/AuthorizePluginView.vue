@@ -49,6 +49,7 @@ function finish(res: { ok: boolean; redirectUri?: string; error?: string }): voi
 
 <template>
   <section class="section">
+    <!-- eslint-disable-next-line vue/no-static-inline-styles -- the page's own width: a class would lose to Bulma's .container:not(…) breakpoint rules (four classes' weight) on wide screens -->
     <div class="container" style="max-width: 40rem">
       <PageHeader
         title="Connect the TarotGen Plugin"
@@ -78,6 +79,7 @@ function finish(res: { ok: boolean; redirectUri?: string; error?: string }): voi
           </p>
           <button
             v-if="isLoggedIn"
+            type="button"
             class="button is-primary"
             :class="{ 'is-loading': submitting }"
             :disabled="submitting"

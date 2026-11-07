@@ -26,11 +26,12 @@ from a custom Dalamud repo), so the site deploy never touches it. See
 
 ## Where things live
 
-```
+```text
 frontend/   Vue 3 SPA — npm project root
 backend/    PHP API — composer project root
 plugin/     FFXIV Dalamud plugin — C# subproject (built & distributed independently)
 scripts/    deploy.ps1 (repo-level orchestration)
+shared/     shared-tooling — git submodule: the lint, test, CI and deploy pieces shared across projects
 ```
 
 | Path | What |
@@ -44,19 +45,25 @@ scripts/    deploy.ps1 (repo-level orchestration)
 | `backend/tests/` | PHPUnit: `Unit/` (classes in isolation), `Http/` (requests through the whole app on an in-memory DB). |
 | `backend/scripts/` | PHP/Python CLI utilities (`make_admin.php`, `indexnow.php`, …). |
 | `backend/{phpunit.xml,phpstan.neon}` | QA configs (auto-discovered when running `composer` from `backend/`). |
-| `backend/{db,assets/decks}/` | SQLite DB and per-deck card images — server-side data, gitignored, **never** in a deploy payload. |
+| `backend/db/` | Phinx migrations (`migrations/`) and the `schema.sql` generated from them, committed; the local SQLite DB beside them is gitignored. |
+| `backend/assets/decks/` | Per-deck card images — server-side data, gitignored, **never** in a deploy payload. |
 | `plugin/TarotGen.Plugin/` | FFXIV Dalamud plugin (C#, .NET 10, Dalamud API 15). Built by DalamudPackager; published to a custom Dalamud repo via `deploy.ps1 -Target plugin`. See [`plugin/README.md`](plugin/README.md). |
-| `scripts/deploy.ps1` | Build & deploy orchestration (frontend + backend + plugin). |
+| `scripts/deploy.ps1` | Build & deploy orchestration (frontend + backend + plugin), on shared-tooling's SharedDeploy module. |
+| `shared/` | [shared-tooling](https://github.com/jwill89/shared-tooling) v1.3.0, a git submodule: ESLint/Prettier/Stylelint/tsconfig, the PHP and C# lint bases, the Vitest and Playwright settings, the CI workflows, `.editorconfig`/`.gitattributes` and the deploy module. |
+| `Taskfile.yml` | [Task](https://taskfile.dev) commands (`task` lists them), including the shared ones. |
 | `*/{node_modules,vendor,dist}/` | Generated dependency / build output. |
 
 ## Quickstart (local dev)
 
-Requires Node 26+ (the LTS; `frontend/.nvmrc`), PHP 8.5+, Composer, and a
-gitignored `frontend/.npmrc` with the FontAwesome Pro registry token (see `AGENTS.md`
-§6). Copy `backend/.env.example` → `backend/.env`. Run the app as **two
-processes, one per folder**:
+Requires Node 26+ (the LTS; `frontend/.nvmrc`), PHP 8.5+, Composer, and the
+FontAwesome Pro registry token in your user `~/.npmrc` (the tracked
+`frontend/.npmrc` names the registry; see `AGENTS.md` §6). Fetch the submodule
+once (`git submodule update --init`, or clone with `--recurse-submodules`) and
+copy `backend/.env.example` → `backend/.env`. Run the app as **two processes,
+one per folder** (or `task dev` for both):
 
 ```powershell
+git submodule update --init          # shared/ (once per clone)
 cd frontend ; npm install            # frontend deps
 cd ..\backend ; composer install     # backend deps
 
@@ -72,6 +79,7 @@ cd frontend ; npm run dev
 ```powershell
 cd frontend ; npm run type-check ; npm run lint ; npm test
 cd backend  ; composer test ; composer stan ; composer lint
+task check                           # every lint, audit and test (CI also checks the generated files and coverage floors)
 ```
 
 ## API docs
@@ -93,14 +101,21 @@ Run both after changing a route or a response shape, and commit the results. See
 ```powershell
 cd frontend ; npm run build              # production SPA build → frontend/dist/
 
-.\scripts\deploy.ps1                     # build + deploy frontend (atomic dist swap)
-.\scripts\deploy.ps1 -Target backend     # deploy PHP code; composer install on the droplet if deps changed
-.\scripts\deploy.ps1 -Target both        # frontend, then backend
+.\scripts\deploy.ps1                     # build + deploy frontend (dist swapped in by renames)
+.\scripts\deploy.ps1 -Target backend     # PHP code: composer install --no-dev on the droplet, DB snapshot, swap, migrations
+.\scripts\deploy.ps1 -Target both        # backend, then frontend
 .\scripts\deploy.ps1 -Target plugin      # build the plugin (Release) + publish latest.zip/icon/repo.json
 .\scripts\deploy.ps1 -SkipBuild          # deploy the existing frontend/dist without rebuilding
+.\scripts\deploy.ps1 -Target backend -NoDbPull  # skip pulling the live DB into backend/db/ afterwards
 ```
 
 The deploy script flattens `frontend/` + `backend/` into the live server layout at
-`/var/www/tarotgen.io` and **never touches** the server's `db/`, `.env`, or
-`assets/`. Each target keeps a rollback copy (`dist.old` / `.deploy/backend-prev.tgz`);
-run `.\scripts\deploy.ps1 -?` for full parameter help.
+`/var/www/tarotgen.io` as one archive over one SSH connection, then checks the site
+through Cloudflare (`/api/decks` and `/`) and rolls back what it changed if that
+fails. It **never uploads** the server's `.env`, database or `assets/`; a backend
+deploy snapshots the database and runs the Phinx migrations, and once the site
+checks out it keeps the daily backup timer in place and pulls a copy of the live
+database for local use. Each target keeps a rollback copy (`dist.old`,
+`.deploy/backend-prev`, `plugin.old`). The settings (host, SSH user, key, web
+root) come from the gitignored `scripts/deploy.config.ps1`; run
+`Get-Help .\scripts\deploy.ps1 -Full` for every parameter and step (`AGENTS.md` §6).

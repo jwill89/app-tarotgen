@@ -155,7 +155,7 @@ final class PasskeyManagementTest extends HttpTestCase
 
         $deleted = $this->request('DELETE', "/auth/passkeys/{$mine}");
         $this->assertSame(204, $deleted->getStatusCode());
-        $this->assertSame('', (string)$deleted->getBody());
+        $this->assertSame('', (string) $deleted->getBody());
 
         $this->assertSame([['name' => 'Phone']], $this->rows('SELECT name FROM user_passkeys'));
     }
@@ -374,7 +374,7 @@ final class PasskeyManagementTest extends HttpTestCase
 
         $this->allowedCredentials('nobody@example.test');
 
-        $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', (string)file_get_contents($this->decoyKey));
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', (string) file_get_contents($this->decoyKey));
     }
 
     /**
@@ -417,6 +417,6 @@ final class PasskeyManagementTest extends HttpTestCase
 
     private function base64UrlDecode(string $value): string
     {
-        return (string)base64_decode(strtr($value, '-_', '+/'), true);
+        return (string) base64_decode(strtr($value, '-_', '+/'), true);
     }
 }

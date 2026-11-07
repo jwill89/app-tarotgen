@@ -67,7 +67,9 @@ function loadImage(url: string): Promise<HTMLImageElement | null> {
 
 async function loadCardImage(card: ExportCard): Promise<HTMLImageElement | null> {
   const img = await loadImage(card.imgUrl)
-  if (img || !card.fallbackUrl) return img
+  if (img || !card.fallbackUrl) {
+    return img
+  }
   return loadImage(card.fallbackUrl)
 }
 
@@ -201,9 +203,13 @@ function paintBackground(ctx: CanvasRenderingContext2D, height: number): void {
 }
 
 function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
-  if (ctx.measureText(text).width <= maxWidth) return text
+  if (ctx.measureText(text).width <= maxWidth) {
+    return text
+  }
   let t = text
-  while (t.length > 1 && ctx.measureText(t + '…').width > maxWidth) t = t.slice(0, -1)
+  while (t.length > 1 && ctx.measureText(t + '…').width > maxWidth) {
+    t = t.slice(0, -1)
+  }
   return t + '…'
 }
 
@@ -232,7 +238,9 @@ function renderSpread(
   canvas.width = Math.round(WIDTH * scale)
   canvas.height = Math.round(height * scale)
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Canvas 2D context is not available.')
+  if (!ctx) {
+    throw new Error('Canvas 2D context is not available.')
+  }
   ctx.scale(scale, scale)
   paintBackground(ctx, height)
   drawHeader(ctx, opts.title, opts.subtitle)
@@ -243,12 +251,21 @@ function renderSpread(
   const fit = computeSpreadFit(positions, cardAspect)
   const badges: { x: number; y: number; r: number; order: number }[] = []
   positions.forEach((p) => {
-    const card = opts.cards[p.order - 1] as ExportCard | undefined
+    const card = opts.cards[p.order - 1]
     const cxPx = PAD + ((50 + (p.x - fit.cx) * fit.scale) / 100) * bodySize
     const cyPx = bodyY + ((50 + (p.y - fit.cy) * fit.scale) / 100) * bodySize
     const wPx = ((CARD_WIDTH_PCT * fit.scale) / 100) * bodySize
     const hPx = wPx * cardAspect
-    drawCard(ctx, images[p.order - 1], cxPx, cyPx, wPx, hPx, p.rotation, card?.reversed ?? false)
+    drawCard(
+      ctx,
+      images[p.order - 1] ?? null,
+      cxPx,
+      cyPx,
+      wPx,
+      hPx,
+      p.rotation,
+      card?.reversed ?? false,
+    )
 
     // Badge in the card's (rotated) top-left corner, kept inside the card.
     const r = Math.max(20, Math.min(wPx, hPx) * 0.13)
@@ -286,7 +303,7 @@ function renderSpread(
   ctx.font = '700 32px Georgia, serif'
   ctx.fillText('Card Details', PAD, legendY + 36)
   positions.forEach((p, i) => {
-    const card = opts.cards[p.order - 1] as ExportCard | undefined
+    const card = opts.cards[p.order - 1]
     const col = Math.floor(i / legendRows)
     const row = i % legendRows
     const colX = PAD + col * (legendColW + legendGap)
@@ -331,7 +348,9 @@ function renderGrid(
   canvas.width = Math.round(WIDTH * scale)
   canvas.height = Math.round(height * scale)
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Canvas 2D context is not available.')
+  if (!ctx) {
+    throw new Error('Canvas 2D context is not available.')
+  }
   ctx.scale(scale, scale)
   paintBackground(ctx, height)
   drawHeader(ctx, opts.title, opts.subtitle)
@@ -341,7 +360,7 @@ function renderGrid(
     const row = Math.floor(i / cols)
     const x = PAD + col * (cardW + gap)
     const y = bodyY + row * rowH
-    drawCard(ctx, images[i], x + cardW / 2, y + cardH / 2, cardW, cardH, 0, card.reversed)
+    drawCard(ctx, images[i] ?? null, x + cardW / 2, y + cardH / 2, cardW, cardH, 0, card.reversed)
 
     // Opaque caption background.
     drawPanel(ctx, x, y + cardH + 8, cardW, 64, false)
@@ -367,7 +386,9 @@ export function useReadingExport() {
   const exporting = ref(false)
 
   async function exportReading(opts: ExportOptions): Promise<void> {
-    if (exporting.value) return
+    if (exporting.value) {
+      return
+    }
     exporting.value = true
     try {
       const scale = opts.scale && opts.scale > 0 ? opts.scale : 1

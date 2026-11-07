@@ -26,8 +26,7 @@ class SpreadController extends AbstractController
         private readonly PendingSpreadRepository $pending,
         private readonly UserRepository $users,
         private readonly SpreadCopyService $copies,
-    ) {
-    }
+    ) {}
 
     /**
      * @param array<string,string> $args
@@ -65,7 +64,7 @@ class SpreadController extends AbstractController
         $spread_id = $args['spread_id'] ?? null;
 
         $status = 200;
-        $data   = $this->spreads->get($spread_id !== null ? (int)$spread_id : null);
+        $data   = $this->spreads->get($spread_id !== null ? (int) $spread_id : null);
 
         if ($spread_id !== null && !($data instanceof Spread)) {
             $data   = ['error' => 'InvalidSpreadID'];
@@ -124,7 +123,7 @@ class SpreadController extends AbstractController
         }
 
         $params    = $this->parsedBody($request);
-        $name      = trim((string)($params['name'] ?? ''));
+        $name      = trim((string) ($params['name'] ?? ''));
         $positions = $params['positions'] ?? [];
 
         if ($name === '' || !is_array($positions) || count($positions) === 0) {
@@ -170,7 +169,7 @@ class SpreadController extends AbstractController
     )]
     public function copySpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $copy = $this->copies->copyToAccount((int)($args['spread_id'] ?? 0), $this->authUserId($request));
+        $copy = $this->copies->copyToAccount((int) ($args['spread_id'] ?? 0), $this->authUserId($request));
 
         if (!($copy instanceof UserSpread)) {
             return $response->withJson(['error' => 'Spread not found.'], 404);

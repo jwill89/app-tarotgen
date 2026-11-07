@@ -80,7 +80,7 @@ class UserData extends AbstractData
             ':now'   => Clock::now(),
         ]);
 
-        return $this->findById((int)$this->db->lastInsertId());
+        return $this->findById((int) $this->db->lastInsertId());
     }
 
     public function activate(int $userId): bool
@@ -165,7 +165,7 @@ class UserData extends AbstractData
             ':gid'   => $googleId,
         ]);
 
-        return $this->findById((int)$this->db->lastInsertId());
+        return $this->findById((int) $this->db->lastInsertId());
     }
 
     /**
@@ -194,6 +194,6 @@ class UserData extends AbstractData
         $stmt = $this->db->prepare('SELECT password_login_disabled FROM users WHERE user_id = :id');
         $stmt->execute([':id' => $userId]);
         $val = $stmt->fetchColumn();
-        return (bool)(int)$val;
+        return (bool) (int) $val;
     }
 }

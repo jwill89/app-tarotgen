@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, useTemplateRef } from 'vue'
 import PageHeader from '@/components/PageHeader.vue'
 import NumberField from '@/components/NumberField.vue'
 import DeckCardListEditor from '@/components/DeckCardListEditor.vue'
@@ -26,7 +26,7 @@ const cards = ref<DeckSystemCard[]>(resizeCards([], 78))
 const submitting = ref(false)
 const submitted = ref(false)
 const errorMsg = ref('')
-const cardEditor = ref<DeckCardListEditorApi | null>(null)
+const cardEditor = useTemplateRef<DeckCardListEditorApi>('cardEditor')
 
 watch(totalCards, (total) => {
   cards.value = resizeCards(cards.value, total)
@@ -183,6 +183,7 @@ async function submitSystem() {
 
               <div class="field mt-5">
                 <button
+                  type="button"
                   class="button is-primary"
                   :class="{ 'is-loading': submitting }"
                   :disabled="submitting || !allCardTitlesValid"

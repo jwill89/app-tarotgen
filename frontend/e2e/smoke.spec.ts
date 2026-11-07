@@ -1,31 +1,15 @@
-import { test, expect, type Page } from '@playwright/test'
-import { adminAccount } from './env'
+import { test, expect } from '@playwright/test'
+import { watchForBreakage } from './breakage.ts'
+import { adminAccount } from './env.ts'
 
 /**
  * The path a visitor takes, end to end on the built app: draw a reading, open a
  * card, report its image; then an admin finds the report. Each step depends on
- * the last, so they run in order on one seeded database.
+ * the last, so they run in order on one seeded database. Everything is found by
+ * role and name, never by a Bulma class, so the suite still holds when the
+ * component kit replaces Bulma.
  */
 test.describe.serial('smoke', () => {
-  /**
-   * What would blank or break the app without failing a click: an uncaught error,
-   * or og.php's Content-Security-Policy refusing a script or style. (Missing card
-   * images are expected — the seeded deck has none.)
-   */
-  function watchForBreakage(page: Page): string[] {
-    const problems: string[] = []
-    page.on('pageerror', (error) => problems.push(`page error: ${error.message}`))
-    page.on('console', (message) => {
-      if (
-        message.type() === 'error' &&
-        /Content Security Policy|Refused to/i.test(message.text())
-      ) {
-        problems.push(`CSP: ${message.text()}`)
-      }
-    })
-    return problems
-  }
-
   test('a visitor draws a reading and reports a card', async ({ page }) => {
     const problems = watchForBreakage(page)
 
@@ -49,11 +33,19 @@ test.describe.serial('smoke', () => {
     await expect(page).toHaveURL(/\/reading\/[A-Za-z0-9]+$/)
     await expect(page.getByText(/This reading will be deleted on /)).toBeVisible()
 
-    const cards = page.locator('.spread-flip')
-    await expect(cards).toHaveCount(3)
-    // The first tap turns a card over; the second opens it in the lightbox.
-    await cards.first().click()
-    await cards.first().click()
+    // Each card is a button named, while face down, by its place alone: nothing a
+    // screen reader reads out gives the card away before it is turned.
+    const faceDown = page.getByRole('button', { name: /^Face-down card \d/ })
+    await expect(faceDown).toHaveCount(3)
+    await expect(faceDown.getByRole('img', { name: /./ })).toHaveCount(0)
+
+    // The first tap turns a card over, and its name then says which card it is;
+    // the second opens it in the lightbox.
+    await page.getByRole('button', { name: 'Face-down card 1, Past', exact: true }).click()
+    const turned = page.getByRole('button', { name: /^Card 1, Past: \S/ })
+    await expect(turned).toBeVisible()
+    await expect(faceDown).toHaveCount(2)
+    await turned.click()
     await expect(page.getByText('Image 1 of 3')).toBeVisible()
 
     await page.getByRole('button', { name: 'Report a problem' }).click()

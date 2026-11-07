@@ -121,6 +121,6 @@ final class AdminCardReportsTest extends HttpTestCase
         $row = $this->rows("SELECT report_id FROM card_reports WHERE card_id = {$cardId}");
         $this->assertCount(1, $row);
 
-        return (int)$row[0]['report_id'];
+        return (int) $row[0]['report_id'];
     }
 }

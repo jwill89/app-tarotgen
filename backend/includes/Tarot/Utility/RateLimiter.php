@@ -79,7 +79,7 @@ readonly class RateLimiter
             return [];
         }
 
-        return self::decode((string)file_get_contents($file));
+        return self::decode((string) file_get_contents($file));
     }
 
     /**
@@ -98,7 +98,7 @@ readonly class RateLimiter
         $entries = [];
         foreach ($decoded as $key => $entry) {
             if (is_array($entry) && is_int($entry['count'] ?? null) && is_int($entry['first'] ?? null)) {
-                $entries[(string)$key] = ['count' => $entry['count'], 'first' => $entry['first']];
+                $entries[(string) $key] = ['count' => $entry['count'], 'first' => $entry['first']];
             }
         }
 
@@ -123,7 +123,7 @@ readonly class RateLimiter
         try {
             flock($fp, LOCK_EX);
 
-            $all = self::decode((string)stream_get_contents($fp));
+            $all = self::decode((string) stream_get_contents($fp));
 
             $all = $change($this->prune($all));
 

@@ -93,7 +93,9 @@ export interface ReasonTally {
 /** Each reason given, with how often — most common first, ties in form order. */
 export function tallyReasons(submissions: CardReportSubmission[]): ReasonTally[] {
   const counts = new Map<CardReportReason, number>()
-  for (const s of submissions) counts.set(s.reason, (counts.get(s.reason) ?? 0) + 1)
+  for (const s of submissions) {
+    counts.set(s.reason, (counts.get(s.reason) ?? 0) + 1)
+  }
 
   const order = (reason: string): number => REASON_ORDER.get(reason) ?? REASON_ORDER.size
 

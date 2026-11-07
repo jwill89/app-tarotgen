@@ -29,6 +29,5 @@ final readonly class ReadingFilter
         public ?string $from = null,
         public ?string $until = null,
         public ?bool $daily = null,
-    ) {
-    }
+    ) {}
 }

@@ -101,9 +101,7 @@ final class AuthServiceTest extends TestCase
         $this->attemptNotices = new ArrayObject();
         $mailer = new class ($this->attemptNotices) extends Mailer {
             /** @param ArrayObject<int,array{string,string}> $notices */
-            public function __construct(private readonly ArrayObject $notices)
-            {
-            }
+            public function __construct(private readonly ArrayObject $notices) {}
 
             #[\Override]
             public function sendRegistrationAttempt(string $toEmail, string $toName, string $signInLink, string $resetLink): bool
@@ -140,7 +138,7 @@ final class AuthServiceTest extends TestCase
         $owners = $this->pdo->query('SELECT user_id FROM sessions ORDER BY rowid');
         $this->assertNotFalse($owners);
 
-        return array_values(array_map(static fn(mixed $id): ?int => $id === null ? null : (int)$id, $owners->fetchAll(PDO::FETCH_COLUMN)));
+        return array_values(array_map(static fn(mixed $id): ?int => $id === null ? null : (int) $id, $owners->fetchAll(PDO::FETCH_COLUMN)));
     }
 
     private function tokenFromLink(string $link): string

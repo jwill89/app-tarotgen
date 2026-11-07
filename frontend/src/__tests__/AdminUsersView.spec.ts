@@ -81,7 +81,7 @@ describe('admin UsersView', () => {
       await mountPage(UsersView, { path: '/admin/users' })
 
       const markers = (name: string) =>
-        [...row(name).cells[2].querySelectorAll('svg')].map((svg) => svg.dataset.icon)
+        [...row(name).cells[2]!.querySelectorAll('svg')].map((svg) => svg.dataset.icon)
       expect(markers('Ada')).toEqual(['user-shield', 'google', 'key'])
       expect(markers('Cy')).toEqual([])
     })
@@ -164,7 +164,7 @@ describe('admin UsersView', () => {
         ['GET', '/api/admin/users'],
       ])
       expect(toasts()).toEqual(['Bea activated.'])
-      expect(row('Bea').cells[3].textContent.trim()).toBe('Active')
+      expect(row('Bea').cells[3]!.textContent.trim()).toBe('Active')
     })
 
     it("shows the server's reason when activating fails", async () => {

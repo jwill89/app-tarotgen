@@ -55,9 +55,7 @@ final class GoogleAuthTest extends HttpTestCase
             private const string ACCESS_TOKEN = 'access-token-from-google';
 
             /** @param \Closure(): (array{sub:string,email:string,email_verified:bool,name:string,picture:string}|null) $profile */
-            public function __construct(private readonly string $code, private readonly \Closure $profile)
-            {
-            }
+            public function __construct(private readonly string $code, private readonly \Closure $profile) {}
 
             #[\Override]
             public function exchangeCode(string $code): ?array
@@ -87,7 +85,7 @@ final class GoogleAuthTest extends HttpTestCase
         $this->assertSame(302, $response->getStatusCode());
         $location = $response->getHeaderLine('Location');
         $this->assertStringStartsWith('https://accounts.google.com/o/oauth2/v2/auth?', $location);
-        parse_str((string)parse_url($location, PHP_URL_QUERY), $query);
+        parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
         $this->assertSame(self::CLIENT_ID, $query['client_id'] ?? null);
         $this->assertSame('https://' . self::HOST . '/api/auth/google/callback', $query['redirect_uri'] ?? null);
         $this->assertIsString($query['state'] ?? null);
@@ -382,7 +380,7 @@ final class GoogleAuthTest extends HttpTestCase
     public function testAGoogleOnlyAccountWithAPasskeyCanUnlink(): void
     {
         $this->assertRedirect('/', [], $this->completeFlow('login'));
-        $this->service(PasskeyRepository::class)->create((int)$this->signedInUser()['user_id'], 'cred-1', '-----PEM-----', 'Laptop', 0);
+        $this->service(PasskeyRepository::class)->create((int) $this->signedInUser()['user_id'], 'cred-1', '-----PEM-----', 'Laptop', 0);
 
         $unlinked = $this->assertJsonResponse(200, $this->post('/auth/google/unlink'));
 
@@ -397,7 +395,7 @@ final class GoogleAuthTest extends HttpTestCase
 
         $forgot = $this->assertJsonResponse(200, $this->post('/auth/forgot-password', ['email' => 'reader@example.test']));
         $this->assertIsString($forgot['reset_link']);
-        parse_str((string)parse_url($forgot['reset_link'], PHP_URL_QUERY), $query);
+        parse_str((string) parse_url($forgot['reset_link'], PHP_URL_QUERY), $query);
         $password = 'test-only-' . bin2hex(random_bytes(8));
         $this->assertJsonResponse(200, $this->post('/auth/reset-password', ['token' => $query['token'] ?? '', 'password' => $password]));
         $this->assertJsonResponse(200, $this->post('/auth/login', ['email' => 'reader@example.test', 'password' => $password]));
@@ -421,7 +419,7 @@ final class GoogleAuthTest extends HttpTestCase
     {
         $response = $this->get('/auth/google?intent=' . $intent);
         $this->assertSame(302, $response->getStatusCode());
-        parse_str((string)parse_url($response->getHeaderLine('Location'), PHP_URL_QUERY), $query);
+        parse_str((string) parse_url($response->getHeaderLine('Location'), PHP_URL_QUERY), $query);
         $this->assertIsString($query['state'] ?? null);
         return $query['state'];
     }
@@ -448,7 +446,7 @@ final class GoogleAuthTest extends HttpTestCase
         $this->assertSame(302, $response->getStatusCode());
         $location = $response->getHeaderLine('Location');
         $this->assertSame($path, parse_url($location, PHP_URL_PATH), "Redirected to {$location}");
-        parse_str((string)parse_url($location, PHP_URL_QUERY), $actual);
+        parse_str((string) parse_url($location, PHP_URL_QUERY), $actual);
         $this->assertSame($query, $actual, "Redirected to {$location}");
     }
 
@@ -474,6 +472,6 @@ final class GoogleAuthTest extends HttpTestCase
         $this->assertNotNull($cookie);
         $row = $this->rows("SELECT expires FROM sessions WHERE id = '" . hash('sha256', $cookie) . "'");
         $this->assertCount(1, $row);
-        return (int)$row[0]['expires'];
+        return (int) $row[0]['expires'];
     }
 }

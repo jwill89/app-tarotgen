@@ -33,7 +33,7 @@ final class MailerTest extends TestCase
             $_ENV[$key] = '';
         }
 
-        $this->log = (string)tempnam(sys_get_temp_dir(), 'tarot-mailer-log');
+        $this->log = (string) tempnam(sys_get_temp_dir(), 'tarot-mailer-log');
         $this->savedErrorLog = ini_set('error_log', $this->log);
     }
 
@@ -58,7 +58,7 @@ final class MailerTest extends TestCase
 
         $this->assertFalse($mailer->sendActivation('reader@example.test', 'Reader', 'https://tarotgen.test/activate?token=abc123'));
 
-        $logged = (string)file_get_contents($this->log);
+        $logged = (string) file_get_contents($this->log);
         $this->assertStringContainsString('SMTP not configured; would send "Activate your TarotGen.io account" to reader@example.test', $logged);
         $this->assertStringContainsString('https://tarotgen.test/activate?token=abc123', $logged);
     }
@@ -67,7 +67,7 @@ final class MailerTest extends TestCase
     {
         $this->assertFalse(new Mailer()->sendPasswordReset('reader@example.test', 'Reader', 'https://tarotgen.test/reset-password?token=def456'));
 
-        $logged = (string)file_get_contents($this->log);
+        $logged = (string) file_get_contents($this->log);
         $this->assertStringContainsString('would send "Reset your TarotGen.io password" to reader@example.test', $logged);
         $this->assertStringContainsString('https://tarotgen.test/reset-password?token=def456', $logged);
     }
@@ -81,7 +81,7 @@ final class MailerTest extends TestCase
             'https://tarotgen.test/forgot-password'
         ));
 
-        $logged = (string)file_get_contents($this->log);
+        $logged = (string) file_get_contents($this->log);
         $this->assertStringContainsString('would send "Someone tried to sign up with your email on TarotGen.io" to reader@example.test', $logged);
         $this->assertStringContainsString('https://tarotgen.test/login', $logged);
         $this->assertStringContainsString('https://tarotgen.test/forgot-password', $logged);
@@ -91,7 +91,7 @@ final class MailerTest extends TestCase
     {
         $this->assertFalse(new Mailer()->sendTest('admin@example.test'));
 
-        $this->assertStringContainsString('would send "TarotGen.io SMTP test" to admin@example.test', (string)file_get_contents($this->log));
+        $this->assertStringContainsString('would send "TarotGen.io SMTP test" to admin@example.test', (string) file_get_contents($this->log));
     }
 
     public function testAMessageRefusedBeforeSendingIsAFailureNotAnException(): void
@@ -109,7 +109,7 @@ final class MailerTest extends TestCase
         $_ENV['MAIL_FROM'] = 'not-an-address-either';
         $this->assertFalse($mailer->sendPasswordReset('reader@example.test', 'Reader', 'https://tarotgen.test/reset-password?token=def456'));
 
-        $logged = (string)file_get_contents($this->log);
+        $logged = (string) file_get_contents($this->log);
         $this->assertSame(2, substr_count($logged, '[Mailer] send failed: '));
         $this->assertStringContainsString('not-an-address', $logged);
     }

@@ -52,7 +52,9 @@ const selected = computed<number | null>({
 
 const filtered = computed(() => {
   const q = searchTerm.value.toLowerCase().trim()
-  if (!q) return props.decks
+  if (!q) {
+    return props.decks
+  }
   return props.decks.filter(
     (d) =>
       d.name.toLowerCase().includes(q) ||
@@ -65,18 +67,24 @@ const groupedOptions = computed(() => {
   const favs = filtered.value.filter((d) => isFavorite(d.deck_id))
   const rest = filtered.value.filter((d) => !isFavorite(d.deck_id))
 
-  const systemGroups: Record<string, Deck[]> = {}
+  // A Map, not an object: a system named like an Object.prototype key
+  // (`constructor`) is a group like any other.
+  const systemGroups = new Map<string, Deck[]>()
   for (const deck of rest) {
     const key = deck.system_short_name || 'Other'
-    if (!Object.hasOwn(systemGroups, key)) systemGroups[key] = []
-    systemGroups[key].push(deck)
+    const group = systemGroups.get(key)
+    if (group) {
+      group.push(deck)
+    } else {
+      systemGroups.set(key, [deck])
+    }
   }
 
   const groups: { label: string; items: Deck[] }[] = []
-  if (favs.length > 0) groups.push({ label: 'Favorites', items: favs })
-  for (const [system, decks] of Object.entries(systemGroups).sort((a, b) =>
-    a[0].localeCompare(b[0]),
-  )) {
+  if (favs.length > 0) {
+    groups.push({ label: 'Favorites', items: favs })
+  }
+  for (const [system, decks] of [...systemGroups].sort((a, b) => a[0].localeCompare(b[0]))) {
     groups.push({ label: system, items: decks })
   }
   return groups
@@ -90,7 +98,9 @@ function displayValue(id: number | null): string {
 
 // Clear the search as the list closes, so it reopens showing every deck.
 function onOpenChange(open: boolean): void {
-  if (!open) searchTerm.value = ''
+  if (!open) {
+    searchTerm.value = ''
+  }
 }
 
 function onInput(event: Event): void {
@@ -105,8 +115,8 @@ function onToggleFavorite(deck: Deck): void {
 <template>
   <ComboboxRoot
     v-model="selected"
-    :ignore-filter="true"
-    :reset-search-term-on-blur="true"
+    ignore-filter
+    reset-search-term-on-blur
     class="myst-combobox"
     @update:open="onOpenChange"
   >

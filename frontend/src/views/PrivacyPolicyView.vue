@@ -7,7 +7,7 @@ import PageHeader from '@/components/PageHeader.vue'
     <div class="container">
       <div class="columns is-centered">
         <div class="column is-8-desktop is-10-tablet">
-          <PageHeader title="Privacy Policy" subtitle="Last updated: October 30, 2026" />
+          <PageHeader title="Privacy Policy" subtitle="Last updated: November 6, 2026" />
 
           <div class="settings-panel">
             <div class="content">
@@ -142,7 +142,7 @@ import PageHeader from '@/components/PageHeader.vue'
                 permanently deleted within a day.
               </p>
               <p>
-                Deleted data can remain in our database backups for up to 14 days, after which the
+                Deleted data can remain in our database backups for up to 28 days, after which the
                 backups that contain it are deleted.
               </p>
 

@@ -30,7 +30,7 @@ class PluginTokenData extends AbstractData
             ':now'     => Clock::now(),
         ]);
 
-        return (int)$this->db->lastInsertId();
+        return (int) $this->db->lastInsertId();
     }
 
     /**

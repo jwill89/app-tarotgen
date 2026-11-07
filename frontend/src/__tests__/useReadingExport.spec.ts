@@ -6,11 +6,12 @@ import { useToasts } from '@/composables/useToasts'
 import type { SpreadPosition } from '@/types'
 
 /*
- * happy-dom has no canvas: getContext('2d') answers null and images never load.
- * The spec stands in the least it needs — a 2D context that records each drawing
- * call (measureText says 10px a character), an Image whose load succeeds or
- * fails by URL, and the object URL / anchor click of the download — so it can
- * check what lands where, not pixels.
+ * jsdom has no canvas: getContext('2d') answers null, toBlob() never calls back
+ * and images never load. The spec stands in the least it needs — a 2D context
+ * that records each drawing call (measureText says 10px a character) and a toBlob
+ * that hands back an empty PNG, an Image whose load succeeds or fails by URL, and
+ * the object URL / anchor click of the download — so it can check what lands
+ * where, not pixels.
  */
 
 interface DrawOp {
@@ -27,10 +28,18 @@ function recordingContext() {
   const state: Record<string, unknown> = {}
   return new Proxy(state, {
     get(target, prop) {
-      if (typeof prop !== 'string') return undefined
-      if (prop === 'measureText') return (text: string) => ({ width: text.length * 10 })
-      if (prop === 'createLinearGradient') return () => ({ addColorStop: () => {} })
-      if (prop in target) return target[prop]
+      if (typeof prop !== 'string') {
+        return undefined
+      }
+      if (prop === 'measureText') {
+        return (text: string) => ({ width: text.length * 10 })
+      }
+      if (prop === 'createLinearGradient') {
+        return () => ({ addColorStop: () => {} })
+      }
+      if (prop in target) {
+        return target[prop]
+      }
       return (...args: unknown[]) => {
         ops.push({ op: prop, args, fillStyle: target.fillStyle })
       }
@@ -67,6 +76,12 @@ function giveCanvasA2dContext() {
     value(this: HTMLCanvasElement) {
       canvases.push(this)
       return recordingContext()
+    },
+  })
+  Object.defineProperty(canvasProto, 'toBlob', {
+    configurable: true,
+    value: (done: BlobCallback, type = 'image/png') => {
+      done(new Blob([], { type }))
     },
   })
 }
@@ -119,8 +134,12 @@ describe('useReadingExport', () => {
   })
 
   afterEach(() => {
-    if (originalGetContext) Object.defineProperty(canvasProto, 'getContext', originalGetContext)
-    if (originalToBlob) Object.defineProperty(canvasProto, 'toBlob', originalToBlob)
+    if (originalGetContext) {
+      Object.defineProperty(canvasProto, 'getContext', originalGetContext)
+    }
+    if (originalToBlob) {
+      Object.defineProperty(canvasProto, 'toBlob', originalToBlob)
+    }
   })
 
   it('downloads the image under the given file name and says so', async () => {
@@ -156,9 +175,9 @@ describe('useReadingExport', () => {
 
       const [first, second] = ops2('translate').map((o) => o.args)
       // 1600px wide: the two cards sit either side of x = 800, level.
-      expect(Number(first[0]) + Number(second[0])).toBeCloseTo(1600)
-      expect(first[1]).toBe(second[1])
-      expect(Number(first[0])).toBeLessThan(800)
+      expect(Number(first![0]) + Number(second![0])).toBeCloseTo(1600)
+      expect(first![1]).toBe(second![1])
+      expect(Number(first![0])).toBeLessThan(800)
     })
 
     it("draws each card in the deck's own proportions, cropped rather than stretched", async () => {
@@ -166,11 +185,11 @@ describe('useReadingExport', () => {
 
       for (const { args } of ops2('drawImage')) {
         const [, sx, sy, sw, sh, , , dw, dh] = args.map(Number)
-        expect(dh / dw).toBeCloseTo(1.5) // the card's slot
-        expect(sh / sw).toBeCloseTo(1.5) // the part of the art shown in it
+        expect(dh! / dw!).toBeCloseTo(1.5) // the card's slot
+        expect(sh! / sw!).toBeCloseTo(1.5) // the part of the art shown in it
         // The 600x1000 art is too tall for 1.5: it loses equal strips top and bottom.
         expect(sx).toBe(0)
-        expect(sy).toBeCloseTo((1000 - sh) / 2)
+        expect(sy).toBeCloseTo((1000 - sh!) / 2)
       }
       expect(ops2('drawImage')).toHaveLength(2)
     })
@@ -227,9 +246,9 @@ describe('useReadingExport', () => {
       await useReadingExport().exportReading(baseOptions({ positions, scale: 2 }))
 
       const [standard, large] = canvases
-      expect(standard.width).toBe(1600)
-      expect(large.width).toBe(3200)
-      expect(large.height).toBe(2 * standard.height)
+      expect(standard!.width).toBe(1600)
+      expect(large!.width).toBe(3200)
+      expect(large!.height).toBe(2 * standard!.height)
       expect(ops2('scale')[0]?.args).toEqual([2, 2])
       expect(ops.filter((o) => o.op === 'translate')).toEqual(
         standardOps.filter((o) => o.op === 'translate'),
@@ -246,11 +265,11 @@ describe('useReadingExport', () => {
       const centres = ops2('translate').map((o) => o.args.map(Number))
       const xs = centres.map(([x]) => x)
       const ys = centres.map(([, y]) => y)
-      expect(xs.slice(0, 4)).toEqual([...xs.slice(0, 4)].sort((a, b) => a - b))
+      expect(xs.slice(0, 4)).toEqual([...xs.slice(0, 4)].sort((a, b) => a! - b!))
       expect(new Set(ys.slice(0, 4)).size).toBe(1)
       // The fifth starts a second row under the first.
       expect(xs[4]).toBe(xs[0])
-      expect(ys[4]).toBeGreaterThan(ys[0])
+      expect(ys[4]).toBeGreaterThan(ys[0]!)
     })
 
     it('grows the image by a row for every four cards', async () => {
@@ -258,7 +277,7 @@ describe('useReadingExport', () => {
       await useReadingExport().exportReading(baseOptions({ cards: fiveCards }))
 
       const [oneRow, twoRows] = canvases
-      expect(twoRows.height).toBeGreaterThan(oneRow.height)
+      expect(twoRows!.height).toBeGreaterThan(oneRow!.height)
     })
 
     it('captions each card and marks the reversed ones', async () => {
@@ -272,7 +291,7 @@ describe('useReadingExport', () => {
       await useReadingExport().exportReading(baseOptions({ cardAspect: 0 }))
 
       const [, , , , , , , dw, dh] = ops2('drawImage')[0]?.args.map(Number) ?? []
-      expect(dh / dw).toBeCloseTo(CARD_ASPECT)
+      expect(dh! / dw!).toBeCloseTo(CARD_ASPECT)
     })
   })
 
@@ -306,8 +325,10 @@ describe('useReadingExport', () => {
   describe('when the browser cannot render', () => {
     it('says so instead of downloading when there is no 2D canvas', async () => {
       vi.spyOn(console, 'error').mockImplementation(() => {})
-      // happy-dom's own answer: no canvas backend, so no context.
-      if (originalGetContext) Object.defineProperty(canvasProto, 'getContext', originalGetContext)
+      // jsdom's own answer: no canvas backend, so no context.
+      if (originalGetContext) {
+        Object.defineProperty(canvasProto, 'getContext', originalGetContext)
+      }
       const { exportReading, exporting } = useReadingExport()
 
       await exportReading(baseOptions())

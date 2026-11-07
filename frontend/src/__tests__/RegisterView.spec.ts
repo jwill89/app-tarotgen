@@ -8,21 +8,28 @@ const pageText = () => text(document.body)
 
 function button(name: string): HTMLButtonElement {
   const found = [...document.body.querySelectorAll('button')].filter((b) => text(b) === name)
-  if (found.length !== 1) throw new Error(`Expected one "${name}" button, found ${found.length}`)
-  return found[0]
+  const [only] = found
+  if (!only || found.length !== 1) {
+    throw new Error(`Expected one "${name}" button, found ${found.length}`)
+  }
+  return only
 }
 
 /** The control a `<label>` with this text points at. */
 function labelled(label: string): HTMLElement {
   const el = [...document.body.querySelectorAll('label')].find((l) => text(l) === label)
   const control = el && document.getElementById(el.htmlFor)
-  if (!control) throw new Error(`Nothing is labelled "${label}"`)
+  if (!control) {
+    throw new Error(`Nothing is labelled "${label}"`)
+  }
   return control
 }
 
 function field(label: string): HTMLInputElement {
   const input = labelled(label)
-  if (!(input instanceof HTMLInputElement)) throw new Error(`"${label}" is not a text field`)
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`"${label}" is not a text field`)
+  }
   return input
 }
 

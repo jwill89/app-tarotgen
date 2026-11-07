@@ -19,12 +19,11 @@
     <Version>0.8.0</Version>
     <Deterministic>true</Deterministic>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- Every build runs the recommended .NET analyzers and the .editorconfig
-         style rules, and any warning fails it (AUDIT §6.3). Vulnerability
-         advisories on packages stay warnings: one landing on a Dalamud
-         dependency shouldn't block a release; Dependabot raises the update. -->
-    <AnalysisLevel>latest-recommended</AnalysisLevel>
-    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- The analyzers and code style come from ../Directory.Build.props
+         (shared-tooling's lint/dotnet). TarotGen's own on top: any warning fails
+         every build, a local or deploy.ps1 one too, not only CI's (AUDIT §6.3).
+         Vulnerability advisories on packages stay warnings: one landing on a
+         Dalamud dependency shouldn't block a release; Dependabot raises the update. -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
   </PropertyGroup>

@@ -1,13 +1,18 @@
 # TarotGen.io scheduled jobs. Installed on the droplet as /etc/cron.d/tarotgen
-# (root:root 644, LF line endings — cron silently ignores a malformed file).
-# Source: scripts/server/tarotgen.cron in the repo.
+# (root:root 644, LF line endings; cron silently ignores a malformed file) by
+# scripts/deploy.ps1 -Target backend, whenever it differs from this file.
 SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 TAROT_DATA_DIR=/var/lib/tarotgen
 
-# 03:17 UTC nightly: online backup of the database, newest 14 kept
-# (/var/backups/tarotgen/nightly). Output goes to syslog: journalctl -t tarotgen-backup
-# Then, only if that backup succeeded, data retention (AUDIT.md §1.7): guest
-# readings older than a year are deleted, as the privacy policy states, and the
-# planner statistics refreshed. Output: journalctl -t tarotgen-retention
-17 3 * * * root /usr/local/sbin/tarotgen-backup >/dev/null 2>&1 && runuser -u www-data -- php /var/www/tarotgen.io/scripts/retention.php 2>&1 | logger -t tarotgen-retention
+# The database's daily backup is no longer here: tarotgen-backup.timer (SharedDeploy's
+# Install-BackupTimer, installed by the deploy) writes it at 10:00 UTC, with up to 15
+# minutes' spread, to /var/lib/tarotgen/db/backups/tarotgen-YYYY-MM-DD.db.gz (UTC date).
+# Check it with: journalctl -u tarotgen-backup
+#
+# 10:30 UTC daily, once that window has passed: data retention (AUDIT.md 1.7). Guest
+# readings older than a year are deleted, as the privacy policy states, and the planner
+# statistics refreshed. It runs only when today's backup exists, so there is always a
+# copy from before it; otherwise it logs that it skipped. The droplet's clock is UTC.
+# Output: journalctl -t tarotgen-retention
+30 10 * * * root backup=/var/lib/tarotgen/db/backups/tarotgen-$(date -u +\%Y-\%m-\%d).db.gz; if [ -s "$backup" ]; then runuser -u www-data -- php /var/www/tarotgen.io/scripts/retention.php 2>&1 | logger -t tarotgen-retention; else logger -t tarotgen-retention "skipped: today's backup $backup is missing"; fi

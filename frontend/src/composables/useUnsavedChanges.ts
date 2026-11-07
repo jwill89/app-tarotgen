@@ -13,7 +13,9 @@ export function useUnsavedChanges(isDirty: () => boolean, message: string): void
   const { confirm } = useConfirm()
 
   onBeforeRouteLeave(async () => {
-    if (!isDirty()) return true
+    if (!isDirty()) {
+      return true
+    }
     return confirm({
       title: 'Unsaved changes',
       message,
@@ -25,7 +27,9 @@ export function useUnsavedChanges(isDirty: () => boolean, message: string): void
 
   // The browser shows its own wording; preventDefault is all it needs.
   function onBeforeUnload(event: BeforeUnloadEvent): void {
-    if (isDirty()) event.preventDefault()
+    if (isDirty()) {
+      event.preventDefault()
+    }
   }
 
   onMounted(() => window.addEventListener('beforeunload', onBeforeUnload))

@@ -27,7 +27,9 @@ const PERSIST = 1_000_000_000
 
 function onOpenChange(open: boolean, id: number): void {
   // Let the close animation finish before removing the node from the queue.
-  if (!open) window.setTimeout(() => dismiss(id), 160)
+  if (!open) {
+    window.setTimeout(() => dismiss(id), 160)
+  }
 }
 </script>
 

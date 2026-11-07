@@ -1,50 +1,53 @@
 name: Plugin
 
-# The FFXIV plugin ships through its own Dalamud repo, not the site deploy, so it
-# builds on its own — and only when something it is built from changes.
+# The packaged FFXIV plugin (latest.zip + manifest, as deploy.ps1 -Target plugin would
+# publish it), kept as a download for a week. The plugin ships through its own Dalamud
+# repo, not the site deploy, so this runs only when something it is built from changes.
+# Its checks (the Release build with warnings as errors, and dotnet format) are CI's
+# plugin job, on shared-tooling's dotnet.yml.
 on:
   push:
     branches: [main]
-    paths: ['plugin/**', '.github/workflows/plugin.yml']
+    paths: ['plugin/**', 'shared', '.editorconfig', '.github/workflows/plugin.yml']
   pull_request:
-    paths: ['plugin/**', '.github/workflows/plugin.yml']
+    paths: ['plugin/**', 'shared', '.editorconfig', '.github/workflows/plugin.yml']
 
 concurrency:
   group: plugin-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  build:
-    name: Build (Release, warnings as errors) + style
+  package:
+    name: Package (Release)
     # Linux, as Kindred Nights' plugin job does: the .csproj enables Windows
     # targeting off Windows, and DALAMUD_HOME says where Dalamud is.
     runs-on: ubuntu-24.04
     steps:
+      # The analyzers and code style come from the shared/ submodule
+      # (plugin/Directory.Build.props), so it is checked out with the repo.
       - uses: actions/checkout@v7
+        with:
+          submodules: true
+          persist-credentials: false
 
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
       # The Dalamud dev distribution the SDK compiles against (XIVLauncher installs
-      # it locally). A Dalamud API bump the .csproj's SDK doesn't match fails here,
-      # which is the point.
+      # it locally).
       - name: Dalamud
         run: |
           curl -fsSL -o "$RUNNER_TEMP/dalamud.zip" https://goatcorp.github.io/dalamud-distrib/latest.zip
           unzip -q "$RUNNER_TEMP/dalamud.zip" -d "$RUNNER_TEMP/dalamud"
           echo "DALAMUD_HOME=$RUNNER_TEMP/dalamud" >> "$GITHUB_ENV"
 
-      # The .csproj turns analyzer and code-style warnings into errors (AUDIT §6.3).
       - name: Build
         run: dotnet build plugin/TarotGen.Plugin/TarotGen.Plugin.csproj --configuration Release
 
-      # Formatting the build's style check doesn't cover (whitespace, layout).
-      - name: Style
-        run: dotnet format plugin/TarotGen.Plugin/TarotGen.Plugin.csproj --verify-no-changes
-
-      # The packaged plugin (latest.zip + manifest), as deploy.ps1 -Target plugin
-      # would publish it.
       - name: Upload the package
         uses: actions/upload-artifact@v7
         with:

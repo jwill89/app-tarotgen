@@ -39,8 +39,7 @@ class PasskeyController extends AbstractController
         private readonly UserRepository $users,
         private readonly SignInMethods $signInMethods,
         private readonly PasskeyDecoys $decoys,
-    ) {
-    }
+    ) {}
 
     // ── Registration ─────────────────────────────────────────────────
 
@@ -90,7 +89,7 @@ class PasskeyController extends AbstractController
         );
 
         $createArgs = $webAuthn->getCreateArgs(
-            (string)hex2bin(str_pad(dechex($userId), 16, '0', STR_PAD_LEFT)), // user id as binary
+            (string) hex2bin(str_pad(dechex($userId), 16, '0', STR_PAD_LEFT)), // user id as binary
             $user->email,
             $user->display_name,
             60, // timeout seconds
@@ -153,8 +152,8 @@ class PasskeyController extends AbstractController
         }
 
         $body = $this->parsedBody($request);
-        $clientDataJSON   = self::base64UrlDecode((string)($body['clientDataJSON'] ?? ''));
-        $attestationObject = self::base64UrlDecode((string)($body['attestationObject'] ?? ''));
+        $clientDataJSON   = self::base64UrlDecode((string) ($body['clientDataJSON'] ?? ''));
+        $attestationObject = self::base64UrlDecode((string) ($body['attestationObject'] ?? ''));
         $name = Input::string($body['name'] ?? 'My Passkey', 50);
         if ($name === '') {
             $name = 'My Passkey';
@@ -182,7 +181,7 @@ class PasskeyController extends AbstractController
         // credentialId is raw binary from the library — encode it to base64url for storage and lookup.
         $credentialId = $data->credentialId instanceof ByteBuffer
             ? self::base64UrlEncode($data->credentialId->getBinaryString())
-            : self::base64UrlEncode((string)$data->credentialId);
+            : self::base64UrlEncode((string) $data->credentialId);
         $signCount = $data->signatureCounter ?? 0;
 
         // A credential already on file (WebAuthn §7.1 step 22) would otherwise hit the
@@ -247,7 +246,7 @@ class PasskeyController extends AbstractController
         $this->startSession();
 
         $body  = $this->parsedBody($request);
-        $email = strtolower(trim((string)($body['email'] ?? '')));
+        $email = strtolower(trim((string) ($body['email'] ?? '')));
 
         $credentialIds = [];
 
@@ -328,10 +327,10 @@ class PasskeyController extends AbstractController
         }
 
         $body = $this->parsedBody($request);
-        $credentialIdB64  = (string)($body['id'] ?? '');
-        $clientDataJSON   = self::base64UrlDecode((string)($body['clientDataJSON'] ?? ''));
-        $authenticatorData = self::base64UrlDecode((string)($body['authenticatorData'] ?? ''));
-        $signature        = self::base64UrlDecode((string)($body['signature'] ?? ''));
+        $credentialIdB64  = (string) ($body['id'] ?? '');
+        $clientDataJSON   = self::base64UrlDecode((string) ($body['clientDataJSON'] ?? ''));
+        $authenticatorData = self::base64UrlDecode((string) ($body['authenticatorData'] ?? ''));
+        $signature        = self::base64UrlDecode((string) ($body['signature'] ?? ''));
 
         if ($credentialIdB64 === '' || $clientDataJSON === '' || $authenticatorData === '' || $signature === '') {
             return $response->withJson(['error' => 'Missing assertion data.'], 400);
@@ -443,7 +442,7 @@ class PasskeyController extends AbstractController
     {
         $userId = $this->authUserId($request);
 
-        $passkeyId = (int)($args['id'] ?? 0);
+        $passkeyId = (int) ($args['id'] ?? 0);
         $body = $this->parsedBody($request);
         $name = Input::string($body['name'] ?? '', 50);
 
@@ -482,7 +481,7 @@ class PasskeyController extends AbstractController
     public function delete(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $userId    = $this->authUserId($request);
-        $passkeyId = (int)($args['id'] ?? 0);
+        $passkeyId = (int) ($args['id'] ?? 0);
         $mine      = array_map(static fn(Passkey $passkey): int => $passkey->passkey_id, $this->passkeys->getByUser($userId));
 
         // Ownership first: another account's passkey is simply not found,

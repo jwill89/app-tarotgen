@@ -46,12 +46,16 @@ const emit = defineEmits<{ close: [] }>()
 // Reka owns the open state internally; mirror its close requests (Escape,
 // backdrop, close button) back out as the `close` event the parents expect.
 function onOpenChange(open: boolean): void {
-  if (!open) emit('close')
+  if (!open) {
+    emit('close')
+  }
 }
 
 // When backdrop-dismiss is disabled, veto the outside-interaction close.
 function onInteractOutside(e: Event): void {
-  if (!props.closeOnBackdrop) e.preventDefault()
+  if (!props.closeOnBackdrop) {
+    e.preventDefault()
+  }
 }
 </script>
 

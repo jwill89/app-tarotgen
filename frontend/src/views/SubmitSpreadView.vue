@@ -22,8 +22,8 @@ const submitted = ref(false)
 const saveMode = ref<'public' | 'personal'>('public')
 
 const saveModeOptions = [
-  { value: 'public', label: 'Public Spread', icon: byPrefixAndName.fas['globe'] },
-  { value: 'personal', label: 'Personal Spread', icon: byPrefixAndName.fas['lock'] },
+  { value: 'public', label: 'Public Spread', icon: byPrefixAndName.fas.globe },
+  { value: 'personal', label: 'Personal Spread', icon: byPrefixAndName.fas.lock },
 ]
 
 async function submitSpread(payload: {
@@ -84,11 +84,11 @@ function goHome() {
               approves it.
             </p>
             <div class="buttons">
-              <button class="button is-link" @click="submitAnother">
+              <button type="button" class="button is-link" @click="submitAnother">
                 <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
                 <span>Create Another</span>
               </button>
-              <button class="button" @click="goHome">Back to Home</button>
+              <button type="button" class="button" @click="goHome">Back to Home</button>
             </div>
           </div>
 

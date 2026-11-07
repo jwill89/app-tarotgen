@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
@@ -38,7 +37,7 @@ public static class SpreadDraw
     /// <summary>A filled order badge with the position number, drawn on top of cards.</summary>
     public static void OrderBadge(ImDrawListPtr dl, Vector2 center, int order, float scale)
     {
-        float r = 9f * scale;
+        var r = 9f * scale;
         dl.AddCircleFilled(center, r, 0xC8000000u);
         dl.AddCircle(center, r, 0x66FFFFFFu);
         OrderNumber(dl, center, order);
@@ -55,17 +54,17 @@ public static class SpreadDraw
     /// <summary>Whether a point falls inside a rotated card rectangle centred at <paramref name="center"/>.</summary>
     public static bool HitTest(Vector2 point, Vector2 center, float w, float h, int rotationDeg)
     {
-        float rad = -rotationDeg * MathF.PI / 180f;
+        var rad = -rotationDeg * MathF.PI / 180f;
         float cos = MathF.Cos(rad), sin = MathF.Sin(rad);
         float dx = point.X - center.X, dy = point.Y - center.Y;
-        float lx = (dx * cos) - (dy * sin);
-        float ly = (dx * sin) + (dy * cos);
+        var lx = (dx * cos) - (dy * sin);
+        var ly = (dx * sin) + (dy * cos);
         return MathF.Abs(lx) <= w / 2f && MathF.Abs(ly) <= h / 2f;
     }
 
     private static (Vector2, Vector2, Vector2, Vector2) Corners(Vector2 center, float w, float h, int rotationDeg)
     {
-        float rad = rotationDeg * MathF.PI / 180f;
+        var rad = rotationDeg * MathF.PI / 180f;
         float cos = MathF.Cos(rad), sin = MathF.Sin(rad);
         float hw = w / 2f, hh = h / 2f;
 

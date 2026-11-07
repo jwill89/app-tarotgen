@@ -12,7 +12,7 @@ channel (`-Target plugin`).
 
 ## What it does (and deliberately does not)
 
-**In scope**
+**In scope:**
 
 - **Generate a reading** — pick a public spread *or* a free draw (random card count), with reversals. No account needed: an unlinked install gets a **draw key** once (see "How it authenticates"). The spread pickers group the public spreads under the site's library categories, in the order the site lists them.
 - **View a reading** by its share code / URL, including password-protected readings (guest enters the password). Each position lists its card, with what the position asks beneath it when the spread says (the New Reading preview shows the same).
@@ -36,12 +36,18 @@ additional cards into a reading, custom readings from hand-picked cards, and dec
 ## Building
 
 Requires the Dalamud dev SDK on disk (XIVLauncher installs it to `%AppData%\XIVLauncher\addon\Hooks\dev`)
-plus the .NET 10 SDK. Then:
+plus the .NET 10 SDK, and the repo's `shared/` submodule (`git submodule update --init`):
+`plugin/Directory.Build.props` imports the .NET analyzers and C# code style every build checks from
+shared-tooling's `shared/lint/dotnet`. Any warning fails the build (the NuGet vulnerability advisories
+excepted). Then:
 
 ```powershell
 dotnet build plugin\TarotGen.Plugin\TarotGen.Plugin.csproj -c Debug     # compile
 dotnet build plugin\TarotGen.Plugin\TarotGen.Plugin.csproj -c Release   # + DalamudPackager -> bin\Release\TarotGen.Plugin\latest.zip
 ```
+
+`dotnet format plugin\TarotGen.Plugin\TarotGen.Plugin.csproj --verify-no-changes` checks the
+formatting, as CI's plugin job does after its Release build.
 
 Or open `TarotGen.Plugin.sln` in Visual Studio 2026 / Rider 2025.3. To try it in-game: `/xldev` →
 Dev Plugin Locations → point at the built DLL, then `/tarot`. The plugin **version** comes from
@@ -64,8 +70,11 @@ From the repo root (needs the deploy settings in `scripts/deploy.config.ps1`; co
 .\scripts\deploy.ps1 -Target plugin
 ```
 
-This builds Release and uploads `latest.zip`, `icon.png`, and a generated `repo.json` (the
-pluginmaster) to `https://tarotgen.io/plugin/`.
+This refuses a `<Version>` that isn't higher than the published one, builds Release from clean, and
+uploads `latest.zip`, `icon.png`, and a generated `repo.json` (the pluginmaster, its download links
+carrying `?v=<version>`), which replace the folder behind `https://tarotgen.io/plugin/` in one swap,
+the previous kept as `plugin.old`. The deploy then checks the published `repo.json` names the new
+version, and puts the previous one back if it doesn't.
 
 ## How it authenticates
 
@@ -97,7 +106,7 @@ it in onboarding instead.
 
 ## Backend it talks to
 
-PHP **8.5 / Slim 4** on one DigitalOcean droplet — **Apache + `mod_php` (prefork MPM)**, SQLite (WAL),
+PHP **8.5 / Slim 4** on one DigitalOcean droplet — **Apache (event MPM) + PHP-FPM**, SQLite (WAL),
 behind **Cloudflare**. The endpoints it uses are the `Plugin`- and `Cards`-tagged routes in the API
 (`/plugin/*`, `/account/tokens`, `/card-reports`); browse the live reference at
 [`/api/docs`](https://tarotgen.io/api/docs).

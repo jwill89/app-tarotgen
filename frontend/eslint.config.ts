@@ -1,9 +1,12 @@
-import shared from '@jwill89/eslint-config'
-import vueA11y from 'eslint-plugin-vuejs-accessibility'
+import shared, { tsStylistic, vueConventions } from '@jwill89/lint-web'
 
-// Shared ruleset (Vue 3 + TypeScript strictTypeChecked + Prettier) lives in the
-// @jwill89/eslint-config submodule (frontend/eslint-config). Project-specific
-// ignores and rules live here. Build/tooling config files are not linted.
+// The shared front-end rules (shared-tooling's lint/web): Vue 3 + TypeScript
+// strictTypeChecked, template accessibility (AUDIT §5.6/§6.1), the Vue conventions
+// (<script setup lang="ts"> only, typed refs, no inline styles) and
+// typescript-eslint's stylistic set, with Prettier's conflict list. Below them, what
+// only this app needs. A rule is turned off here with its reason, or at the one line
+// it doesn't fit with the reason beside it. Build and tooling config files are not
+// linted.
 export default [
   {
     name: 'tarot/ignores',
@@ -11,7 +14,9 @@ export default [
       'dist/**',
       'coverage/**',
       'public/**',
-      'eslint-config/**', // the shared-config submodule itself
+      // What a Playwright run leaves behind (traces, the HTML report).
+      'test-results/**',
+      'playwright-report/**',
       'src/types/api.generated.ts', // generated from the OpenAPI spec
       '*.config.ts',
       '*.config.js',
@@ -20,17 +25,46 @@ export default [
     ],
   },
   ...shared,
-  // Template accessibility: labels, alt text, interactive roles (AUDIT §5.6/§6.1).
-  ...vueA11y.configs['flat/recommended'],
+  vueConventions,
+  tsStylistic,
   {
     name: 'tarot/a11y',
     rules: {
-      // A label works by wrapping its control or by `for`/`id`; the plugin's
-      // default demands both. Our forms use `for`/`id`.
+      // A label works by wrapping its control or by `for`/`id`, and a label whose
+      // control is a child component counts: BaseSelect, NumberField, ToggleSwitch
+      // and the comboboxes take the id and put it on their focusable element
+      // (AGENTS.md §5 "Form labels").
       'vuejs-accessibility/label-has-for': [
         'error',
         { required: { some: ['nesting', 'id'] }, allowChildren: true },
       ],
+    },
+  },
+  {
+    // main.ts registers both Font Awesome components globally; the shared rule
+    // knows FontAwesomeIcon only.
+    name: 'tarot/vue',
+    files: ['**/*.vue'],
+    rules: {
+      'vue/no-undef-components': [
+        'error',
+        {
+          ignorePatterns: [
+            '^(Router|router-)(Link|View|link|view)$',
+            '^(FontAwesome(Icon|Layers)|font-awesome-(icon|layers))$',
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // A mock that does nothing is how a spec silences the console it expects to
+    // be written to, holds a request open (new Promise(() => {})) or stands in a
+    // callback until the test replaces it; the app's own code has none.
+    name: 'tarot/test-overrides',
+    files: ['src/__tests__/**'],
+    rules: {
+      '@typescript-eslint/no-empty-function': 'off',
     },
   },
   {

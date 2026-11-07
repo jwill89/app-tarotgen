@@ -30,7 +30,7 @@ final class JournalExportTest extends TestCase
     {
         $this->db = new PDO('sqlite::memory:');
         $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $this->db->exec((string)file_get_contents(dirname(__DIR__, 3) . '/db/schema.sql'));
+        $this->db->exec((string) file_get_contents(dirname(__DIR__, 3) . '/db/schema.sql'));
         $this->db->exec("INSERT INTO users (user_id, email, password_hash, display_name) VALUES (1, 'one@example.test', '', 'One')");
         $this->db->exec("INSERT INTO decks (deck_id, name) VALUES (1, 'Rider-Waite')");
 

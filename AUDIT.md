@@ -15,14 +15,16 @@ verification are listed at the end so nobody re-chases them.
 - Tick the box when the **Verify** step passes, not when the edit lands.
 - Conventions, commands, and layering rules live in `AGENTS.md`; read it first.
   Three rules that bite here:
-  1. `backend/db/schema.sql` must be edited **by hand** after a migration. Do not
-     regenerate it with `scripts/dump_schema.php` — its `ORDER BY name` reorders
-     the whole file, and a dev DB that has drifted (as it had until §1.2/§2.1,
-     after which it matched `schema.sql` object-for-object) silently rewrites
-     unrelated tables.
-  2. `backend/db/migrate_*.php` scripts are **gitignored**; `scripts/deploy.ps1`
-     never uploads `db/`. Every migration must be copied to the droplet's
-     `<WebRoot>/db/` and run there *before* deploying backend code that needs it.
+  1. *(Since 2026-11-06.)* `backend/db/schema.sql` is **generated** from the
+     migrations: `php scripts/dump_schema.php` builds it on a throwaway database
+     (never the dev DB, so drift can't leak in) and `SchemaTest` fails when it is
+     stale. Never edit it by hand.
+  2. *(Since 2026-11-06.)* Schema changes are **Phinx migrations** in
+     `backend/db/migrations/`, committed; the backend deploy runs them on the
+     droplet as www-data, after snapshotting the database, with
+     `php vendor/bin/phinx migrate` (AGENTS.md §6, §7). The one-off
+     `backend/db/migrate_*.php` scripts the items below mention are retired:
+     the baseline migration is their end state.
   3. After route/schema changes: `composer docs` → commit `backend/openapi.json`
      → `npm run gen:types`. `OpenApiSpecTest` and CI both fail on drift.
 - Product constraint: **this site does not interpret readings.** No card
@@ -59,10 +61,14 @@ matches `schema.sql`.
 - **Agents edit and verify; the owner commits.** No commits, branches, pushes,
   or pruning by an agent. §0's git housekeeping is the owner's.
 - **Droplet access** goes through the deploy SSH setup (`scripts/deploy.config.ps1`
-  → plink/pscp via Pageant). Read-only checks run freely; **every prod-changing
+  → plink via Pageant; since 2026-11-06 the deploy holds one shared connection and
+  no longer uses pscp). Read-only checks run freely; **every prod-changing
   command (migration, cron, upload) is proposed and approved first.** Batch
   commands: the droplet runs `ufw limit ssh` (6 connections / 30 s).
 - **Backups (§1.1): local rotation on the droplet, 14 copies.** No off-site copy.
+  *(Since 2026-11-06: daily at 10:00 UTC, 28 days kept, by shared-tooling's
+  backup timer, which the backend deploy installs; the deploy's pull of the live
+  database is the one copy off the droplet. AGENTS.md §6 "Backups".)*
 - **Guest-reading retention (§1.7): 1 year.**
 - **Exposure notification (§1.0): none** — too few users to warrant one.
 - **CSP (§1.5): keep Cloudflare Web Analytics and Bot Fight Mode**; allow them
@@ -87,7 +93,8 @@ audit's assumptions where they differ):
 | Ad-hoc DB copies on server | four `tarotdb.pre-*.db` from July migrations + `db/old/` | §1.1 |
 
 *That table is the morning-of snapshot that shaped the plan. Since changed by the
-work below: cron now runs the nightly backup (§1.1) and retention (§1.7); the
+work below: a daily backup runs (§1.1; since 2026-11-06 a systemd timer, with cron
+running only retention after it, §1.7); the
 `.env` and DB moved out of the web root (§1.0); `schema.sql` matches prod and
 the pending migration ran (§0, §1.2); the relay tables are gone (§2.1); card
 images are cached for 30 days at the edge with a full-size WebP beside each PNG
@@ -222,8 +229,8 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
     DB built from `schema.sql` has the same `decks` columns as prod.
   - **DONE 2026-10-28:** (a) `DeckData::SELECT_WITH_SYSTEM` lists its columns;
     new `DeckDataTest::testColumnsDeckDoesNotDeclareAreNotHydrated` adds an
-    undeclared `is_thoth` column — it fails on the old `d.*` query (deprecation
-    + assertion) and passes now. (b) `drop_legacy_deck_columns.php` run on the
+    undeclared `is_thoth` column — it fails on the old `d.*` query (deprecation and
+    assertion) and passes now. (b) `drop_legacy_deck_columns.php` run on the
     dev DB (backup `db/tarotdb.backup-20261028-011103-pre-1.2.db`): one-liner
     went from the four `Deck::$…` deprecations per deck to a clean
     `hydrated 27 decks`. (c) The four legacy lines removed from the `decks`
@@ -1965,6 +1972,7 @@ except §1.7's first live run. **Remaining, revised 2026-10-28 (end of day):**
    The owner's decisions it found are listed under "Open from §8".
 4. **Open from §6.1:** keyboard favouriting (a design call).
 5. **Features:** in §9's order, smallest first.
+
 ---
 
 ## Appendix A — Claims that did not survive verification

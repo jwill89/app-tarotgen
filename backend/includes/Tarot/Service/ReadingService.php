@@ -47,8 +47,7 @@ class ReadingService
         private readonly SpreadRepository $spreads,
         private readonly UserSpreadRepository $userSpreads,
         private readonly CardNameResolver $cardNames,
-    ) {
-    }
+    ) {}
 
     /**
      * Generate a randomized reading from a deck (optionally shaped by a spread).
@@ -66,8 +65,8 @@ class ReadingService
      */
     public function generate(array $params, ?int $userId = null, bool $isAdmin = false): Reading
     {
-        $number_of_cards = max(1, (int)($params['number_of_cards'] ?? 1));
-        $deck_id         = (int)($params['deck_id'] ?? 1);
+        $number_of_cards = max(1, (int) ($params['number_of_cards'] ?? 1));
+        $deck_id         = (int) ($params['deck_id'] ?? 1);
         $use_reversals        = Input::bool($params['use_reversals'] ?? null);
         $use_additional_cards = Input::bool($params['use_additional_cards'] ?? null);
         $spread_id            = $params['spread_id'] ?? null;
@@ -76,14 +75,14 @@ class ReadingService
         // If a spread was selected, load it. The spread dictates the number of
         // cards drawn (one per position) and is snapshotted into the reading.
         $spread = null;
-        if ($spread_id !== null && $spread_id !== '' && (int)$spread_id > 0) {
-            $loaded = $this->spreads->get((int)$spread_id);
+        if ($spread_id !== null && $spread_id !== '' && (int) $spread_id > 0) {
+            $loaded = $this->spreads->get((int) $spread_id);
             if ($loaded instanceof Spread) {
                 $spread          = $loaded;
                 $number_of_cards = max(1, $spread->card_count);
             }
-        } elseif ($userId !== null && $user_spread_id !== null && $user_spread_id !== '' && (int)$user_spread_id > 0) {
-            $loaded = $this->userSpreads->get($userId, (int)$user_spread_id);
+        } elseif ($userId !== null && $user_spread_id !== null && $user_spread_id !== '' && (int) $user_spread_id > 0) {
+            $loaded = $this->userSpreads->get($userId, (int) $user_spread_id);
             if ($loaded instanceof UserSpread) {
                 // Wrap user spread into the same shape used for snapshots.
                 $spread          = $this->userSpreadAsSpread($loaded);
@@ -165,11 +164,11 @@ class ReadingService
      */
     public function drawAdditional(array $info, array $params): array
     {
-        $count                = max(1, (int)($params['count'] ?? 1));
+        $count                = max(1, (int) ($params['count'] ?? 1));
         $use_reversals        = Input::bool($params['use_reversals'] ?? null);
         $use_additional_cards = Input::bool($params['use_additional_cards'] ?? null);
 
-        $deck = $this->decks->get((int)($info['deck_id'] ?? 0));
+        $deck = $this->decks->get((int) ($info['deck_id'] ?? 0));
         if (!($deck instanceof Deck)) {
             throw new ApiException('InvalidDeckID', 400);
         }
@@ -185,7 +184,7 @@ class ReadingService
         $used = [];
         foreach ($existing as $entry) {
             if (isset($entry['card_id'])) {
-                $used[(int)$entry['card_id']] = true;
+                $used[(int) $entry['card_id']] = true;
             }
         }
 
@@ -237,7 +236,7 @@ class ReadingService
      */
     public function createCustom(array $params, ?int $userId = null, bool $isAdmin = false): Reading
     {
-        $deck_id = (int)($params['deck_id'] ?? 0);
+        $deck_id = (int) ($params['deck_id'] ?? 0);
 
         $name = Input::string($params['name'] ?? null, 100);
         if ($name === '') {
@@ -272,7 +271,7 @@ class ReadingService
                 throw new ApiException('Invalid card data.', 400);
             }
 
-            $card_id = (int)($card['card_id'] ?? 0);
+            $card_id = (int) ($card['card_id'] ?? 0);
             if ($card_id < 1 || $card_id > $available) {
                 throw new ApiException('A selected card is not part of this deck.', 400);
             }
@@ -283,7 +282,7 @@ class ReadingService
             }
             $seen_ids[$card_id] = true;
 
-            $rotation = (int)($card['rotation'] ?? 0) % 360;
+            $rotation = (int) ($card['rotation'] ?? 0) % 360;
             if ($rotation < 0) {
                 $rotation += 360;
             }
@@ -293,8 +292,8 @@ class ReadingService
                 'card_id'  => $card_id,
                 'reversed' => Input::bool($card['reversed'] ?? null),
                 'title'    => Input::string($card['title'] ?? null, 100),
-                'x'        => max(0.0, min(100.0, round((float)($card['x'] ?? 50), 2))),
-                'y'        => max(0.0, min(100.0, round((float)($card['y'] ?? 50), 2))),
+                'x'        => max(0.0, min(100.0, round((float) ($card['x'] ?? 50), 2))),
+                'y'        => max(0.0, min(100.0, round((float) ($card['y'] ?? 50), 2))),
                 'rotation' => $rotation,
             ];
         }
@@ -469,8 +468,8 @@ class ReadingService
         $reading->setReadingInfo(json_encode($reading_data, JSON_THROW_ON_ERROR));
 
         if (isset($owner['user_id'])) {
-            $reading->setUserId((int)$owner['user_id']);
-            $reading->setHideUser((bool)($owner['hide_user'] ?? false));
+            $reading->setUserId((int) $owner['user_id']);
+            $reading->setHideUser((bool) ($owner['hide_user'] ?? false));
             $reading->setReadingName($owner['reading_name'] ?? null);
             $reading->setReadingNotes($owner['reading_notes'] ?? null);
             $reading->setQuestion($owner['question'] ?? null);
@@ -568,7 +567,7 @@ class ReadingService
         $boundaries[] = $count; // final packet ends at the bottom of the deck
 
         // Integer threshold for a CSPRNG coin flip at the configured rate.
-        $threshold = (int)round(self::REVERSAL_TURN_PROBABILITY * 1_000_000);
+        $threshold = (int) round(self::REVERSAL_TURN_PROBABILITY * 1_000_000);
 
         $start = 0;
         foreach ($boundaries as $end) {

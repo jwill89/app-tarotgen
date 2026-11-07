@@ -28,7 +28,9 @@ const model = defineModel<T>({ required: true })
 // must always keep a value, so take only an update naming one of the options.
 function onUpdate(value: unknown): void {
   const option = props.options.find((o) => o.value === value)
-  if (option) model.value = option.value
+  if (option) {
+    model.value = option.value
+  }
 }
 </script>
 

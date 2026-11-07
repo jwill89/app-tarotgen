@@ -81,7 +81,9 @@ async function fetchData() {
   // filtered deck replaced the whole list with it, so switching back to
   // "All Decks" after a save or delete showed that one deck's cards.
   const dk = await api.get<Deck[]>(endpoints.admin.decks.list)
-  if (dk) decks.value = dk
+  if (dk) {
+    decks.value = dk
+  }
 
   const results = await Promise.all(
     decks.value.map((d) => api.get<SpecialCard[]>(endpoints.admin.decks.specialCards(d.deck_id))),
@@ -92,7 +94,7 @@ async function fetchData() {
 function openAdd() {
   isNew.value = true
   editing.value = {
-    deck_id: filterDeckId.value ?? (decks.value.length > 0 ? decks.value[0].deck_id : undefined),
+    deck_id: filterDeckId.value ?? decks.value[0]?.deck_id,
     card_id: undefined,
     name: '',
   }
@@ -108,7 +110,9 @@ function closeEdit() {
 }
 
 async function saveCard() {
-  if (!editing.value) return
+  if (!editing.value) {
+    return
+  }
   const { deck_id: deckId, card_id: cardId } = editing.value
   if (deckId === undefined) {
     toasts.error('Choose the deck this card belongs to.')
@@ -130,7 +134,9 @@ async function saveCard() {
         'Special card updated.',
       )
     }
-    if (!result) return
+    if (!result) {
+      return
+    }
     await fetchData()
     closeEdit()
   } finally {
@@ -146,12 +152,16 @@ async function deleteCard(card: SpecialCard) {
     confirmLabel: 'Delete',
     danger: true,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
   const result = await api.del(
     endpoints.admin.decks.specialCardById(card.deck_id, card.card_id),
     'Special card deleted.',
   )
-  if (result) await fetchData()
+  if (result) {
+    await fetchData()
+  }
 }
 
 onMounted(fetchData)
@@ -163,7 +173,7 @@ onMounted(fetchData)
     subtitle="Manage extra cards specific to certain decks."
   >
     <template #actions>
-      <button class="button is-primary" @click="openAdd">
+      <button type="button" class="button is-primary" @click="openAdd">
         <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
         <span>Add Special Card</span>
       </button>
@@ -330,8 +340,13 @@ onMounted(fetchData)
     </template>
 
     <template #footer>
-      <button class="button" @click="closeEdit">Cancel</button>
-      <button class="button is-success" :class="{ 'is-loading': saving }" @click="saveCard">
+      <button type="button" class="button" @click="closeEdit">Cancel</button>
+      <button
+        type="button"
+        class="button is-success"
+        :class="{ 'is-loading': saving }"
+        @click="saveCard"
+      >
         <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['floppy-disk']" /></span>
         <span>{{ isNew ? 'Create' : 'Save' }}</span>
       </button>

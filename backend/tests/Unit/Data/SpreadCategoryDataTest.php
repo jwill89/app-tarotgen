@@ -31,7 +31,7 @@ final class SpreadCategoryDataTest extends TestCase
     {
         $this->db = new PDO('sqlite::memory:');
         $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $this->db->exec((string)file_get_contents(dirname(__DIR__, 3) . '/db/schema.sql'));
+        $this->db->exec((string) file_get_contents(dirname(__DIR__, 3) . '/db/schema.sql'));
         $this->db->exec('PRAGMA foreign_keys = ON');
 
         $this->categories = new SpreadCategoryData($this->db);

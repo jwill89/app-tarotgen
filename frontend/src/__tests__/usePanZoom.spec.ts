@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { usePanZoom } from '@/composables/usePanZoom'
 
 /**
- * A viewport of a given size. happy-dom does no layout, so clientWidth/Height
+ * A viewport of a given size. jsdom does no layout, so clientWidth/Height
  * and getBoundingClientRect are set by hand.
  */
 function viewport(width = 400, height = 300, left = 0, top = 0): HTMLElement {
@@ -40,10 +40,14 @@ describe('usePanZoom zooming', () => {
 
     pz.zoomIn()
     expect(pz.zoom.value).toBe(1.25)
-    for (let i = 0; i < 20; i++) pz.zoomIn()
+    for (let i = 0; i < 20; i++) {
+      pz.zoomIn()
+    }
     expect(pz.zoom.value).toBe(pz.MAX_ZOOM)
 
-    for (let i = 0; i < 20; i++) pz.zoomOut()
+    for (let i = 0; i < 20; i++) {
+      pz.zoomOut()
+    }
     expect(pz.zoom.value).toBe(pz.MIN_ZOOM)
   })
 
@@ -78,12 +82,8 @@ describe('usePanZoom zooming', () => {
   it('zooms in with the wheel at the cursor, and out the other way', () => {
     const pz = usePanZoom()
     pz.viewportRef.value = viewport(400, 300, 50, 40)
-    const wheel = (deltaY: number) => {
-      const e = new WheelEvent('wheel', { deltaY, clientX: 150, clientY: 100, cancelable: true })
-      // happy-dom's WheelEvent skips MouseEvent and drops the pointer position.
-      Object.defineProperties(e, { clientX: { value: 150 }, clientY: { value: 100 } })
-      return e
-    }
+    const wheel = (deltaY: number) =>
+      new WheelEvent('wheel', { deltaY, clientX: 150, clientY: 100, cancelable: true })
 
     const up = wheel(-100)
     pz.onWheel(up)

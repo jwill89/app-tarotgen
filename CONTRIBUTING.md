@@ -31,28 +31,37 @@ the work, and help newcomers. Harassment or hostility isn't welcome.
 ## Development setup
 
 Full instructions live in the [README Quickstart](README.md#quickstart-local-dev).
-In short — you need **Node**, **PHP 8.5+**, and **Composer**, a gitignored
-`frontend/.npmrc` with the Font Awesome Pro kit token (see `AGENTS.md` §6), and a
-`backend/.env` copied from [`backend/.env.example`](backend/.env.example). The app
-runs as **two processes, one per folder**:
+In short — you need **Node**, **PHP 8.5+**, and **Composer**, the Font Awesome
+Pro kit token in your user `~/.npmrc` (the tracked `frontend/.npmrc` holds no
+token; see `AGENTS.md` §6), the `shared/` submodule (shared-tooling: the lint,
+test, CI and deploy pieces), and a `backend/.env` copied from
+[`backend/.env.example`](backend/.env.example). The app runs as **two
+processes, one per folder**:
 
 ```powershell
+git submodule update --init                     # shared/, once per clone
 cd backend  ; composer install ; composer dev   # PHP API on :80
 cd frontend ; npm install       ; npm run dev    # Vite SPA on :5173 (proxies /api → :80)
 ```
 
 The backend uses a local **SQLite** database, so no database server is needed.
+To start one, create an empty file and run the migrations (Phinx never creates
+the file itself, so a wrong path can't quietly become a new database):
+
+```powershell
+cd backend ; New-Item db/tarotdb.db ; composer migrate
+```
 
 ## Branching & workflow
 
 1. **Fork** the repository (or create a branch if you have push access).
-2. Branch off the default branch (`master`) with a descriptive name, e.g.
+2. Branch off the default branch (`main`) with a descriptive name, e.g.
    `feature/turnstile-login`, `fix/reading-reversal-count`, `docs/contributing`.
 3. Make your change in focused commits.
 4. Run the full check suite (below) and make sure everything passes.
 5. Update [`CHANGELOG.md`](CHANGELOG.md) and bump the version if appropriate
    (see [Versioning](#versioning--changelog)).
-6. Open a pull request against `master`.
+6. Open a pull request against `main`.
 
 Keep pull requests **focused** — one logical change per PR. Unrelated cleanups
 belong in their own PR.
@@ -66,7 +75,8 @@ project-wide rules:
 
 - **Vue 3 `<script setup lang="ts">`** with TypeScript. No `any` — the
   `type-check` step must stay clean.
-- **4-space indentation**; let ESLint settle formatting (`npm run lint:fix`).
+- **2-space indentation**, as Prettier writes it (`npm run format`; shared
+  settings from `shared/lint/web`), and ESLint's fixes with `npm run lint:fix`.
 - Put shared logic in **composables** (`src/composables/`) and shared values in
   `src/constants.ts` — don't duplicate.
 - **Icons** go through the Font Awesome registry in
@@ -89,6 +99,32 @@ project-wide rules:
 - **Secrets never get committed.** New config goes in `.env` with a documented,
   empty placeholder in [`backend/.env.example`](backend/.env.example).
 
+### Database changes (`backend/db/`)
+
+Schema changes are [Phinx](https://book.cakephp.org/phinx/0/en/index.html)
+migrations in `backend/db/migrations/`. Details and SQLite's pitfalls are in
+`AGENTS.md` §7.
+
+1. **Add a migration** with `vendor\bin\phinx create AddThingToReadings` and
+   write it: `up()` in SQL, and `down()` where the change can be undone. Keep
+   it additive, so the code before yours still runs on the new schema.
+   **Never edit a migration that has run in production**; fix it with another.
+2. **Run it** locally: `composer migrate` (`composer migrate:status` shows what
+   has run).
+3. **Regenerate `db/schema.sql`** with `php scripts/dump_schema.php`, which builds
+   it from the migrations on a throwaway database, and commit it with the
+   migration. Don't edit it by hand: the tests load it, and `SchemaTest` fails
+   when it doesn't match the migrations.
+4. **Test it** against a database built from the previous `schema.sql`
+   (`tests/Unit/Database/BaselineMigrationTest.php` shows how).
+
+On the host, the backend deploy runs the migrations itself, as the web-server
+user, from the web root, after snapshotting the database: `runuser -u www-data
+-- env TAROT_DATA_DIR=/var/lib/tarotgen php vendor/bin/phinx migrate`. If one
+fails, the previous code goes back and the deploy prints the command that
+restores the snapshot. The old one-off `db/migrate_*.php` scripts are retired;
+don't add new ones.
+
 ## Tests & checks
 
 Every PR must pass the full suite. Add or update tests for the behavior you
@@ -100,10 +136,18 @@ cd frontend ; npm run type-check ; npm run lint ; npm test
 
 # Backend
 cd backend  ; composer test ; composer stan ; composer lint
+
+# Everything, from the repo root: every lint, audit and test
+task check
 ```
 
-- `composer test` → PHPUnit, `composer stan` → PHPStan, `composer lint` → PHPCS
-  (`composer lint:fix` / `php-cs-fixer` to auto-format).
+- `composer test` → PHPUnit, `composer stan` → PHPStan, `composer lint` → PHP CS
+  Fixer's check (`composer lint:fix` to auto-format).
+- `task check` adds most of the rest CI runs: Stylelint, Knip, Prettier, Rector,
+  the dependency checks and audits, the plugin's `dotnet format`,
+  PSScriptAnalyzer, markdownlint, the shared repo files and workflow refs, and
+  the Playwright suite. CI also builds the plugin and checks the coverage floors
+  and that the generated API types are current.
 - If your change is observable in the browser, verify it manually too (run both
   servers and exercise the flow) before opening the PR.
 

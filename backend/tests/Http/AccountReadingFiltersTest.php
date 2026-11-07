@@ -84,7 +84,7 @@ final class AccountReadingFiltersTest extends HttpTestCase
         $this->assertDocumented('get', '/account/readings', 200, $list);
         $this->assertSame($expected, array_column($list, 'reading_id'));
         // The total is of what matched, not of every reading.
-        $this->assertSame((string)count($expected), $response->getHeaderLine('X-Total-Count'));
+        $this->assertSame((string) count($expected), $response->getHeaderLine('X-Total-Count'));
     }
 
     public function testAFilteredListStillPages(): void
@@ -156,9 +156,9 @@ final class AccountReadingFiltersTest extends HttpTestCase
         $this->assertCount(5, $spreads);
         foreach ($spreads as $spread) {
             $this->assertIsArray($spread);
-            $response = $this->get('/account/readings?limit=25&spread=' . rawurlencode((string)$spread['name']));
+            $response = $this->get('/account/readings?limit=25&spread=' . rawurlencode((string) $spread['name']));
             $this->assertJsonResponse(200, $response);
-            $this->assertSame((string)$spread['count'], $response->getHeaderLine('X-Total-Count'), (string)$spread['name']);
+            $this->assertSame((string) $spread['count'], $response->getHeaderLine('X-Total-Count'), (string) $spread['name']);
         }
     }
 

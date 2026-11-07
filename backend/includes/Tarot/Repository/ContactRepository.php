@@ -7,9 +7,7 @@ use Tarot\Structure\Contact;
 
 readonly class ContactRepository
 {
-    public function __construct(private ContactData $data)
-    {
-    }
+    public function __construct(private ContactData $data) {}
 
     /**
      * @return Contact[]

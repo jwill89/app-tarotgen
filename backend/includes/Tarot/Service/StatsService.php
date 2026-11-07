@@ -11,9 +11,7 @@ use PDO;
  */
 class StatsService
 {
-    public function __construct(private readonly PDO $db)
-    {
-    }
+    public function __construct(private readonly PDO $db) {}
 
     /**
      * @return array<string,mixed>
@@ -90,9 +88,9 @@ class StatsService
         );
 
         return [
-            'readings' => (int)($row['readings'] ?? 0),
-            'last7'    => (int)($row['last7'] ?? 0),
-            'last30'   => (int)($row['last30'] ?? 0),
+            'readings' => (int) ($row['readings'] ?? 0),
+            'last7'    => (int) ($row['last7'] ?? 0),
+            'last30'   => (int) ($row['last30'] ?? 0),
         ];
     }
 
@@ -108,9 +106,9 @@ class StatsService
         );
 
         return [
-            'freeDraw' => (int)($row['free_draw'] ?? 0),
-            'spread'   => (int)($row['spread'] ?? 0),
-            'custom'   => (int)($row['custom'] ?? 0),
+            'freeDraw' => (int) ($row['free_draw'] ?? 0),
+            'spread'   => (int) ($row['spread'] ?? 0),
+            'custom'   => (int) ($row['custom'] ?? 0),
         ];
     }
 
@@ -128,16 +126,16 @@ class StatsService
         // Resolve names in one pass instead of joining on a JSON-extracted column.
         $names = [];
         foreach ($this->rows("SELECT deck_id, name FROM decks") as $d) {
-            $names[(int)$d['deck_id']] = (string)$d['name'];
+            $names[(int) $d['deck_id']] = (string) $d['name'];
         }
 
         $out = [];
         foreach ($rows as $row) {
-            $deckId = (int)$row['deck_id'];
+            $deckId = (int) $row['deck_id'];
             $out[] = [
                 'deck_id' => $deckId,
                 'name'    => $names[$deckId] ?? ('Deck #' . $deckId),
-                'count'   => (int)$row['count'],
+                'count'   => (int) $row['count'],
             ];
         }
 
@@ -159,8 +157,8 @@ class StatsService
         $out = [];
         foreach ($rows as $row) {
             $out[] = [
-                'name'  => (string)($row['name'] ?? 'Untitled'),
-                'count' => (int)$row['count'],
+                'name'  => (string) ($row['name'] ?? 'Untitled'),
+                'count' => (int) $row['count'],
             ];
         }
 
@@ -180,7 +178,7 @@ class StatsService
 
         $out = [];
         foreach ($rows as $row) {
-            $out[] = ['date' => (string)$row['date'], 'count' => (int)$row['count']];
+            $out[] = ['date' => (string) $row['date'], 'count' => (int) $row['count']];
         }
 
         return $out;
@@ -194,7 +192,7 @@ class StatsService
     /** A single scalar COUNT/aggregate as an int (0 when there's no row). */
     private function scalarInt(string $sql): int
     {
-        return (int)$this->run($sql)->fetchColumn();
+        return (int) $this->run($sql)->fetchColumn();
     }
 
     /**

@@ -106,7 +106,9 @@ const baseSpreadModel = computed<number>({
 // leaving each card unassigned so the user still chooses what sat where.
 async function applyTemplate() {
   const spread = spreads.value.find((s) => s.spread_id === baseSpreadId.value)
-  if (!spread) return
+  if (!spread) {
+    return
+  }
 
   const hasWork = slots.value.some((s) => s.placed || s.cardId !== null)
   if (hasWork) {
@@ -134,7 +136,9 @@ async function applyTemplate() {
       reversed: false,
     })
   }
-  if (slots.value.length === 0) slots.value.push(newSlot())
+  if (slots.value.length === 0) {
+    slots.value.push(newSlot())
+  }
   cardCount.value = slots.value.length
   editorKey.value++ // remount the canvas → fresh history / selection / zoom
   toasts.success(`Applied the "${spread.name}" template.`)
@@ -155,7 +159,9 @@ watch(
 watch(
   deckId,
   async (val) => {
-    if (val === null) return
+    if (val === null) {
+      return
+    }
     local.set(LAST_DECK_KEY, val)
     slots.value.forEach((s) => {
       s.cardId = null
@@ -163,7 +169,9 @@ watch(
     loadingCards.value = true
     const cards = await fetchDeckCards(val)
     loadingCards.value = false
-    if (!cards) toasts.error("Couldn't load this deck's cards. Please try again.")
+    if (!cards) {
+      toasts.error("Couldn't load this deck's cards. Please try again.")
+    }
     deckCards.value = cards ?? []
   },
   { immediate: true },
@@ -172,8 +180,12 @@ watch(
 // Resize the slot list when the card count changes (in place).
 watch(cardCount, (val) => {
   const target = Math.max(1, Math.min(78, Math.floor(val || 1)))
-  while (slots.value.length < target) slots.value.push(newSlot())
-  while (slots.value.length > target) slots.value.pop()
+  while (slots.value.length < target) {
+    slots.value.push(newSlot())
+  }
+  while (slots.value.length > target) {
+    slots.value.pop()
+  }
 })
 
 // Keep the card-count field in sync when an undo/redo changes the slot count.
@@ -205,7 +217,9 @@ function cardOptionsFor(currentCardId: number | null) {
 }
 
 function cardThumb(cardId: number | null): string {
-  if (cardId === null || deckId.value === null) return ''
+  if (cardId === null || deckId.value === null) {
+    return ''
+  }
   return cardImageUrls(deckId.value, cardId).thumb
 }
 
@@ -374,6 +388,7 @@ async function submit() {
               <template #card-controls-extra="{ item }">
                 <Tooltip text="Toggle reversed">
                   <button
+                    type="button"
                     class="button is-small"
                     :class="{ 'is-warning': item.reversed }"
                     tabindex="-1"
@@ -424,13 +439,13 @@ async function submit() {
                     </div>
                   </template>
                   <template #footer>
-                    <button class="button is-primary" @click="close">Done</button>
+                    <button type="button" class="button is-primary" @click="close">Done</button>
                   </template>
                 </BaseModal>
               </template>
             </SpreadCanvasEditor>
 
-            <ReadingOwnerOptions ref="ownerOptions" :notes="true" class="mt-4" />
+            <ReadingOwnerOptions ref="ownerOptions" notes class="mt-4" />
 
             <TurnstileWidget
               v-if="!isLoggedIn"
@@ -442,13 +457,18 @@ async function submit() {
 
             <div class="field is-grouped mt-4">
               <div class="control">
-                <button class="button is-primary" :disabled="challengePending" @click="submit">
+                <button
+                  type="button"
+                  class="button is-primary"
+                  :disabled="challengePending"
+                  @click="submit"
+                >
                   <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards']" /></span>
                   <span>Recreate Draw</span>
                 </button>
               </div>
               <div class="control">
-                <button class="button" @click="resetForm">
+                <button type="button" class="button" @click="resetForm">
                   <span class="icon"
                     ><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-left']"
                   /></span>

@@ -28,8 +28,7 @@ class GoogleAuthController extends AbstractController
         private readonly GoogleOAuthService $google,
         private readonly UserRepository $users,
         private readonly SignInMethods $signInMethods,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Get(
         path: '/auth/google',
@@ -98,8 +97,8 @@ class GoogleAuthController extends AbstractController
         $this->startSession();
 
         $params = $request->getQueryParams();
-        $code   = (string)($params['code'] ?? '');
-        $state  = (string)($params['state'] ?? '');
+        $code   = (string) ($params['code'] ?? '');
+        $state  = (string) ($params['state'] ?? '');
 
         // Validate CSRF state.
         $expectedState = $_SESSION['google_oauth_state'] ?? '';
@@ -111,7 +110,7 @@ class GoogleAuthController extends AbstractController
 
         if ($code === '') {
             // User cancelled or Google returned an error.
-            $error = (string)($params['error'] ?? 'OAuth was cancelled.');
+            $error = (string) ($params['error'] ?? 'OAuth was cancelled.');
             return $this->redirectToFrontend($response, '/login', $error);
         }
 
@@ -269,7 +268,7 @@ class GoogleAuthController extends AbstractController
 
     private function handleLink(Response $response, string $googleId): Response|ResponseInterface
     {
-        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
         if ($userId < 1) {
             return $this->redirectToFrontend($response, '/login', 'Session expired. Please log in and try again.');
         }

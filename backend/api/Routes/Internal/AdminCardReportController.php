@@ -20,8 +20,7 @@ class AdminCardReportController extends AbstractController
         private readonly CardReportRepository $cardReports,
         private readonly DeckRepository $decks,
         private readonly CardImageService $cardImages,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Get(
         path: '/admin/card-reports',
@@ -78,7 +77,7 @@ class AdminCardReportController extends AbstractController
     )]
     public function updateCardReport(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $reportId = (int)($args['report_id'] ?? 0);
+        $reportId = (int) ($args['report_id'] ?? 0);
 
         if ($reportId < 1) {
             return $response->withJson(['error' => 'Invalid report ID'], 400);
@@ -91,7 +90,7 @@ class AdminCardReportController extends AbstractController
         $params = $this->parsedBody($request);
 
         if (array_key_exists('resolved', $params)) {
-            $this->cardReports->setResolved($reportId, (bool)$params['resolved']);
+            $this->cardReports->setResolved($reportId, (bool) $params['resolved']);
         }
 
         return $response->withJson(['success' => true]);
@@ -127,7 +126,7 @@ class AdminCardReportController extends AbstractController
     )]
     public function regenerateCard(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $reportId = (int)($args['report_id'] ?? 0);
+        $reportId = (int) ($args['report_id'] ?? 0);
 
         if ($reportId < 1) {
             return $response->withJson(['error' => 'Invalid report ID'], 400);

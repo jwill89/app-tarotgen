@@ -22,7 +22,9 @@ async function mountControl(modelValue = 'spread') {
   })
   const segment = (label: string) => {
     const found = wrapper.findAll('button').find((b) => b.text() === label)
-    if (!found) throw new Error(`No segment "${label}"`)
+    if (!found) {
+      throw new Error(`No segment "${label}"`)
+    }
     return found
   }
   return { wrapper, segment }

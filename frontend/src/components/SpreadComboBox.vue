@@ -69,7 +69,9 @@ const selected = computed<SpreadOption>({
 
 const filtered = computed(() => {
   const q = searchTerm.value.toLowerCase().trim()
-  if (!q) return props.options
+  if (!q) {
+    return props.options
+  }
   return props.options.filter((o) => o.name.toLowerCase().includes(q))
 })
 
@@ -91,8 +93,12 @@ const groupedOptions = computed<OptionGroup[]>(() => {
   const personal = filtered.value.filter((o) => o.type === 'personal' && !o.isFavorite)
   const pub = filtered.value.filter((o) => o.type === 'public' && !o.isFavorite)
   const groups: OptionGroup[] = []
-  if (favs.length > 0) groups.push({ key: 'favorites', label: 'Favorites', items: favs })
-  if (personal.length > 0) groups.push({ key: 'personal', label: 'My Spreads', items: personal })
+  if (favs.length > 0) {
+    groups.push({ key: 'favorites', label: 'Favorites', items: favs })
+  }
+  if (personal.length > 0) {
+    groups.push({ key: 'personal', label: 'My Spreads', items: personal })
+  }
   return [...groups, ...publicGroups(pub)]
 })
 
@@ -104,8 +110,11 @@ function publicGroups(options: SpreadOption[]): OptionGroup[] {
     const label = option.category ?? 'Public Spreads'
     const order = option.category ? (option.categoryOrder ?? 0) : Number.POSITIVE_INFINITY
     const group = byCategory.get(label)
-    if (group) group.items.push(option)
-    else byCategory.set(label, { order, items: [option] })
+    if (group) {
+      group.items.push(option)
+    } else {
+      byCategory.set(label, { order, items: [option] })
+    }
   }
   return [...byCategory.entries()]
     .sort(([, a], [, b]) => a.order - b.order)
@@ -113,13 +122,17 @@ function publicGroups(options: SpreadOption[]): OptionGroup[] {
 }
 
 function displayValue(val: SpreadOption | undefined): string {
-  if (!val) return ''
+  if (!val) {
+    return ''
+  }
   return val.id === FREE_DRAW_ID ? FREE_DRAW_LABEL : val.name
 }
 
 // Clear the search as the list closes, so it reopens showing every spread.
 function onOpenChange(open: boolean): void {
-  if (!open) searchTerm.value = ''
+  if (!open) {
+    searchTerm.value = ''
+  }
 }
 
 function onInput(event: Event): void {
@@ -132,7 +145,9 @@ function selectFreeDraw(): void {
 
 function onToggleFavorite(option: SpreadOption): void {
   if (option.type === 'personal') {
-    if (option.user_spread_id != null) void toggleFavorite('personal', option.user_spread_id)
+    if (option.user_spread_id != null) {
+      void toggleFavorite('personal', option.user_spread_id)
+    }
   } else if (option.spread_id != null) {
     void toggleFavorite('public', option.spread_id)
   }
@@ -143,8 +158,8 @@ function onToggleFavorite(option: SpreadOption): void {
   <ComboboxRoot
     v-model="selected"
     by="id"
-    :ignore-filter="true"
-    :reset-search-term-on-blur="true"
+    ignore-filter
+    reset-search-term-on-blur
     class="myst-combobox"
     @update:open="onOpenChange"
   >

@@ -62,7 +62,9 @@ const safePage = computed(() => Math.min(page.value, totalPages.value))
 // per-page change shrinks the total, so keep the bound page in range ourselves
 // (otherwise the controls desync from the displayed page).
 watch(totalPages, (tp) => {
-  if (page.value > tp) page.value = tp
+  if (page.value > tp) {
+    page.value = tp
+  }
 })
 
 const pagedReadings = computed(() => {
@@ -104,7 +106,9 @@ async function deleteReading(reading: ReadingSummary) {
     confirmLabel: 'Delete',
     danger: true,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
 
   const result = await api.del(
     endpoints.admin.readings.byId(reading.reading_id),
@@ -135,7 +139,7 @@ onMounted(fetchReadings)
 <template>
   <AdminListPage title="Manage Readings" subtitle="Browse and manage all saved readings.">
     <template #actions>
-      <button class="button is-danger" @click="cleanModalActive = true">
+      <button type="button" class="button is-danger" @click="cleanModalActive = true">
         <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['broom']" /></span>
         <span>Clean Readings</span>
       </button>
@@ -329,8 +333,9 @@ onMounted(fetchReadings)
       </div>
     </div>
     <template #footer>
-      <button class="button" @click="cleanModalActive = false">Cancel</button>
+      <button type="button" class="button" @click="cleanModalActive = false">Cancel</button>
       <button
+        type="button"
         class="button is-danger"
         :class="{ 'is-loading': cleanBusy }"
         :disabled="cleanBusy"

@@ -32,7 +32,7 @@ final class Input
      */
     public static function string(mixed $value, int $maxLen, bool $trim = true): string
     {
-        $string = (string)($value ?? '');
+        $string = (string) ($value ?? '');
 
         if ($trim) {
             $string = trim($string);

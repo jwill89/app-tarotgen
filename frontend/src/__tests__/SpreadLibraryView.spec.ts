@@ -87,7 +87,9 @@ async function chooseTab(label: string): Promise<void> {
   const tab = [...document.body.querySelectorAll<HTMLElement>('[role="tab"]')].find((t) =>
     t.textContent.trim().startsWith(label),
   )
-  if (!tab) throw new Error(`No "${label}" tab`)
+  if (!tab) {
+    throw new Error(`No "${label}" tab`)
+  }
   tab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
   await flushPromises()
 }
@@ -95,7 +97,9 @@ async function chooseTab(label: string): Promise<void> {
 async function openSpread(name: string): Promise<HTMLElement> {
   await click(button(name))
   const detail = dialog(name)
-  if (!detail) throw new Error(`"${name}" did not open`)
+  if (!detail) {
+    throw new Error(`"${name}" did not open`)
+  }
   return detail
 }
 
@@ -314,7 +318,9 @@ describe('SpreadLibraryView', () => {
     await click(button('Copy to My Spreads'))
 
     const footer = dialog('Two Hearts')?.querySelector('footer')
-    if (!footer) throw new Error('No footer')
+    if (!footer) {
+      throw new Error('No footer')
+    }
     await click(button('Close', footer))
     expect(dialog('Two Hearts')).toBeNull()
 

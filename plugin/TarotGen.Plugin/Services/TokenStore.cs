@@ -1,4 +1,3 @@
-using System;
 using System.Security.Cryptography;
 using System.Text;
 using Dalamud.Plugin;
@@ -31,8 +30,8 @@ public sealed class TokenStore
         this.config = config;
         this.pluginInterface = pluginInterface;
         this.log = log;
-        this.cachedToken = Decrypt(config.EncryptedToken, config.TokenIsEncrypted, "account token");
-        this.cachedDrawKey = Decrypt(config.EncryptedDrawKey, config.DrawKeyIsEncrypted, "draw key");
+        this.cachedToken = this.Decrypt(config.EncryptedToken, config.TokenIsEncrypted, "account token");
+        this.cachedDrawKey = this.Decrypt(config.EncryptedDrawKey, config.DrawKeyIsEncrypted, "draw key");
     }
 
     /// <summary>An account token is present (unlocks finalize / favorites / My Readings).</summary>
@@ -50,7 +49,7 @@ public sealed class TokenStore
     public void Save(string token, string displayName)
     {
         this.cachedToken = token;
-        var (blob, encrypted) = Encrypt(token);
+        var (blob, encrypted) = this.Encrypt(token);
         this.config.EncryptedToken = blob;
         this.config.TokenIsEncrypted = encrypted;
         this.config.LinkedName = displayName;
@@ -70,7 +69,7 @@ public sealed class TokenStore
     public void SaveDrawKey(string key)
     {
         this.cachedDrawKey = key;
-        var (blob, encrypted) = Encrypt(key);
+        var (blob, encrypted) = this.Encrypt(key);
         this.config.EncryptedDrawKey = blob;
         this.config.DrawKeyIsEncrypted = encrypted;
         this.config.Save(this.pluginInterface);
@@ -92,9 +91,9 @@ public sealed class TokenStore
     public void Forget(string credential)
     {
         if (credential == this.cachedToken)
-            Clear();
+            this.Clear();
         else if (credential == this.cachedDrawKey)
-            ClearDrawKey();
+            this.ClearDrawKey();
     }
 
     private (string Blob, bool Encrypted) Encrypt(string secret)

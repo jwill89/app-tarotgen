@@ -33,7 +33,9 @@ interface RequestOptionsJson {
 function bufferToBase64Url(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)
   let binary = ''
-  for (const byte of bytes) binary += String.fromCharCode(byte)
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte)
+  }
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
@@ -45,7 +47,9 @@ function base64UrlToBuffer(base64url: string): ArrayBuffer {
   const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
   const binary = atob(padded)
   const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i)
+  }
   return bytes.buffer
 }
 
@@ -62,7 +66,9 @@ export function usePasskeys() {
     loading.value = true
     try {
       const data = await apiFetch<Passkey[]>(endpoints.passkeys.list)
-      if (data) passkeys.value = data
+      if (data) {
+        passkeys.value = data
+      }
     } finally {
       loading.value = false
     }
@@ -76,7 +82,9 @@ export function usePasskeys() {
         { method: 'POST' },
         'Failed to get registration options.',
       )
-      if (!options.ok) return { ok: false, error: options.error }
+      if (!options.ok) {
+        return { ok: false, error: options.error }
+      }
 
       // 2. Call the WebAuthn browser API, with the base64url fields as bytes.
       const { publicKey } = options.data
@@ -104,7 +112,9 @@ export function usePasskeys() {
         }),
         'Registration failed.',
       )
-      if (!registered.ok) return { ok: false, error: registered.error }
+      if (!registered.ok) {
+        return { ok: false, error: registered.error }
+      }
 
       // The reply describes the new key only in part (no credential id), so the
       // list is reloaded rather than patched; the user, to pick up has_passkeys.
@@ -126,7 +136,9 @@ export function usePasskeys() {
         sendJson('POST', { email: email ?? '' }),
         'Failed to get login options.',
       )
-      if (!options.ok) return { ok: false, error: options.error }
+      if (!options.ok) {
+        return { ok: false, error: options.error }
+      }
 
       // 2. Call the WebAuthn browser API, with the base64url fields as bytes.
       const { publicKey } = options.data
@@ -154,7 +166,9 @@ export function usePasskeys() {
         }),
         'Passkey login failed.',
       )
-      if (!signedIn.ok) return { ok: false, error: signedIn.error }
+      if (!signedIn.ok) {
+        return { ok: false, error: signedIn.error }
+      }
 
       currentUser.value = signedIn.data.user
       return { ok: true }
@@ -172,9 +186,13 @@ export function usePasskeys() {
       sendJson('PATCH', { name }),
       'Could not rename passkey.',
     )
-    if (!res.ok) return { ok: false, error: res.error }
+    if (!res.ok) {
+      return { ok: false, error: res.error }
+    }
     const pk = passkeys.value.find((p) => p.passkey_id === id)
-    if (pk) pk.name = name
+    if (pk) {
+      pk.name = name
+    }
     return { ok: true }
   }
 
@@ -184,7 +202,9 @@ export function usePasskeys() {
       { method: 'DELETE' },
       'Could not delete passkey.',
     )
-    if (!res.ok) return { ok: false, error: res.error }
+    if (!res.ok) {
+      return { ok: false, error: res.error }
+    }
     passkeys.value = passkeys.value.filter((p) => p.passkey_id !== id)
     await fetchMe()
     return { ok: true }
@@ -196,7 +216,9 @@ export function usePasskeys() {
       sendJson('PATCH', { disable }),
       'Could not update setting.',
     )
-    if (!res.ok) return { ok: false, error: res.error }
+    if (!res.ok) {
+      return { ok: false, error: res.error }
+    }
     currentUser.value = res.data.user
     return { ok: true }
   }

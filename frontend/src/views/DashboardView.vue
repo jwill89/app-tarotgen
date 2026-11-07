@@ -113,36 +113,43 @@ async function doLogout() {
     border-color 0.15s ease,
     transform 0.15s ease;
 }
+
 .daily-strip:hover {
   border-color: var(--myst-gold);
   color: var(--myst-text);
   transform: translateY(-1px);
 }
+
 .daily-strip:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 35%, transparent);
 }
+
 .daily-strip__icon {
   flex: none;
   color: var(--myst-gold);
   font-size: 1.6rem;
 }
+
 .daily-strip__text {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-width: 0;
 }
+
 .daily-strip__title {
   font-family: var(--myst-heading-font);
   font-size: 1.3rem;
   color: var(--myst-text-strong);
   line-height: 1.2;
 }
+
 .daily-strip__sub {
   color: var(--myst-text-muted);
   font-size: 0.95rem;
 }
+
 .daily-strip__go {
   display: inline-flex;
   align-items: center;
@@ -151,7 +158,8 @@ async function doLogout() {
   color: var(--myst-gold-bright);
   font-weight: 600;
 }
-@media screen and (max-width: 600px) {
+
+@media screen and (width <= 600px) {
   .daily-strip__go span {
     display: none;
   }

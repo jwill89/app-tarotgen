@@ -4,6 +4,7 @@ import { flushPromises, type DOMWrapper } from '@vue/test-utils'
 import SpreadCanvasEditor from '@/components/SpreadCanvasEditor.vue'
 import type { SpreadSlotBase } from '@/components/spreadCanvas'
 import { mountWithApp, cleanup } from './helpers/app'
+import { pointer } from './helpers/page'
 
 const slot = (title: string, extra: Partial<SpreadSlotBase> = {}): SpreadSlotBase => ({
   title,
@@ -56,7 +57,7 @@ async function mountCanvas(initial: SpreadSlotBase[]) {
     global: { stubs: { Tooltip: TooltipPassThrough } },
   })
 
-  // happy-dom lays nothing out: give the canvas a size so drags map to percentages.
+  // jsdom lays nothing out: give the canvas a size so drags map to percentages.
   const canvas = wrapper.get('.spread-canvas').element
   vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue(
     DOMRect.fromRect({ x: 0, y: 0, width: 400, height: 200 }),
@@ -71,7 +72,9 @@ async function mountCanvas(initial: SpreadSlotBase[]) {
           b.text() === name ||
           b.attributes('title') === name,
       )
-    if (!found) throw new Error(`No "${name}" button`)
+    if (!found) {
+      throw new Error(`No "${name}" button`)
+    }
     return found
   }
   const click = async (name: string) => {
@@ -81,7 +84,9 @@ async function mountCanvas(initial: SpreadSlotBase[]) {
   const cards = () => wrapper.findAll('.spread-card')
   const card = (n: number) => {
     const found = cards().find((c) => c.get('.spread-order-badge').text() === String(n))
-    if (!found) throw new Error(`Card ${String(n)} is not on the canvas`)
+    if (!found) {
+      throw new Error(`Card ${String(n)} is not on the canvas`)
+    }
     return found
   }
   const tray = () => wrapper.findAll('.spread-token').map((t) => t.text())
@@ -91,18 +96,20 @@ async function mountCanvas(initial: SpreadSlotBase[]) {
 
 type Canvas = Awaited<ReturnType<typeof mountCanvas>>
 
-const pointer = { button: 0, pointerId: 1 }
+const primary = { button: 0, pointerId: 1 }
 
 async function drag(canvas: Canvas, n: number, to: { clientX: number; clientY: number }) {
   const card = canvas.card(n)
-  await card.trigger('pointerdown', pointer)
-  await card.trigger('pointermove', { ...pointer, ...to })
-  await card.trigger('pointerup', pointer)
+  await pointer(card, 'pointerdown', primary)
+  await pointer(card, 'pointermove', { ...primary, ...to })
+  await pointer(card, 'pointerup', primary)
   await flushPromises()
 }
 
 async function placeAll(canvas: Canvas): Promise<void> {
-  while (canvas.tray().length > 0) await canvas.click(`Place card ${canvas.tray()[0]}`)
+  while (canvas.tray().length > 0) {
+    await canvas.click(`Place card ${canvas.tray()[0]}`)
+  }
 }
 
 describe('SpreadCanvasEditor', () => {
@@ -120,7 +127,7 @@ describe('SpreadCanvasEditor', () => {
     expect(document.getElementById(captionId)?.textContent).toContain('Unplaced Cards')
     expect(tray()).toEqual(['2', '3'])
     expect(cards().map((c) => c.get('.title').text())).toEqual(['Past'])
-    const style = (cards()[0].element as HTMLElement).style
+    const style = (cards()[0]!.element as HTMLElement).style
     expect([style.left, style.top, style.getPropertyValue('--rotation')]).toEqual([
       '20%',
       '30%',
@@ -157,12 +164,12 @@ describe('SpreadCanvasEditor', () => {
 
     await canvas.click('Rotate right')
     await canvas.click('Rotate right')
-    expect(canvas.slots.value[0].rotation).toBe(30)
+    expect(canvas.slots.value[0]!.rotation).toBe(30)
 
     await canvas.click('Rotate left')
     await canvas.click('Rotate left')
     await canvas.click('Rotate left')
-    expect(canvas.slots.value[0].rotation).toBe(345)
+    expect(canvas.slots.value[0]!.rotation).toBe(345)
   })
 
   it('sends a card back to the tray', async () => {
@@ -222,18 +229,18 @@ describe('SpreadCanvasEditor', () => {
     const canvas = await mountCanvas([slot('A'), slot('B'), slot('C')])
     await placeAll(canvas)
 
-    await canvas.card(1).trigger('pointerdown', { ...pointer, shiftKey: true })
-    await canvas.card(2).trigger('pointerdown', { ...pointer, shiftKey: true })
+    await pointer(canvas.card(1), 'pointerdown', { ...primary, shiftKey: true })
+    await pointer(canvas.card(2), 'pointerdown', { ...primary, shiftKey: true })
     expect(canvas.selected()).toBe('3 selected')
     // With several selected, the single-card controls step aside.
     expect(canvas.wrapper.find('.card-controls').exists()).toBe(false)
 
-    await canvas.card(2).trigger('pointerdown', { ...pointer, ctrlKey: true })
+    await pointer(canvas.card(2), 'pointerdown', { ...primary, ctrlKey: true })
     expect(canvas.selected()).toBe('2 selected')
 
     const viewport = canvas.wrapper.get('.spread-canvas-viewport')
-    await viewport.trigger('pointerdown', { ...pointer, clientX: 5, clientY: 5 })
-    await viewport.trigger('pointerup', { ...pointer, clientX: 5, clientY: 5 })
+    await pointer(viewport, 'pointerdown', { ...primary, clientX: 5, clientY: 5 })
+    await pointer(viewport, 'pointerup', { ...primary, clientX: 5, clientY: 5 })
     expect(canvas.selected()).toBe('0 selected')
   })
 
@@ -245,13 +252,13 @@ describe('SpreadCanvasEditor', () => {
     ])
     expect(canvas.button('Align left edges').attributes('disabled')).toBeDefined()
 
-    await canvas.card(1).trigger('pointerdown', { ...pointer, shiftKey: true })
-    await canvas.card(2).trigger('pointerdown', { ...pointer, shiftKey: true })
+    await pointer(canvas.card(1), 'pointerdown', { ...primary, shiftKey: true })
+    await pointer(canvas.card(2), 'pointerdown', { ...primary, shiftKey: true })
     expect(canvas.button('Equal horizontal spacing').attributes('disabled')).toBeDefined()
     await canvas.click('Align left edges')
     expect(canvas.slots.value.map((s) => s.x)).toEqual([10, 10, 80])
 
-    await canvas.card(3).trigger('pointerdown', { ...pointer, shiftKey: true })
+    await pointer(canvas.card(3), 'pointerdown', { ...primary, shiftKey: true })
     await canvas.click('Equal vertical spacing')
     expect(canvas.slots.value.map((s) => s.y)).toEqual([20, 60, 40])
   })
@@ -282,7 +289,9 @@ describe('SpreadCanvasEditor', () => {
     await canvas.click('Zoom in')
     expect(level()).toBe('125%')
 
-    for (let i = 0; i < 10; i++) await canvas.click('Zoom in')
+    for (let i = 0; i < 10; i++) {
+      await canvas.click('Zoom in')
+    }
     expect(level()).toBe('300%')
     expect(canvas.button('Zoom in').attributes('disabled')).toBeDefined()
 
@@ -306,7 +315,7 @@ describe('SpreadCanvasEditor', () => {
     expect(canvas.card(1).get('.title').text()).toBe('The Distant Past')
 
     await canvas.click('Undo')
-    expect(canvas.slots.value[0].title).toBe('Past')
+    expect(canvas.slots.value[0]!.title).toBe('Past')
   })
 
   it('offers the card actions from a right-click menu', async () => {
@@ -325,7 +334,7 @@ describe('SpreadCanvasEditor', () => {
     // Opening the menu selects the card it is for.
     expect(canvas.selected()).toBe('1 selected')
 
-    items[1].click()
+    items[1]!.click()
     await flushPromises()
     expect(canvas.slots.value.map((s) => s.rotation)).toEqual([0, 15])
   })
@@ -363,8 +372,8 @@ describe('SpreadCanvasEditor', () => {
     const canvas = await mountCanvas([slot('A', { placed: true, x: 50, y: 50 })])
 
     const card = canvas.card(1)
-    await card.trigger('pointerdown', { button: 2, pointerId: 1 })
-    await card.trigger('pointermove', { button: 2, pointerId: 1, clientX: 0, clientY: 0 })
+    await pointer(card, 'pointerdown', { button: 2, pointerId: 1 })
+    await pointer(card, 'pointermove', { button: 2, pointerId: 1, clientX: 0, clientY: 0 })
 
     expect(canvas.selected()).toBe('0 selected')
     expect(canvas.slots.value[0]).toMatchObject({ x: 50, y: 50 })

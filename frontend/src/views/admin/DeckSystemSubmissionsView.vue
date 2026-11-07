@@ -35,7 +35,9 @@ const waiting = computed(() =>
 /** The preview's line under its title: short name, size, and who sent it when known. */
 function summary(system: DeckSystem): string {
   const parts = [system.short_name, `${system.total_cards} cards`]
-  if (system.submitted_by !== null) parts.push(`submitted by user #${system.submitted_by}`)
+  if (system.submitted_by !== null) {
+    parts.push(`submitted by user #${system.submitted_by}`)
+  }
   return parts.join(' · ')
 }
 
@@ -46,9 +48,14 @@ async function openPreview(system: DeckSystem): Promise<void> {
     endpoints.admin.deckSystems.byId(system.deck_system_id),
   )
   // Closed, or another opened, while the cards were on their way.
-  if (!isPreviewing(system)) return
-  if (full) previewCards.value = full.cards
-  else previewing.value = null // useAdminApi has toasted why
+  if (!isPreviewing(system)) {
+    return
+  }
+  if (full) {
+    previewCards.value = full.cards
+  } else {
+    previewing.value = null
+  } // useAdminApi has toasted why
 }
 
 function isPreviewing(system: DeckSystem): boolean {
@@ -56,7 +63,9 @@ function isPreviewing(system: DeckSystem): boolean {
 }
 
 function closePreview(system: DeckSystem): void {
-  if (isPreviewing(system)) previewing.value = null
+  if (isPreviewing(system)) {
+    previewing.value = null
+  }
 }
 
 function edit(system: DeckSystem): void {
@@ -71,7 +80,9 @@ async function approve(system: DeckSystem): Promise<void> {
     'Deck system approved.',
   )
   busyId.value = null
-  if (!result) return
+  if (!result) {
+    return
+  }
   closePreview(system)
   await loadPending()
 }
@@ -83,14 +94,18 @@ async function reject(system: DeckSystem): Promise<void> {
     confirmLabel: 'Reject',
     danger: true,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
   busyId.value = system.deck_system_id
   const result = await api.del(
     endpoints.admin.deckSystems.byId(system.deck_system_id),
     'Submission rejected.',
   )
   busyId.value = null
-  if (!result) return
+  if (!result) {
+    return
+  }
   closePreview(system)
   await loadPending()
 }
@@ -187,6 +202,7 @@ onMounted(() => {
 
     <template v-if="previewing" #footer>
       <button
+        type="button"
         class="button is-success"
         :class="{ 'is-loading': busyId === previewing.deck_system_id }"
         @click="approve(previewing)"
@@ -194,15 +210,15 @@ onMounted(() => {
         <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['check']" /></span>
         <span>Approve</span>
       </button>
-      <button class="button" @click="edit(previewing)">
+      <button type="button" class="button" @click="edit(previewing)">
         <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen-to-square']" /></span>
         <span>Edit</span>
       </button>
-      <button class="button is-danger" @click="reject(previewing)">
+      <button type="button" class="button is-danger" @click="reject(previewing)">
         <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" /></span>
         <span>Reject</span>
       </button>
-      <button class="button" @click="previewing = null">Close</button>
+      <button type="button" class="button" @click="previewing = null">Close</button>
     </template>
   </BaseModal>
 </template>
@@ -215,7 +231,7 @@ onMounted(() => {
   column-gap: 2.5rem;
 }
 
-@media screen and (min-width: 769px) {
+@media screen and (width >= 769px) {
   .preview-card-list {
     columns: 2;
   }

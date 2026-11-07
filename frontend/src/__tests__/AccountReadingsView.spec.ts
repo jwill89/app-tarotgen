@@ -23,8 +23,11 @@ const toastMessages = () => useToasts().toasts.value.map((t) => t.message)
 
 function button(name: string, root: ParentNode = document.body): HTMLButtonElement {
   const found = [...root.querySelectorAll('button')].filter((b) => text(b) === name)
-  if (found.length !== 1) throw new Error(`Expected one "${name}" button, found ${found.length}`)
-  return found[0]
+  const [only] = found
+  if (!only || found.length !== 1) {
+    throw new Error(`Expected one "${name}" button, found ${found.length}`)
+  }
+  return only
 }
 
 /** The table row whose title (the first line of its first cell) is `title`. */
@@ -32,14 +35,18 @@ function row(title: string): HTMLTableRowElement {
   const found = [...document.body.querySelectorAll('tbody tr')].find(
     (tr): tr is HTMLTableRowElement => tr instanceof HTMLTableRowElement && titleOf(tr) === title,
   )
-  if (!found) throw new Error(`No reading titled "${title}"`)
+  if (!found) {
+    throw new Error(`No reading titled "${title}"`)
+  }
   return found
 }
 
 /** A row's title: its first cell's text before the question, querent and tags. */
 function titleOf(tr: Element): string {
   const cell = tr.querySelector('td')
-  if (!cell) return ''
+  if (!cell) {
+    return ''
+  }
   return [...cell.childNodes]
     .filter(
       (n) =>
@@ -64,7 +71,9 @@ const confirmDialog = () => document.body.querySelector<HTMLElement>('[role="ale
 
 async function answer(choice: string) {
   const open = confirmDialog()
-  if (!open) throw new Error('No confirm dialog is open')
+  if (!open) {
+    throw new Error('No confirm dialog is open')
+  }
   await click(button(choice, open))
 }
 
@@ -201,7 +210,7 @@ describe('AccountReadingsView', () => {
       await open()
 
       const tags = (title: string) =>
-        [...row(title).cells[0].querySelectorAll('.tag')].map((t) => text(t))
+        [...row(title).cells[0]!.querySelectorAll('.tag')].map((t) => text(t))
       expect(tags('Daily card — 30 October 2026 Daily card')).toEqual(['Daily card'])
       expect(tags('Morning reflection')).toEqual([])
     })
@@ -217,11 +226,11 @@ describe('AccountReadingsView', () => {
       ])
       await open()
 
-      const cell = row('Morning reflection').cells[0]
+      const cell = row('Morning reflection').cells[0]!
       expect(text(cell.querySelector('.reading-question') ?? cell)).toBe('“Should I take the job?”')
       expect(text(cell.querySelector('.reading-querent') ?? cell)).toBe('For My sister')
       expect([...cell.querySelectorAll('.data-chip')].map(text)).toEqual(['career', 'monthly'])
-      expect(row('Plain').cells[0].querySelector('p')).toBeNull()
+      expect(row('Plain').cells[0]!.querySelector('p')).toBeNull()
     })
 
     it('shows who can open each reading', async () => {
@@ -233,10 +242,10 @@ describe('AccountReadingsView', () => {
       ])
       await open()
 
-      expect(text(row('Locked').cells[2])).toBe('Password')
-      expect(text(row('Anonymous').cells[2])).toBe('Anyone with the link Name hidden')
-      expect(text(row('Open').cells[2])).toBe('Anyone with the link')
-      expect(text(row('Mine alone').cells[2])).toBe('Private')
+      expect(text(row('Locked').cells[2]!)).toBe('Password')
+      expect(text(row('Anonymous').cells[2]!)).toBe('Anyone with the link Name hidden')
+      expect(text(row('Open').cells[2]!)).toBe('Anyone with the link')
+      expect(text(row('Mine alone').cells[2]!)).toBe('Private')
     })
 
     it('links each reading to its page', async () => {
@@ -394,7 +403,9 @@ describe('AccountReadingsView', () => {
       const { router } = await open()
 
       const chip = row('Tagged').querySelector<HTMLAnchorElement>('.data-chip')
-      if (!chip) throw new Error('No tag')
+      if (!chip) {
+        throw new Error('No tag')
+      }
       await click(chip)
 
       expect(router.currentRoute.value.query).toEqual({ tag: 'monthly' })
@@ -596,7 +607,7 @@ describe('AccountReadingsView', () => {
       expect(toastMessages()).toEqual(['Reading updated.'])
       expect(editDialog()).toBeNull()
       expect(asked).toHaveLength(2)
-      expect(text(row('Evening reflection').cells[2])).toBe('Private')
+      expect(text(row('Evening reflection').cells[2]!)).toBe('Private')
     })
 
     it("keeps the dialog open with the server's reason when a save is refused", async () => {

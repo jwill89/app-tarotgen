@@ -31,11 +31,12 @@ export function stubApi(handlers: Record<string, ApiHandler>): Mock {
   const mock = vi.fn(async (input: string, init?: RequestInit) => {
     const url = new URL(input, 'https://tarotgen.test')
     const key = `${(init?.method ?? 'GET').toUpperCase()} ${url.pathname.replace(/^\/api/, '')}`
-    if (!Object.hasOwn(handlers, key)) {
+    // Own keys only: a call named like an Object.prototype key is unexpected too.
+    const handler = Object.hasOwn(handlers, key) ? handlers[key] : undefined
+    if (handler === undefined) {
       unexpected.push(key)
       throw new Error(`Unexpected API call: ${key}`)
     }
-    const handler = handlers[key]
     const sent =
       typeof init?.body === 'string' && init.body.startsWith('{')
         ? JSON.parse(init.body)

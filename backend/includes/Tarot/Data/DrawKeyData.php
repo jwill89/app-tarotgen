@@ -65,7 +65,7 @@ class DrawKeyData extends AbstractData
         $stmt->execute([':hash' => $keyHash]);
         $id = $stmt->fetchColumn();
 
-        return $id === false ? null : (int)$id;
+        return $id === false ? null : (int) $id;
     }
 
     public function touchLastUsed(int $id): void

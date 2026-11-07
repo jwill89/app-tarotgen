@@ -34,9 +34,9 @@ describe('SpreadLayoutPreview', () => {
 
     const [left, right] = wrapper.findAll<HTMLElement>('.spread-card').map((c) => c.element.style)
     // Centred on the middle, and wider than an unzoomed card (11%).
-    expect(parseFloat(left.left) + parseFloat(right.left)).toBeCloseTo(100)
-    expect(parseFloat(left.width)).toBeGreaterThan(11)
-    expect(left.getPropertyValue('--rotation')).toBe('0deg')
+    expect(parseFloat(left!.left) + parseFloat(right!.left)).toBeCloseTo(100)
+    expect(parseFloat(left!.width)).toBeGreaterThan(11)
+    expect(left!.getPropertyValue('--rotation')).toBe('0deg')
   })
 
   it('moves a number off a card that a later one covers', async () => {
@@ -46,8 +46,8 @@ describe('SpreadLayoutPreview', () => {
     const [first, second] = wrapper
       .findAll<HTMLElement>('.preview-number')
       .map((n) => n.element.style)
-    expect([second.left, second.top]).toEqual(['50%', '50%'])
-    expect([first.left, first.top]).not.toEqual(['50%', '50%'])
+    expect([second!.left, second!.top]).toEqual(['50%', '50%'])
+    expect([first!.left, first!.top]).not.toEqual(['50%', '50%'])
   })
 
   it('draws a quiet silhouette as a thumbnail: no numbers, no grid, hidden from readers', async () => {

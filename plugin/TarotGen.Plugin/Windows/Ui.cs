@@ -1,4 +1,3 @@
-using System;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -138,7 +137,7 @@ internal static class Ui
     public static bool IconButton(string id, FontAwesomeIcon icon, string tooltip)
     {
         using var _ = ImRaii.PushId(id);
-        bool clicked = ImGuiComponents.IconButton(icon);
+        var clicked = ImGuiComponents.IconButton(icon);
         if (!string.IsNullOrEmpty(tooltip) && ImGui.IsItemHovered())
             ImGui.SetTooltip(tooltip);
         return clicked;

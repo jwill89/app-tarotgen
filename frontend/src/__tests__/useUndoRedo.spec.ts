@@ -24,22 +24,22 @@ describe('useUndoRedo — history via explicit record()', () => {
     const h = useUndoRedo(slots)
     h.reset()
 
-    slots[0].x = 10
+    slots[0]!.x = 10
     h.record()
-    slots[0].x = 20
+    slots[0]!.x = 20
     h.record()
     expect(h.canUndo.value).toBe(true)
 
     h.undo()
-    expect(slots[0].x).toBe(10)
+    expect(slots[0]!.x).toBe(10)
     h.undo()
-    expect(slots[0].x).toBe(0)
+    expect(slots[0]!.x).toBe(0)
     expect(h.canUndo.value).toBe(false)
 
     h.redo()
-    expect(slots[0].x).toBe(10)
+    expect(slots[0]!.x).toBe(10)
     h.redo()
-    expect(slots[0].x).toBe(20)
+    expect(slots[0]!.x).toBe(20)
     expect(h.canRedo.value).toBe(false)
   })
 
@@ -48,9 +48,9 @@ describe('useUndoRedo — history via explicit record()', () => {
     const h = useUndoRedo(slots)
     h.reset()
 
-    slots[0].x = 10
+    slots[0]!.x = 10
     h.record()
-    slots[0].x = 20
+    slots[0]!.x = 20
     h.record()
     h.undo() // back to x=10, redo available
     // undo() sets an internal "restoring" guard that clears on the next
@@ -58,11 +58,11 @@ describe('useUndoRedo — history via explicit record()', () => {
     await nextTick()
     expect(h.canRedo.value).toBe(true)
 
-    slots[0].x = 99
+    slots[0]!.x = 99
     h.record() // new branch
     expect(h.canRedo.value).toBe(false)
     h.undo()
-    expect(slots[0].x).toBe(10)
+    expect(slots[0]!.x).toBe(10)
   })
 
   it('ignores no-op records (identical snapshots)', () => {
@@ -79,19 +79,19 @@ describe('useUndoRedo — history via explicit record()', () => {
     h.reset()
 
     h.suspend()
-    slots[0].x = 1
+    slots[0]!.x = 1
     h.record()
-    slots[0].x = 2
+    slots[0]!.x = 2
     h.record()
     expect(h.canUndo.value).toBe(false)
 
     h.resume()
-    slots[0].x = 3
+    slots[0]!.x = 3
     h.record()
     expect(h.canUndo.value).toBe(true)
     h.undo()
     // Collapsed: the suspended intermediate states were never captured.
-    expect(slots[0].x).toBe(0)
+    expect(slots[0]!.x).toBe(0)
   })
 
   it('invokes the onRestore callback on undo/redo', () => {
@@ -99,7 +99,7 @@ describe('useUndoRedo — history via explicit record()', () => {
     const onRestore = vi.fn()
     const h = useUndoRedo(slots, onRestore)
     h.reset()
-    slots[0].x = 5
+    slots[0]!.x = 5
     h.record()
 
     h.undo()
@@ -112,14 +112,16 @@ describe('useUndoRedo — history via explicit record()', () => {
     const h = useUndoRedo(slots, undefined, 3) // tiny cap
     h.reset()
     for (let i = 1; i <= 10; i++) {
-      slots[0].x = i
+      slots[0]!.x = i
       h.record()
     }
 
     // Undo as far as possible; capped history means we can't reach x=0 again.
     let guard = 0
-    while (h.canUndo.value && guard++ < 50) h.undo()
-    expect(slots[0].x).toBeGreaterThan(0)
+    while (h.canUndo.value && guard++ < 50) {
+      h.undo()
+    }
+    expect(slots[0]!.x).toBeGreaterThan(0)
   })
 })
 
@@ -132,11 +134,11 @@ describe('useUndoRedo — deep watcher', () => {
     const h = scope.run(() => useUndoRedo(slots))!
     h.reset()
 
-    slots[0].x = 42
+    slots[0]!.x = 42
     await nextTick()
     expect(h.canUndo.value).toBe(true)
     h.undo()
-    expect(slots[0].x).toBe(0)
+    expect(slots[0]!.x).toBe(0)
 
     scope.stop()
   })

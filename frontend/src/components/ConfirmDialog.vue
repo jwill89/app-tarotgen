@@ -39,7 +39,9 @@ function choose(value: boolean): void {
 watch(
   () => state.value.active,
   (active) => {
-    if (active) choice = false
+    if (active) {
+      choice = false
+    }
   },
 )
 
@@ -48,7 +50,9 @@ watch(
 // close-driven `false` beat the Action button's `true` (so confirm() always
 // resolved false). Deferring to a microtask reads `choice` after BOTH have run.
 function onOpenChange(open: boolean): void {
-  if (!open) queueMicrotask(() => settle(choice))
+  if (!open) {
+    queueMicrotask(() => settle(choice))
+  }
 }
 </script>
 
@@ -56,7 +60,7 @@ function onOpenChange(open: boolean): void {
   <AlertDialogRoot :open="state.active" @update:open="onOpenChange">
     <AlertDialogPortal>
       <AlertDialogOverlay class="myst-modal-overlay" />
-      <AlertDialogContent class="myst-modal" style="max-width: 26rem">
+      <AlertDialogContent class="myst-modal myst-confirm">
         <header class="myst-modal-head">
           <AlertDialogTitle class="myst-modal-title">{{ state.title }}</AlertDialogTitle>
         </header>
@@ -84,6 +88,10 @@ function onOpenChange(open: boolean): void {
 </template>
 
 <style scoped>
+.myst-confirm {
+  max-width: 26rem;
+}
+
 .myst-confirm-message {
   margin: 0;
   color: var(--myst-text-muted);

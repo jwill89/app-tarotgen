@@ -65,7 +65,7 @@ final class RateLimiterTest extends TestCase
 
         // The next write keeps only well-formed entries.
         $limiter->hit('stringy');
-        $stored = json_decode((string)file_get_contents($this->backingFile()), true);
+        $stored = json_decode((string) file_get_contents($this->backingFile()), true);
         $this->assertIsArray($stored);
         $this->assertSame(['good', 'stringy'], array_keys($stored));
         $this->assertSame(1, $stored['stringy']['count']);

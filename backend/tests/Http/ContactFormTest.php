@@ -182,9 +182,7 @@ final class ContactFormTest extends HttpTestCase
              * @param Closure(): bool                         $passes
              * @param ArrayObject<int,array<string,string>> $verified
              */
-            public function __construct(private readonly Closure $passes, private readonly ArrayObject $verified)
-            {
-            }
+            public function __construct(private readonly Closure $passes, private readonly ArrayObject $verified) {}
 
             #[\Override]
             protected function postSiteVerify(array $payload): array

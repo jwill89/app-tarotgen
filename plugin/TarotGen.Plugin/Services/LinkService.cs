@@ -1,9 +1,5 @@
-using System;
-using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
 
 namespace TarotGen.Plugin.Services;
@@ -45,7 +41,7 @@ public sealed class LinkService : IDisposable
         this.IsBusy = true;
         this.Status = "Waiting for you to connect in your browser…";
         this.flowCts = new CancellationTokenSource();
-        _ = Task.Run(RunAsync);
+        _ = Task.Run(this.RunAsync);
     }
 
     /// <summary>Abort an in-flight link attempt.</summary>

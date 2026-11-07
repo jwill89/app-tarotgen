@@ -1,13 +1,8 @@
-using System;
-using System.Collections.Generic;
 using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
 using TarotGen.Plugin.Models;
 
@@ -70,7 +65,7 @@ public sealed class TarotApiClient : IDisposable
         if (this.deckCache is not null)
             return this.deckCache;
 
-        var decks = await GetJsonAsync<List<Deck>>("/decks", ct).ConfigureAwait(false) ?? new();
+        var decks = await this.GetJsonAsync<List<Deck>>("/decks", ct).ConfigureAwait(false) ?? new();
         this.deckCache = decks;
         this.decksById = new Dictionary<int, Deck>();
         foreach (var d in decks)
@@ -83,7 +78,7 @@ public sealed class TarotApiClient : IDisposable
         if (this.spreadCache is not null)
             return this.spreadCache;
 
-        var spreads = await GetJsonAsync<List<Spread>>("/spreads", ct).ConfigureAwait(false) ?? new();
+        var spreads = await this.GetJsonAsync<List<Spread>>("/spreads", ct).ConfigureAwait(false) ?? new();
         this.spreadCache = spreads;
         return spreads;
     }
@@ -104,7 +99,7 @@ public sealed class TarotApiClient : IDisposable
         var credential = this.tokens.Token ?? this.tokens.DrawKey;
         try
         {
-            return await PostJsonAsync<GenerateRequest, Reading>("/readings/generate", request, credential, ct)
+            return await this.PostJsonAsync<GenerateRequest, Reading>("/readings/generate", request, credential, ct)
                 .ConfigureAwait(false);
         }
         catch (TarotApiException ex) when (ex.StatusCode == (int)HttpStatusCode.Unauthorized && credential is not null)
@@ -115,10 +110,10 @@ public sealed class TarotApiClient : IDisposable
     }
 
     public Task<Reading?> GetReadingAsync(string readingId, CancellationToken ct = default)
-        => GetJsonAsync<Reading>($"/readings/{Uri.EscapeDataString(readingId)}", ct);
+        => this.GetJsonAsync<Reading>($"/readings/{Uri.EscapeDataString(readingId)}", ct);
 
     public Task<Reading?> UnlockReadingAsync(string readingId, string password, CancellationToken ct = default)
-        => PostJsonAsync<object, Reading>(
+        => this.PostJsonAsync<object, Reading>(
             $"/readings/{Uri.EscapeDataString(readingId)}/unlock",
             new { password },
             ct);
@@ -132,7 +127,7 @@ public sealed class TarotApiClient : IDisposable
     public async Task<string?> ReportCardAsync(
         int deckId, int cardId, string cardName, string reason, string details, CancellationToken ct = default)
     {
-        var ack = await PostJsonAsync<object, CardReportAck>(
+        var ack = await this.PostJsonAsync<object, CardReportAck>(
             "/card-reports",
             new { DeckId = deckId, CardId = cardId, CardName = cardName, Reason = reason, Details = details },
             ct).ConfigureAwait(false);
@@ -142,10 +137,10 @@ public sealed class TarotApiClient : IDisposable
     // ── Account (require a linked token) ─────────────────────────────────────
 
     public Task<List<Reading>?> GetMyReadingsAsync(CancellationToken ct = default)
-        => GetJsonAsync<List<Reading>>("/account/readings", ct);
+        => this.GetJsonAsync<List<Reading>>("/account/readings", ct);
 
     public Task<Reading?> FinalizeReadingAsync(string readingId, CancellationToken ct = default)
-        => PostJsonAsync<object, Reading>(
+        => this.PostJsonAsync<object, Reading>(
             $"/readings/{Uri.EscapeDataString(readingId)}/finalize",
             new { },
             ct);
@@ -158,11 +153,11 @@ public sealed class TarotApiClient : IDisposable
         using var request = new HttpRequestMessage(HttpMethod.Get, ApiBase + path);
         AddAuth(request, this.tokens.Token);
         using var resp = await this.http.SendAsync(request, linked.Token).ConfigureAwait(false);
-        return await ReadOrThrow<T>(resp, linked.Token).ConfigureAwait(false);
+        return await this.ReadOrThrow<T>(resp, linked.Token).ConfigureAwait(false);
     }
 
     private Task<TOut?> PostJsonAsync<TIn, TOut>(string path, TIn body, CancellationToken ct)
-        => PostJsonAsync<TIn, TOut>(path, body, this.tokens.Token, ct);
+        => this.PostJsonAsync<TIn, TOut>(path, body, this.tokens.Token, ct);
 
     private async Task<TOut?> PostJsonAsync<TIn, TOut>(string path, TIn body, string? bearer, CancellationToken ct)
     {
@@ -173,7 +168,7 @@ public sealed class TarotApiClient : IDisposable
         };
         AddAuth(request, bearer);
         using var resp = await this.http.SendAsync(request, linked.Token).ConfigureAwait(false);
-        return await ReadOrThrow<TOut>(resp, linked.Token).ConfigureAwait(false);
+        return await this.ReadOrThrow<TOut>(resp, linked.Token).ConfigureAwait(false);
     }
 
     private static void AddAuth(HttpRequestMessage request, string? bearer)
@@ -191,7 +186,7 @@ public sealed class TarotApiClient : IDisposable
             return await resp.Content.ReadFromJsonAsync<T>(JsonOpts, ct).ConfigureAwait(false);
 
         // The API returns { "error": "…" } (or { "errors": [...] }) on failure.
-        string message = $"HTTP {(int)resp.StatusCode}";
+        var message = $"HTTP {(int)resp.StatusCode}";
         try
         {
             var body = await resp.Content.ReadFromJsonAsync<ApiError>(JsonOpts, ct).ConfigureAwait(false);

@@ -45,7 +45,9 @@ const {
 
 async function fetchUsers() {
   const data = await api.get<AdminUser[]>(endpoints.admin.users.list)
-  if (data) users.value = data
+  if (data) {
+    users.value = data
+  }
 }
 
 /**
@@ -65,7 +67,9 @@ async function activate(user: AdminUser) {
     `${user.display_name} activated.`,
   )
   busyId.value = null
-  if (result) await fetchUsers()
+  if (result) {
+    await fetchUsers()
+  }
 }
 
 async function resend(user: AdminUser) {
@@ -76,7 +80,9 @@ async function resend(user: AdminUser) {
   )
   busyId.value = null
 
-  if (!result) return
+  if (!result) {
+    return
+  }
 
   if (result.emailed) {
     toasts.success(`Activation email sent to ${user.email}.`)
@@ -100,7 +106,9 @@ async function toggleAdmin(user: AdminUser) {
     confirmLabel: makingAdmin ? 'Make admin' : 'Revoke admin',
     danger: !makingAdmin,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
 
   busyId.value = user.user_id
   const result = await api.patch<AdminUser>(
@@ -111,7 +119,9 @@ async function toggleAdmin(user: AdminUser) {
       : `Admin removed from ${user.display_name}.`,
   )
   busyId.value = null
-  if (result) await fetchUsers()
+  if (result) {
+    await fetchUsers()
+  }
 }
 
 async function remove(user: AdminUser) {
@@ -121,9 +131,13 @@ async function remove(user: AdminUser) {
     confirmLabel: 'Delete',
     danger: true,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
   const result = await api.del(endpoints.admin.users.byId(user.user_id), 'Account deleted.')
-  if (result) await fetchUsers()
+  if (result) {
+    await fetchUsers()
+  }
 }
 
 onMounted(fetchUsers)

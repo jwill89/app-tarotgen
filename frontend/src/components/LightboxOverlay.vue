@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, useTemplateRef } from 'vue'
 import {
   DialogRoot,
   DialogPortal,
@@ -18,14 +18,20 @@ import type { CardImageUrls } from '@/utils/cardImages'
 
 const props = defineProps<{
   cards: ReadingCard[]
+  /**
+   * Which of `cards` (by index) are face up on the page. Any other shows its back
+   * here too, named only by its number, so paging through the lightbox can't turn
+   * a card over early, or name it to a screen reader.
+   */
+  revealed: ReadonlySet<number>
   cardBack: CardImageUrls
   initialIndex: number
   deckId: number
 }>()
 
-const { hasReported } = useCardReports()
-
 const emit = defineEmits<{ close: [] }>()
+
+const { hasReported } = useCardReports()
 
 const index = ref(props.initialIndex)
 const flipped = ref(false)
@@ -34,17 +40,24 @@ const MIN_ZOOM = 1
 const MAX_ZOOM = 4
 const STEP_ZOOM = 2.5 // zoom level used by double-click / double-tap toggle
 
-const imgEl = ref<HTMLImageElement>()
+const imgEl = useTemplateRef<HTMLImageElement>('imgEl')
 const zoom = ref(1)
 const panX = ref(0)
 const panY = ref(0)
 const isPanning = ref(false)
 const animate = ref(false) // smooth transition for button / double-click zoom
 
+// The card on show, while it is face up; the card back (index -1) and the cards
+// still face down have none.
+const currentCard = computed(() =>
+  props.revealed.has(index.value) ? props.cards[index.value] : undefined,
+)
+
 const imageUrls = computed(() => {
-  if (index.value === -1) return { display: props.cardBack.display, png: props.cardBack.png }
-  const card = props.cards[index.value] as ReadingCard | undefined
-  return card ? { display: card.imgUrl, png: card.pngUrl } : null
+  const card = currentCard.value
+  return card
+    ? { display: card.imgUrl, png: card.pngUrl }
+    : { display: props.cardBack.display, png: props.cardBack.png }
 })
 
 // A deck's display WebPs are generated after its scans are uploaded; until
@@ -54,33 +67,28 @@ const missingDisplays = reactive(new Set<string>())
 
 const imageSrc = computed(() => {
   const urls = imageUrls.value
-  if (!urls) return ''
   return missingDisplays.has(urls.display) ? urls.png : urls.display
 })
 
 function onImageError(): void {
   const urls = imageUrls.value
-  if (urls && imageSrc.value === urls.display) missingDisplays.add(urls.display)
+  if (imageSrc.value === urls.display) {
+    missingDisplays.add(urls.display)
+  }
 }
 
 const imageTitle = computed(() => {
-  if (index.value === -1) return 'Card Back'
-  const card = props.cards[index.value] as ReadingCard | undefined
-  return card ? card.card_name : ''
+  if (currentCard.value) {
+    return currentCard.value.card_name
+  }
+  return index.value === -1 ? 'Card Back' : `Face-down card ${String(index.value + 1)}`
 })
 
-const isReversed = computed(() => {
-  if (index.value === -1) return false
-  const card = props.cards[index.value] as ReadingCard | undefined
-  return card ? card.reversed : false
-})
+const isReversed = computed(() => currentCard.value?.reversed ?? false)
 
 const showReversed = computed(() => isReversed.value && !flipped.value)
 
 /* ── Report a problem with the card ────────────────────── */
-const currentCard = computed(() =>
-  index.value >= 0 ? (props.cards[index.value] as ReadingCard | undefined) : undefined,
-)
 const alreadyReported = computed(() =>
   currentCard.value ? hasReported(props.deckId, currentCard.value.card_id) : false,
 )
@@ -95,7 +103,9 @@ const reportTooltip = computed(() =>
 const reportTarget = ref<ReadingCard | null>(null)
 
 function openReport(): void {
-  if (currentCard.value && !alreadyReported.value) reportTarget.value = currentCard.value
+  if (currentCard.value && !alreadyReported.value) {
+    reportTarget.value = currentCard.value
+  }
 }
 
 const isZoomed = computed(() => zoom.value > MIN_ZOOM + 0.001)
@@ -110,7 +120,9 @@ const imageTransform = computed(() => {
 /** Largest distance the image can be panned from centre on each axis. */
 function panBounds() {
   const el = imgEl.value
-  if (!el) return { x: 0, y: 0 }
+  if (!el) {
+    return { x: 0, y: 0 }
+  }
   return {
     x: Math.max(0, (el.clientWidth * zoom.value - el.clientWidth) / 2),
     y: Math.max(0, (el.clientHeight * zoom.value - el.clientHeight) / 2),
@@ -134,8 +146,10 @@ function resetZoom() {
  * under the cursor/finger. Falls back to the image centre when no point given.
  */
 function zoomTo(newZoom: number, clientX?: number, clientY?: number) {
-  const el: HTMLImageElement | undefined = imgEl.value
-  if (!el) return
+  const el = imgEl.value
+  if (!el) {
+    return
+  }
   const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newZoom))
   const rect = el.getBoundingClientRect()
   const centerX = rect.left + rect.width / 2
@@ -182,8 +196,11 @@ function onWheel(e: WheelEvent) {
 
 function onDoubleClick(e: MouseEvent) {
   withAnimation(() => {
-    if (isZoomed.value) resetZoom()
-    else zoomTo(STEP_ZOOM, e.clientX, e.clientY)
+    if (isZoomed.value) {
+      resetZoom()
+    } else {
+      zoomTo(STEP_ZOOM, e.clientX, e.clientY)
+    }
   })
 }
 
@@ -194,7 +211,9 @@ let panStartX = 0
 let panStartY = 0
 
 function onMouseDown(e: MouseEvent) {
-  if (!isZoomed.value) return
+  if (!isZoomed.value) {
+    return
+  }
   e.preventDefault()
   isPanning.value = true
   dragStartX = e.clientX
@@ -229,21 +248,21 @@ let pinchMidY = 0
 let lastTapTime = 0
 let touchMoved = false
 
-function touchDist(e: TouchEvent) {
-  const [a, b] = [e.touches[0], e.touches[1]]
+function touchDist(a: Touch, b: Touch) {
   return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
 }
 
 function onTouchStart(e: TouchEvent) {
-  if (e.touches.length === 2) {
-    pinchStartDist = touchDist(e)
+  const [a, b] = [e.touches[0], e.touches[1]]
+  if (e.touches.length === 2 && a && b) {
+    pinchStartDist = touchDist(a, b)
     pinchStartZoom = zoom.value
-    pinchMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2
-    pinchMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2
+    pinchMidX = (a.clientX + b.clientX) / 2
+    pinchMidY = (a.clientY + b.clientY) / 2
     touchMoved = true
-  } else if (e.touches.length === 1) {
-    touchStartX = e.touches[0].clientX
-    touchStartY = e.touches[0].clientY
+  } else if (e.touches.length === 1 && a) {
+    touchStartX = a.clientX
+    touchStartY = a.clientY
     touchPanStartX = panX.value
     touchPanStartY = panY.value
     touchMoved = false
@@ -251,15 +270,16 @@ function onTouchStart(e: TouchEvent) {
 }
 
 function onTouchMove(e: TouchEvent) {
-  if (e.touches.length === 2 && pinchStartDist > 0) {
+  const [a, b] = [e.touches[0], e.touches[1]]
+  if (e.touches.length === 2 && a && b && pinchStartDist > 0) {
     e.preventDefault()
-    const ratio = touchDist(e) / pinchStartDist
+    const ratio = touchDist(a, b) / pinchStartDist
     zoomTo(pinchStartZoom * ratio, pinchMidX, pinchMidY)
-  } else if (e.touches.length === 1 && isZoomed.value) {
+  } else if (e.touches.length === 1 && a && isZoomed.value) {
     // Pan the zoomed image instead of navigating.
     e.preventDefault()
-    panX.value = touchPanStartX + (e.touches[0].clientX - touchStartX)
-    panY.value = touchPanStartY + (e.touches[0].clientY - touchStartY)
+    panX.value = touchPanStartX + (a.clientX - touchStartX)
+    panY.value = touchPanStartY + (a.clientY - touchStartY)
     clampPan()
     touchMoved = true
   }
@@ -270,10 +290,13 @@ function onTouchEnd(e: TouchEvent) {
     pinchStartDist = 0
     return
   }
-  if (touchMoved) return
+  const end = e.changedTouches[0]
+  if (touchMoved || !end) {
+    return
+  }
 
-  const endX = e.changedTouches[0].clientX
-  const endY = e.changedTouches[0].clientY
+  const endX = end.clientX
+  const endY = end.clientY
   const dx = touchStartX - endX
   const dy = touchStartY - endY
 
@@ -282,8 +305,11 @@ function onTouchEnd(e: TouchEvent) {
   if (now - lastTapTime < 300 && Math.abs(dx) < 30 && Math.abs(dy) < 30) {
     lastTapTime = 0
     withAnimation(() => {
-      if (isZoomed.value) resetZoom()
-      else zoomTo(STEP_ZOOM, endX, endY)
+      if (isZoomed.value) {
+        resetZoom()
+      } else {
+        zoomTo(STEP_ZOOM, endX, endY)
+      }
     })
     return
   }
@@ -291,8 +317,11 @@ function onTouchEnd(e: TouchEvent) {
 
   // Horizontal swipe navigates (only when not zoomed).
   if (!isZoomed.value && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
-    if (dx > 0) next()
-    else prev()
+    if (dx > 0) {
+      next()
+    } else {
+      prev()
+    }
   }
 }
 
@@ -319,18 +348,28 @@ watch(index, () => resetZoom())
 function onKeydown(e: KeyboardEvent) {
   // While the report form is open, keys belong to it: arrows move between its
   // reasons, and "-" or "0" are just text in its details box.
-  if (reportTarget.value) return
-  if (e.key === 'ArrowLeft') prev()
-  else if (e.key === 'ArrowRight') next()
-  else if (e.key === '+' || e.key === '=') zoomInBtn()
-  else if (e.key === '-' || e.key === '_') zoomOutBtn()
-  else if (e.key === '0') resetBtn()
+  if (reportTarget.value) {
+    return
+  }
+  if (e.key === 'ArrowLeft') {
+    prev()
+  } else if (e.key === 'ArrowRight') {
+    next()
+  } else if (e.key === '+' || e.key === '=') {
+    zoomInBtn()
+  } else if (e.key === '-' || e.key === '_') {
+    zoomOutBtn()
+  } else if (e.key === '0') {
+    resetBtn()
+  }
 }
 
 // Reka owns the open state; mirror every close request (Escape, backdrop,
 // DialogClose) back out as the `close` event the parent already listens for.
 function onOpenChange(open: boolean): void {
-  if (!open) emit('close')
+  if (!open) {
+    emit('close')
+  }
 }
 
 /**
@@ -344,7 +383,9 @@ function onOpenChange(open: boolean): void {
 function onPointerDownOutside(e: Event): void {
   const original = (e as CustomEvent<{ originalEvent: PointerEvent }>).detail.originalEvent
   const target = original.target as HTMLElement | null
-  if (!target) return
+  if (!target) {
+    return
+  }
   if (original.offsetX > target.clientWidth || original.offsetY > target.clientHeight) {
     e.preventDefault()
   }
@@ -362,7 +403,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DialogRoot :open="true" @update:open="onOpenChange">
+  <DialogRoot open @update:open="onOpenChange">
     <DialogPortal>
       <!--
         The overlay is BOTH the backdrop and the scroll container, with
@@ -425,6 +466,7 @@ onUnmounted(() => {
 
           <div class="lightbox-toolbar">
             <button
+              type="button"
               class="lightbox-zoom-btn"
               :disabled="zoom <= MIN_ZOOM"
               aria-label="Zoom out"
@@ -435,6 +477,7 @@ onUnmounted(() => {
               /></span>
             </button>
             <button
+              type="button"
               class="lightbox-zoom-btn lightbox-zoom-reset"
               aria-label="Reset zoom"
               @click="resetBtn"
@@ -442,6 +485,7 @@ onUnmounted(() => {
               {{ Math.round(zoom * 100) }}%
             </button>
             <button
+              type="button"
               class="lightbox-zoom-btn"
               :disabled="zoom >= MAX_ZOOM"
               aria-label="Zoom in"
@@ -454,6 +498,7 @@ onUnmounted(() => {
 
             <button
               v-if="isReversed"
+              type="button"
               class="button is-small is-rounded lightbox-flip-btn"
               @click="flipped = !flipped"
             >
@@ -463,8 +508,9 @@ onUnmounted(() => {
               <span>{{ flipped ? 'View Reversed' : 'View Upright' }}</span>
             </button>
 
-            <Tooltip v-if="index > -1" :text="reportTooltip">
+            <Tooltip v-if="currentCard" :text="reportTooltip">
               <button
+                type="button"
                 class="button is-small is-rounded lightbox-report-btn"
                 :class="{ 'is-success': alreadyReported }"
                 :disabled="alreadyReported"

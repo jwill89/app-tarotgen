@@ -101,7 +101,9 @@ const buttonNamed = (name: string) => {
       b.getAttribute('aria-label') === name ||
       b.getAttribute('title') === name,
   )
-  if (!found) throw new Error(`No "${name}" button`)
+  if (!found) {
+    throw new Error(`No "${name}" button`)
+  }
   return found
 }
 async function click(name: string): Promise<void> {
@@ -136,7 +138,9 @@ function sent(api: ReturnType<typeof stubApi>, method: string, url: string): unk
 
 async function typeInto(selector: string, text: string): Promise<void> {
   const field = document.body.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)
-  if (!field) throw new Error(`No ${selector}`)
+  if (!field) {
+    throw new Error(`No ${selector}`)
+  }
   field.value = text
   field.dispatchEvent(new Event('input'))
   await flushPromises()
@@ -173,7 +177,7 @@ describe('FreeDrawPlacementView', () => {
       [cardImageUrls(1, 0).thumb, 'The Fool'],
       [cardImageUrls(1, 9).thumb, 'Wheel of Fortune'],
     ])
-    expect(images[1].classes()).toContain('reversed')
+    expect(images[1]!.classes()).toContain('reversed')
   })
 
   it('keeps cards already placed on a spread where they were, with only new ones in the tray', async () => {

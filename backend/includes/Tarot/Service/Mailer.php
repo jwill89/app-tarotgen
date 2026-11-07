@@ -126,12 +126,12 @@ class Mailer
             // real response.
             $mail->Timeout    = 10;
 
-            $mail->Host       = (string)Env::get('SMTP_HOST');
-            $mail->Port       = (int)Env::get('SMTP_PORT', '587');
+            $mail->Host       = (string) Env::get('SMTP_HOST');
+            $mail->Port       = (int) Env::get('SMTP_PORT', '587');
             $mail->SMTPAuth   = Env::get('SMTP_USER') !== null;
 
             if ($mail->SMTPAuth) {
-                $mail->Username = (string)Env::get('SMTP_USER');
+                $mail->Username = (string) Env::get('SMTP_USER');
                 $mail->Password = Env::get('SMTP_PASS', '');
             }
 

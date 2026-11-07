@@ -12,6 +12,7 @@
   html {
     background-image: none;
   }
+
   body.has-fixed-nav {
     padding-top: 0;
   }

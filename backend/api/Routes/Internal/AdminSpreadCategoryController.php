@@ -29,8 +29,7 @@ class AdminSpreadCategoryController extends AbstractController
 
     public function __construct(
         private readonly SpreadCategoryRepository $categories,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Get(
         path: '/admin/spread-categories',
@@ -133,7 +132,7 @@ class AdminSpreadCategoryController extends AbstractController
         }
 
         try {
-            $category = $this->categories->rename((int)($args['category_id'] ?? 0), $name);
+            $category = $this->categories->rename((int) ($args['category_id'] ?? 0), $name);
         } catch (NameTakenException) {
             return $response->withJson(['error' => self::NAME_TAKEN], 409);
         }
@@ -206,7 +205,7 @@ class AdminSpreadCategoryController extends AbstractController
     )]
     public function delete(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $category = $this->categories->find((int)($args['category_id'] ?? 0));
+        $category = $this->categories->find((int) ($args['category_id'] ?? 0));
 
         if ($category === null) {
             return $response->withJson(['error' => 'Category not found.'], 404);
@@ -257,7 +256,7 @@ class AdminSpreadCategoryController extends AbstractController
             if (!is_int($value) && !(is_string($value) && ctype_digit($value))) {
                 return null;
             }
-            $ids[] = (int)$value;
+            $ids[] = (int) $value;
         }
 
         return $ids;

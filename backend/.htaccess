@@ -57,7 +57,7 @@ RewriteEngine On
 # the "existing files" rule below serves the SQLite database and .env verbatim,
 # and Apache executes any .php under db/, includes/, vendor/ or scripts/ by URL.
 RewriteRule ^(db|includes|vendor|scripts|\.deploy)(/|$) - [R=404,L]
-RewriteRule ^(\.env.*|composer\.(json|lock)|openapi\.json)$ - [R=404,L]
+RewriteRule ^(\.env.*|composer\.(json|lock)|openapi\.json|phinx\.php)$ - [R=404,L]
 
 # API requests — handled by api/.htaccess
 RewriteCond %{REQUEST_URI} ^/api/

@@ -17,8 +17,7 @@ class ConfigController extends AbstractController
 {
     public function __construct(
         private readonly TurnstileService $turnstile,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Get(
         path: '/config',

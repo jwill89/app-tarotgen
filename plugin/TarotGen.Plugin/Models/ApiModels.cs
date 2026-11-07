@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace TarotGen.Plugin.Models;
 
 // DTOs mirror the TarotGen backend response shapes. JSON is (de)serialized with
@@ -26,7 +24,7 @@ public sealed class Deck
     public int SystemTotalCards { get; set; }
 
     /// <summary>Standard card count, falling back to 78 when the system is missing.</summary>
-    public int EffectiveTotalCards => SystemTotalCards > 0 ? SystemTotalCards : 78;
+    public int EffectiveTotalCards => this.SystemTotalCards > 0 ? this.SystemTotalCards : 78;
 }
 
 /// <summary>A deck system (GET /api/deck-systems).</summary>

@@ -29,7 +29,9 @@ async function mountField(start: Visibility = 'link', hasPassword = false) {
 
 function choose(wrapper: VueWrapper, label: string) {
   const found = wrapper.findAll('.myst-segmented__btn').find((b) => b.text() === label)
-  if (!found) throw new Error(`No "${label}" choice`)
+  if (!found) {
+    throw new Error(`No "${label}" choice`)
+  }
   return found.trigger('click')
 }
 

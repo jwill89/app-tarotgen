@@ -8,9 +8,7 @@ use Tarot\Structure\SpreadCategory;
 
 readonly class SpreadCategoryRepository
 {
-    public function __construct(private SpreadCategoryData $data)
-    {
-    }
+    public function __construct(private SpreadCategoryData $data) {}
 
     /**
      * Every category, in the list's order.

@@ -69,7 +69,9 @@ const back = computed(() => ({
 }))
 
 const title = computed(() => {
-  if (id === null) return 'Add Deck System'
+  if (id === null) {
+    return 'Add Deck System'
+  }
   return state.value === 'missing' ? 'Deck System Not Found' : 'Edit Deck System'
 })
 const subtitle = computed(() =>
@@ -121,7 +123,9 @@ async function loadSystem(systemId: string): Promise<void> {
 watch(
   () => form.value?.total_cards,
   (total) => {
-    if (form.value) form.value.cards = resizeCards(form.value.cards, total ?? 78)
+    if (form.value) {
+      form.value.cards = resizeCards(form.value.cards, total ?? 78)
+    }
   },
 )
 
@@ -149,7 +153,9 @@ async function save(edited: DeckSystemForm): Promise<void> {
         payload,
         'Deck system updated.',
       )
-      if (updated === null) return
+      if (updated === null) {
+        return
+      }
     }
     // Saved: nothing left to lose, so leaving doesn't ask.
     savedForm = JSON.stringify(edited)
@@ -160,7 +166,9 @@ async function save(edited: DeckSystemForm): Promise<void> {
 }
 
 onMounted(() => {
-  if (id !== null) void loadSystem(id)
+  if (id !== null) {
+    void loadSystem(id)
+  }
 })
 </script>
 
@@ -235,8 +243,9 @@ onMounted(() => {
           All cards must have a title before saving.
         </p>
         <div class="buttons">
-          <button class="button" @click="returnTo(home)">Cancel</button>
+          <button type="button" class="button" @click="returnTo(home)">Cancel</button>
           <button
+            type="button"
             class="button is-success"
             :class="{ 'is-loading': saving }"
             :disabled="saving || !allCardTitlesValid"

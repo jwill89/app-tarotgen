@@ -8,9 +8,7 @@ use Tarot\Structure\PasskeyCredential;
 
 readonly class PasskeyRepository
 {
-    public function __construct(private PasskeyData $data)
-    {
-    }
+    public function __construct(private PasskeyData $data) {}
 
     /** @return list<Passkey> */
     public function getByUser(int $userId): array

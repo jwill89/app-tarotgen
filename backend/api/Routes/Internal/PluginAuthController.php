@@ -31,8 +31,7 @@ class PluginAuthController extends AbstractController
     public function __construct(
         private readonly PluginTokenService $pluginTokens,
         private readonly UserRepository $users,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Post(
         path: '/plugin/authorize',
@@ -70,10 +69,10 @@ class PluginAuthController extends AbstractController
         }
 
         $body        = $this->parsedBody($request);
-        $challenge   = trim((string)($body['code_challenge'] ?? ''));
-        $method      = strtoupper(trim((string)($body['code_challenge_method'] ?? 'S256')));
-        $redirectUri = trim((string)($body['redirect_uri'] ?? ''));
-        $state       = (string)($body['state'] ?? '');
+        $challenge   = trim((string) ($body['code_challenge'] ?? ''));
+        $method      = strtoupper(trim((string) ($body['code_challenge_method'] ?? 'S256')));
+        $redirectUri = trim((string) ($body['redirect_uri'] ?? ''));
+        $state       = (string) ($body['state'] ?? '');
 
         if ($challenge === '' || $method !== Pkce::METHOD) {
             return $response->withJson(['error' => 'A valid S256 code_challenge is required.'], 400);
@@ -130,8 +129,8 @@ class PluginAuthController extends AbstractController
         $limiter->hit($ip);
 
         $body     = $this->parsedBody($request);
-        $code     = (string)($body['code'] ?? '');
-        $verifier = (string)($body['code_verifier'] ?? '');
+        $code     = (string) ($body['code'] ?? '');
+        $verifier = (string) ($body['code_verifier'] ?? '');
 
         $token = $this->pluginTokens->exchangeCode($code, $verifier);
         if ($token === null) {
@@ -193,7 +192,7 @@ class PluginAuthController extends AbstractController
     )]
     public function revokeToken(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $tokenId = (int)($args['id'] ?? 0);
+        $tokenId = (int) ($args['id'] ?? 0);
 
         if (!$this->pluginTokens->revoke($this->authUserId($request), $tokenId)) {
             return $response->withJson(['error' => 'Token not found.'], 404);

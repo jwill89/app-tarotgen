@@ -1,69 +1,119 @@
 #!/usr/bin/env pwsh
+#Requires -Version 7.4
+
 <#
 .SYNOPSIS
-    Build and deploy the TarotGen.io frontend and/or PHP backend to the droplet.
+    Build and deploy TarotGen.io to the droplet: the Vue SPA, the PHP API, both, or the Dalamud plugin.
 
 .DESCRIPTION
-    The live site at <WebRoot> (Apache + PHP) has a flat layout that mirrors this
-    repo's runtime files. This script flattens the repo into that layout WITHOUT
-    ever touching the server-side data (.env + the database, which live outside
-    the web root in TAROT_DATA_DIR, and assets/decks/).
+    Built on shared-tooling's SharedDeploy module (shared/deploy/pwsh), the shape every
+    deploy follows: one archive, one held SSH connection, one remote run.
 
-    Each target is packed into one tarball (a "bundle") with the shell that
-    installs it. A run uploads all its bundles in ONE pscp call, to the SSH user's
-    home directory (outside the web root), and installs them in ONE plink call:
-    checksums verified first, then each bundle unpacked into a staging dir and
-    swapped in. Two SSH connections whatever the target, so `ufw limit ssh` (which
-    drops the IP after 6 connections in 30s) never needs a pause, and one archive
-    replaces the per-file round trips that made a 1 MB upload take ~20s.
+    The live site is one flat web root (WebRoot): the SPA in dist, the API's files beside
+    it, the plugin repository in plugin. Its private data sit outside it, in TAROT_DATA_DIR
+    (/var/lib/tarotgen): the .env and the database, db/tarotdb.db, which belongs to
+    www-data. A deploy never ships the .env, the database, assets or the retired one-off
+    scripts in db.
 
-    -Target frontend (default):
-        Builds the SPA (vite) -> dist/, then swaps it in: live "dist" -> "dist.old"
-        (rollback backup, overwritten each deploy), new build -> "dist".
+    Locally, before anything connects:
+      frontend  builds frontend (vue-tsc + vite) into frontend/dist (skip with -SkipBuild);
+      backend   packs the runtime PHP: api, includes, scripts, db/migrations, og.php,
+                openapi.json, phinx.php, composer.json, composer.lock and the .htaccess;
+      plugin    refuses a csproj Version that is not higher than the published repo.json's,
+                then builds the plugin from clean and lays out its repository: latest.zip,
+                icon.png and repo.json, written from the built manifest with ?v=<version>
+                on its download links.
+    Everything goes into ONE archive. A broken build changes nothing.
 
-    -Target backend:
-        Packs the runtime PHP payload (api/, includes/, scripts/, og.php,
-        openapi.json, composer.json, composer.lock, .htaccess) - NOT vendor/, db/,
-        .env, assets/. Archives the current backend to .deploy/backend-prev.tgz
-        (rollback), swaps the new files into place, and - only if composer.lock
-        changed - runs `composer install --no-dev --optimize-autoloader`.
+    Then, on one SSH connection held for the whole run:
+      1. Upload the archive to the SSH user's home.
+      2. One remote run checks its SHA-256 and file count, then, API first:
+           backend   builds the new code whole in WebRoot/.deploy/next: the upload, a copy
+                     of the live vendor with composer install --no-dev run on it, and the
+                     retired db scripts carried over. Snapshots the database (below). Swaps
+                     every entry in by renames, keeping the previous ones in
+                     WebRoot/.deploy/backend-prev. Then, from the web root:
+                       runuser -u www-data -- env TAROT_DATA_DIR=/var/lib/tarotgen php vendor/bin/phinx migrate
+                     If that fails the deploy stops and the previous code goes back, with
+                     Phinx's message, the snapshot and the command that restores it
+                     printed. The database itself is never put back automatically;
+           frontend  swaps dist in by renames (the previous kept as dist.old);
+           plugin    refuses a version not higher than the published one, then swaps the
+                     plugin folder in (the previous kept as plugin.old).
+      3. Fetch the site from here, through Cloudflare: /api/decks must list a deck (the API
+         and the database answer), the page must answer (with the frontend: name this
+         build's entry script, which must load), and repo.json must carry this release's
+         ?v=. If any check fails, what this run changed goes back, plugin and frontend
+         first, then the code; the database stays as the migrations left it.
+      4. With the backend, once that passes:
+           - the daily backup, SharedDeploy's Install-BackupTimer: tarotgen-backup.timer runs
+             as www-data at 10:00 UTC (up to 15 minutes' spread) and keeps a checked, gzip'd
+             copy, /var/lib/tarotgen/db/backups/tarotgen-YYYY-MM-DD.db.gz, for 28 days;
+           - the old backup retired: /etc/cron.d/tarotgen becomes scripts/server/tarotgen.cron
+             where it differs (retention alone, at 10:30 UTC, only once that day's backup
+             exists) and /usr/local/sbin/tarotgen-backup is removed. The old copies in
+             /var/backups/tarotgen/nightly stay until they are removed by hand;
+           - a copy of the live database pulled into backend/db/tarotdb.db, the one the app
+             opens locally, keeping the three previous local copies (skip with -NoDbPull).
 
-    -Target both: frontend and backend, in one upload and one install.
+    The snapshot before the migrations is
+    /var/lib/tarotgen/db/tarotdb.db.pre-<yyyyMMdd-HHmmss, UTC>.gz, written as www-data, as
+    everything in the database's folder must be: sqlite3 .backup to a partial file, PRAGMA
+    integrity_check, gzip, gzip -t, then the rename; the newest three are kept. It is taken
+    before the swap, so a snapshot that fails changes nothing. The daily backup's pruning
+    touches only its own dated names in backups, so it can never match one.
 
-    -Target plugin: builds the FFXIV plugin and publishes it to <WebRoot>/plugin.
+    Settings resolve from the parameter, then $env:DEPLOY_*, then the git-ignored
+    scripts/deploy.config.ps1 (copy scripts/deploy.config.example.ps1). Nothing about the
+    host's address, user or key is in this file.
 
-    Nothing goes live unless every bundle of the run built and uploaded intact.
-    Unpacked files get the server's usual modes (644 files, 755 dirs, owned by the
-    SSH user) and the extraction time as mtime, exactly as the old per-file pscp
-    upload left them - Windows tar records 0666 files and read-only dirs, which
-    are deliberately not kept.
-
-    Uses PuTTY's pscp/plink so the DigitalOcean .ppk key works directly. pscp/plink
-    run in batch mode, so a passphrase-protected .ppk must be loaded into Pageant
-    first:  pageant.exe "<KeyPath>"  (enter the passphrase once per Windows session).
-    A connection that gets rate-limited is retried once after a 35s wait.
+    Needs PowerShell 7.4 and PuTTY's plink 0.85 or later (pscp is no longer used), with a
+    key that has a passphrase loaded into Pageant first: pageant.exe "<KeyPath>". The SSH
+    user must be root. The host needs composer, php, sqlite3, gzip and runuser. The whole
+    run is one SSH connection (plus one only if it drops and reconnects), which stays
+    under the droplet's `ufw limit ssh`.
 
 .PARAMETER Target
-    What to deploy: frontend (default), backend, both, or plugin.
+    What to deploy: frontend (default), backend, both (backend then frontend, in one
+    upload and one remote run), or plugin (the Dalamud custom repo in WebRoot/plugin).
 
 .PARAMETER VpsHost
-    Droplet IP or hostname. Defaults to the production droplet.
+    Droplet IP or hostname. If omitted, resolved from $env:DEPLOY_VPS_HOST, then
+    scripts/deploy.config.ps1 ($DeployVpsHost).
 
 .PARAMETER VpsUser
-    SSH user (default "root").
+    SSH user, root. If omitted, resolved from $env:DEPLOY_VPS_USER, then $DeployVpsUser.
+    It has no default: it must be set in one of the three places.
 
 .PARAMETER KeyPath
-    Path to the PuTTY .ppk private key.
+    Path to the PuTTY .ppk private key. If omitted, resolved from $env:DEPLOY_KEY_PATH,
+    then $DeployKeyPath.
 
 .PARAMETER WebRoot
-    Apache DocumentRoot on the host (contains "dist", api/, includes/, ...).
+    Apache DocumentRoot on the host (holds dist, api, includes, plugin and the rest). If
+    omitted, resolved from $env:DEPLOY_WEB_ROOT, then $DeployWebRoot.
+
+.PARAMETER SiteUrl
+    The site's public address, fetched after the deploy as visitors reach it. If omitted,
+    resolved from $env:DEPLOY_SITE_URL, then $DeploySiteUrl, then https://tarotgen.io (the
+    address the SPA's canonical link and the plugin's IconUrl already publish). The
+    plugin's download links are built from it too.
+
+.PARAMETER ConfigPath
+    The untracked settings file; by default scripts/deploy.config.ps1. It need not exist.
 
 .PARAMETER SkipBuild
-    Frontend only: deploy the existing dist/ without rebuilding.
+    Frontend only: deploy the existing frontend/dist without rebuilding.
 
 .PARAMETER NoBackup
-    Remove the rollback backup (dist.old / .deploy/backend-prev.tgz) after a
-    successful deploy.
+    Remove the rollback copies (dist.old, WebRoot/.deploy/backend-prev, plugin.old) once
+    the run succeeds on the host. A step that fails on the host still puts its previous
+    copy back, but the smoke check then has nothing to go back to, so a failure only stops
+    the run. The database snapshot is still taken.
+
+.PARAMETER NoDbPull
+    Don't refresh the local database (backend/db/tarotdb.db) from the live one after a
+    deploy that includes the backend.
 
 .EXAMPLE
     .\scripts\deploy.ps1                 # frontend (default)
@@ -72,398 +122,440 @@
     .\scripts\deploy.ps1 -Target backend
 
 .EXAMPLE
-    .\scripts\deploy.ps1 -Target both
+    .\scripts\deploy.ps1 -Target both -NoDbPull
+
+.EXAMPLE
+    .\scripts\deploy.ps1 -Target plugin   # build + publish the Dalamud plugin repo
 #>
 [CmdletBinding()]
 param(
     [ValidateSet('frontend', 'backend', 'both', 'plugin')]
     [string]$Target = 'frontend',
 
-    # Connection settings are intentionally NOT hardcoded here (this file is in
-    # source control). They are resolved below from, in priority order: an
-    # explicit -param, an environment variable, or the gitignored
-    # scripts/deploy.config.ps1. See scripts/deploy.config.example.ps1.
+    # Server-specific settings are NOT in this tracked script. Each resolves from its
+    # -param, then $env:DEPLOY_*, then the untracked scripts/deploy.config.ps1.
     [string]$VpsHost,
-
     [string]$VpsUser,
-
     [string]$KeyPath,
-
     [string]$WebRoot,
+    [string]$SiteUrl,
+    [string]$ConfigPath = (Join-Path -Path $PSScriptRoot -ChildPath 'deploy.config.ps1'),
 
     [switch]$SkipBuild,
-
-    [switch]$NoBackup
+    [switch]$NoBackup,
+    [switch]$NoDbPull
 )
 
 $ErrorActionPreference = 'Stop'
-# PowerShell 7.4+ makes a non-zero *native* exit throw under ErrorActionPreference
-# 'Stop', which would bypass our own $LASTEXITCODE checks and can exit silently if
-# the window closes. Turn it off so our checks/messages always run. (No-op on 5.1.)
 $PSNativeCommandUseErrorActionPreference = $false
+Import-Module (Join-Path $PSScriptRoot '..\shared\deploy\pwsh\SharedDeploy.psd1') -Force
+trap { Close-DeployConnection; Write-Host "`nERROR: $($_.Exception.Message)" -ForegroundColor Red; exit 1 }
 
-function Write-Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Cyan }
-function Write-Ok($msg) { Write-Host "    $msg" -ForegroundColor Green }
-function Fail($msg) { Write-Host "`nERROR: $msg" -ForegroundColor Red; exit 1 }
-
-# Catch-all: show any unexpected terminating error instead of exiting silently.
-trap { Write-Host "`nERROR: $($_.Exception.Message)" -ForegroundColor Red; exit 1 }
-
-# Run a remote command via plink. Retry once (after the 30s ufw window) ONLY when
-# the failure looks like a dropped/refused connection - not a genuine command
-# error (so a real failure isn't misreported as a rate-limit and re-run).
-function Invoke-RemoteWithRetry([string]$cmd) {
-    $out = & $plink -batch -i $KeyPath $remoteTarget $cmd 2>&1
-    foreach ($line in $out) { if ("$line".Trim()) { Write-Host "    $line" } }
-    if ($LASTEXITCODE -eq 0) { return $true }
-    $text = $out | Out-String
-    if ($text -notmatch 'Network error|Connection (timed out|refused|reset|abandoned)|Unable to (open connection|authenticate)|Server unexpectedly closed') {
-        return $false   # genuine command failure - do not retry
-    }
-    Write-Host "    Connection failed - likely the SSH rate limit (ufw limit ssh). Waiting 35s, then retrying once..." -ForegroundColor Yellow
-    Start-Sleep -Seconds 35
-    & $plink -batch -i $KeyPath $remoteTarget $cmd
-    return ($LASTEXITCODE -eq 0)
+$settings = Resolve-DeploySetting -ConfigPath $ConfigPath -Value @{
+    VpsHost = $VpsHost
+    VpsUser = $VpsUser
+    KeyPath = $KeyPath
+    WebRoot = $WebRoot
+    SiteUrl = $SiteUrl
+} -Required VpsHost, VpsUser, KeyPath, WebRoot -Default @{
+    # Public already (frontend/index.html's canonical link, the plugin's IconUrl), so not a host secret.
+    SiteUrl = 'https://tarotgen.io'
 }
 
-# One pscp upload of the bundles (bare file names in $BundleDir: run from there so
-# no path with a space reaches the argument list) to the SSH user's home directory,
-# with an elapsed-time indicator and no polling. Returns @{ Ok; Err; Elapsed }.
-function Invoke-Upload([string[]]$Files) {
-    $outFile = Join-Path $env:TEMP ("pscp-out-{0}.log" -f [guid]::NewGuid())
-    $errFile = Join-Path $env:TEMP ("pscp-err-{0}.log" -f [guid]::NewGuid())
-    $proc = Start-Process -FilePath $pscp -NoNewWindow -PassThru -WorkingDirectory $BundleDir `
-        -RedirectStandardOutput $outFile -RedirectStandardError $errFile `
-        -ArgumentList (@('-batch', '-q', '-i', $KeyPath) + $Files + "${remoteTarget}:")
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    $maxSeconds = 900
-    $killed = $false
-    while (-not $proc.HasExited) {
-        Start-Sleep -Seconds 1
-        Write-Progress -Activity 'Uploading' -Status ("{0} - {1:mm\:ss} elapsed" -f ($Files -join ', '), $sw.Elapsed)
-        if ($sw.Elapsed.TotalSeconds -gt $maxSeconds) {
-            try { $proc.Kill() } catch [System.InvalidOperationException] { Write-Verbose 'pscp had already exited.' }
-            $killed = $true
-            break
+$web = $settings.WebRoot.TrimEnd('/')
+$site = $settings.SiteUrl.TrimEnd('/')
+if ($site -notmatch '^https?://[^/\s]+$') {
+    throw "SiteUrl must be the site's address alone, such as https://tarotgen.io, not '$($settings.SiteUrl)'."
+}
+
+$withBackend = $Target -in 'backend', 'both'
+$withFrontend = $Target -in 'frontend', 'both'
+$withPlugin = $Target -eq 'plugin'
+$targets = @(
+    if ($withBackend) { 'backend' }
+    if ($withFrontend) { 'frontend' }
+    if ($withPlugin) { 'plugin' }
+)
+
+$repoRoot = Split-Path -Path $PSScriptRoot -Parent
+$backendDir = Join-Path $repoRoot 'backend'
+$frontendDir = Join-Path $repoRoot 'frontend'
+$distDir = Join-Path $frontendDir 'dist'
+$pluginDir = Join-Path $repoRoot 'plugin\TarotGen.Plugin'
+$pluginProject = Join-Path $pluginDir 'TarotGen.Plugin.csproj'
+$cronFile = Join-Path $PSScriptRoot 'server\tarotgen.cron'
+# The database the app opens when run locally (TAROT_DATA_DIR unset, Paths::database()); gitignored.
+$devDb = Join-Path $backendDir 'db\tarotdb.db'
+
+# The host's data, fixed by the site rather than by this machine's settings: TAROT_DATA_DIR is
+# set in the vhost, /etc/environment and scripts/server/tarotgen.cron, and AGENTS.md documents it.
+$dataDir = '/var/lib/tarotgen'
+$liveDb = "$dataDir/db/tarotdb.db"
+$dbOwner = 'www-data'
+# The snapshot before the migrations: Install-ServiceBinary's form, <Database>.pre-<time>.gz.
+$snapshotPrefix = "$liveDb.pre-"
+$snapshot = $snapshotPrefix + [datetime]::UtcNow.ToString('yyyyMMdd-HHmmss', [cultureinfo]::InvariantCulture) + '.gz'
+$restoreDb = "runuser -u $dbOwner -- sh -c 'rm -f $liveDb-wal $liveDb-shm && gunzip -c $snapshot > $liveDb'"
+# The owner's command (decided 2026-11-06), run from the web root.
+$migrate = "runuser -u $dbOwner -- env TAROT_DATA_DIR=$dataDir php vendor/bin/phinx migrate"
+
+# The backend's code, by its top-level entries in the web root: what the archive carries (under
+# backend/ in it), and vendor, which the host builds beside it. The .htaccess goes first, so the
+# new rules refuse db, phinx.php and the rest before the new files land. Its staging and backup
+# folders sit inside .deploy, which the .htaccess refuses too.
+$backendShipped = '.htaccess', 'api', 'includes', 'scripts', 'db/migrations', 'og.php', 'openapi.json', 'phinx.php', 'composer.json', 'composer.lock'
+$backendCode = @($backendShipped | ForEach-Object { ($_ -split '/')[0] }) + 'vendor'
+$codeStaging = '.deploy/next'
+$codeBackup = '.deploy/backend-prev'
+
+# Every check after the deploy asks with this, so no edge-cached answer can stand in for the origin's.
+$token = [guid]::NewGuid().ToString('N').Substring(0, 12)
+
+Write-Host "Deploy target: $Target ($($targets -join ', ')) -> $($settings.VpsUser)@$($settings.VpsHost):$web" -ForegroundColor Yellow
+
+function ConvertTo-PluginVersion {
+    # Four parts, so the csproj's 0.8.1 compares with a manifest's 0.8.0.0 as Dalamud compares them.
+    [CmdletBinding()]
+    [OutputType([version])]
+    param([Parameter(Mandatory)] [string]$Value)
+    $version = [version]$Value
+    [version]::new($version.Major, $version.Minor, [math]::Max($version.Build, 0), [math]::Max($version.Revision, 0))
+}
+
+# The plugin's version must be higher than the published one, since Dalamud updates to nothing
+# else. The host refuses a lower one too, but the published index is read here first, before the
+# plugin is built. If it can't be read, the host's check still stands.
+if ($withPlugin) {
+    $planned = @(([xml](Get-Content -LiteralPath $pluginProject -Raw)).Project.PropertyGroup.Version | Where-Object { $_ })[0]
+    $published = $null
+    try {
+        $published = @(Invoke-RestMethod -Uri "$site/plugin/repo.json?deploy=$token" -TimeoutSec 15)[0].AssemblyVersion
+        $higher = (ConvertTo-PluginVersion -Value $planned) -gt (ConvertTo-PluginVersion -Value $published)
+    } catch {
+        Write-Warning "The published plugin version could not be read or compared ($($_.Exception.Message)); the host will check it."
+        $higher = $true
+    }
+    if (-not $higher) {
+        throw "The plugin's version $planned is not higher than the published $published, and Dalamud updates to nothing else. Raise <Version> in plugin/TarotGen.Plugin/TarotGen.Plugin.csproj; nothing was built or changed."
+    }
+}
+
+# -- Build and pack, before anything connects -----------------------------------
+# One archive, laid out as the host's steps want it: the code under backend/, the SPA as dist,
+# the plugin repository as plugin.
+$content = [ordered]@{}
+$entryScript = $null
+$repo = $null
+$archive = $null
+$connection = $null
+
+if ($withBackend) {
+    foreach ($item in $backendShipped) {
+        $path = Join-Path $backendDir $item
+        if (-not (Test-Path -LiteralPath $path)) { throw "Backend payload item not found: $path. Nothing was changed." }
+        $content["backend/$item"] = $path
+    }
+    # The cron file names the web root and the daily backup's folder itself; a mismatch would stop
+    # retention without a word, so it stops the deploy instead, before anything changes.
+    $cron = (Get-Content -LiteralPath $cronFile -Raw) -replace "`r", ''
+    foreach ($needed in "$web/scripts/retention.php", "$dataDir/db/backups/tarotgen-") {
+        if (-not $cron.Contains($needed)) { throw "scripts/server/tarotgen.cron does not name $needed, which this deploy installs; fix one or the other. Nothing was changed." }
+    }
+    if (-not $cron.EndsWith("`n")) { $cron += "`n" }
+}
+
+if ($withFrontend) {
+    $shell = Join-Path $distDir 'index.html'
+    if ($SkipBuild) {
+        Write-Step 'Skipping the frontend build (-SkipBuild); using the existing frontend/dist'
+        if (-not (Test-Path -LiteralPath $shell)) { throw 'frontend/dist/index.html is missing - nothing to deploy.' }
+    } else {
+        Invoke-NpmBuild -Path $frontendDir -Output $shell
+    }
+    $content['dist'] = $distDir
+    # The build's entry script (Vite's assetsDir is _app): the page must name it, and serve it.
+    $entryScript = [regex]::Match((Get-Content -LiteralPath $shell -Raw), 'src="(/_app/[^"]+\.js)"').Groups[1].Value
+}
+
+if ($withPlugin) {
+    Invoke-PluginBuild -Project $pluginProject
+    $built = Join-Path $pluginDir 'bin\Release\TarotGen.Plugin'
+    # repo.json is written from the built manifest, with ?v=<version> on the download links so
+    # Cloudflare never serves an old latest.zip under a new index.
+    $repo = Export-PluginRepository -Manifest (Join-Path $built 'TarotGen.Plugin.json') -IndexPath 'repo.json' `
+        -BaseUrl "$site/plugin" -IconPath 'icon.png' -File ([ordered]@{
+            'latest.zip' = Join-Path $built 'latest.zip'
+            'icon.png'   = Join-Path $pluginDir 'images\icon.png'
+        })
+    $content['plugin'] = $repo.Path
+}
+
+# -- The host's steps -----------------------------------------------------------
+# Switch-RemoteItemSet runs these from the web root, with $stage (.deploy/next), $backup
+# (.deploy/backend-prev) and $bundle set, under set -e and its own EXIT trap, which puts the
+# previous code back if anything after the swap fails. So they set no trap of their own.
+$prepare = Format-RemoteScript -Value @{
+    DB              = $liveDb
+    DB_OWNER        = $dbOwner
+    DATA_DIR        = $dataDir
+    SNAPSHOT        = $snapshot
+    SNAPSHOT_PREFIX = $snapshotPrefix
+} -Template @'
+db='__DB__'
+db_owner='__DB_OWNER__'
+snap='__SNAPSHOT__'
+snap_prefix='__SNAPSHOT_PREFIX__'
+snap_suffix=''
+if [ ! -f "$db" ]; then echo "There is no database at $db (is TAROT_DATA_DIR still __DATA_DIR__?), so nothing was changed." >&2; exit 3; fi
+for t in composer php sqlite3 gzip runuser; do
+  if ! command -v "$t" >/dev/null 2>&1; then echo "$t is not installed (or not on PATH) on the host, so nothing was changed." >&2; exit 3; fi
+done
+# Only db/migrations ships. The retired one-off scripts beside it on the host stay where they
+# are (AGENTS.md section 7), so they move into the new db with it.
+mkdir -p "$stage/db"
+if [ -d db ]; then
+  find db -mindepth 1 -maxdepth 1 ! -name migrations -exec cp -a {} "$stage/db/" \;
+fi
+# On every deploy, in the staging folder: the site never runs new code on the old vendor, and
+# the optimized autoloader always matches the new code. It starts from a copy of the live
+# vendor, so it only fetches what composer.lock changed.
+echo '==> composer install --no-dev, in the staging folder'
+export COMPOSER_ALLOW_SUPERUSER=1
+if [ -d vendor ]; then cp -a vendor "$stage/vendor"; fi
+composer install --working-dir="$stage" --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader
+if [ ! -f "$stage/vendor/bin/phinx" ]; then echo 'composer install left no vendor/bin/phinx, so the migrations could not run; nothing was changed.' >&2; exit 3; fi
+# >>> snapshot (tested on its own; keep these markers)
+# The database before the migrations, to the standard of SharedDeploy's Install-ServiceBinary:
+# sqlite3 .backup to a partial file, PRAGMA integrity_check, gzip to another partial file,
+# gzip -t, and only then the rename, with no uncompressed copy left; the newest three kept.
+# Whatever writes in the database's folder runs as its owner, under umask 077 (AGENTS.md
+# section 7). Taken before the swap, so a snapshot that fails changes nothing.
+echo '==> Snapshotting the database before the migrations'
+as_db_owner() { runuser -u "$db_owner" -- sh -c 'umask 077 && exec "$@"' sh "$@"; }
+snapshots() {
+  for f in "$snap_prefix"[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]"$snap_suffix" \
+    "$snap_prefix"[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]"$snap_suffix.gz"; do
+    if [ -f "$f" ]; then printf '%s %s\n' "$(stat -c %Y "$f")" "$f"; fi
+  done | sort -k 1,1nr | cut -d ' ' -f 2-
+}
+snap_raw="${snap%.gz}.partial"
+snap_part="$snap.partial"
+rm -f "$snap_raw" "$snap_part"
+if ! as_db_owner sqlite3 "$db" ".backup '$snap_raw'"; then
+  rm -f "$snap_raw"
+  echo 'sqlite3 .backup of the database failed, so nothing was changed.' >&2
+  exit 4
+fi
+verdict=$(as_db_owner sqlite3 "$snap_raw" 'PRAGMA integrity_check;' 2>&1) || true
+if [ "$verdict" != ok ]; then
+  rm -f "$snap_raw" "$snap_raw-wal" "$snap_raw-shm"
+  echo "The database snapshot failed its integrity check, so nothing was changed: $verdict" >&2
+  exit 4
+fi
+if ! as_db_owner sh -c 'gzip -c "$1" > "$2"' sh "$snap_raw" "$snap_part" || ! gzip -t "$snap_part"; then
+  rm -f "$snap_raw" "$snap_part"
+  echo 'Compressing the database snapshot failed, so nothing was changed.' >&2
+  exit 4
+fi
+mv -f "$snap_part" "$snap"
+rm -f "$snap_raw"
+snapshots | tail -n +4 | xargs -r -d '\n' rm -f --
+echo "    snapshot: $snap ($(du -h "$snap" | cut -f1)); the newest three are kept"
+# <<< snapshot
+'@
+
+$afterSwap = Format-RemoteScript -Value @{ MIGRATE = $migrate } -Template @'
+# >>> migrate (tested on its own; keep these markers)
+echo '==> __MIGRATE__'
+if out=$(__MIGRATE__ 2>&1); then
+  printf '%s\n' "$out" | sed 's/^/    /'
+else
+  rc=$?
+  {
+    echo ''
+    echo "MIGRATION FAILED (phinx exit $rc): the deploy stops here and the previous code goes back. Phinx said:"
+    printf '%s\n' "$out" | sed 's/^/  | /'
+    case "$out" in
+      *'The baseline changed nothing'*)
+        echo 'That is the baseline refusing the live database: its schema is not the one the old db scripts built (Missing and Different above).'
+        echo 'Nothing in the database was changed or recorded. Bring it to that schema, then deploy again (AGENTS.md section 7).'
+        ;;
+      *)
+        echo 'Each migration runs in one transaction, so the one that failed left nothing behind; any that ran before it in this deploy stay applied.'
+        ;;
+    esac
+    echo "The database as it was just before the migrations: $snap"
+    echo "To put it back, with the site's writes stopped:"
+    echo "  runuser -u $db_owner -- sh -c 'rm -f $db-wal $db-shm && gunzip -c $snap > $db'"
+  } >&2
+  exit 6
+fi
+# <<< migrate
+# The previous deploy script's rollback archive and staging folder; .deploy/backend-prev holds
+# the previous code now.
+rm -f .deploy/backend-prev.tgz
+rm -rf .deploy.new
+'@
+
+# After the daily backup is in place: the cron file runs retention alone, and the old nightly
+# backup goes. Its copies stay until they are removed by hand.
+$retire = if ($withBackend) {
+    Format-RemoteScript -Value @{ CRON = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($cron)) } -Template @'
+set -e
+cron=/etc/cron.d/tarotgen
+next=/etc/cron.d/.tarotgen.next
+old_job=/usr/local/sbin/tarotgen-backup
+nightly=/var/backups/tarotgen/nightly
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+printf '%s' '__CRON__' | base64 -d > "$work/cron"
+if cmp -s "$work/cron" "$cron"; then
+  echo "$cron is already scripts/server/tarotgen.cron."
+else
+  # Under a name with dots, which cron ignores, until the rename puts it in place whole.
+  install -m 644 -o root -g root "$work/cron" "$next"
+  mv -f "$next" "$cron"
+  echo "Installed $cron from scripts/server/tarotgen.cron: retention alone, once the day's backup exists."
+fi
+if [ -e "$old_job" ]; then
+  rm -f "$old_job"
+  echo "Removed $old_job, the old nightly backup."
+fi
+if [ -d "$nightly" ]; then
+  echo "The old nightly copies stay in $nightly ($(find "$nightly" -maxdepth 1 -type f -name 'tarotdb-*.db.gz' | wc -l) of them) until they are removed by hand."
+fi
+'@
+}
+
+try {
+    Write-Step 'Packing the deploy...'
+    $archive = Compress-DeployArchive -Content $content -Exclude '__pycache__', '*.pyc', '.env', '.env.*', 'Desktop.ini', 'Thumbs.db', '.DS_Store'
+    Write-Ok ('{0} files, {1:N1} MB, one archive' -f $archive.FileCount, ($archive.Size / 1MB))
+
+    $connection = $settings | Open-DeployConnection
+
+    Write-Step 'Uploading...'
+    $upload = Invoke-Upload -Path $archive.Path -Destination 'tarotgen-deploy.tgz' -Activity "Uploading TarotGen.io ($($targets -join ', '))" -FileCount $archive.FileCount
+    if (-not $upload.Ok) { throw "Upload failed; nothing on the host changed.`n$($upload.Err)" }
+    Write-Ok ('Uploaded in {0:mm\:ss}.' -f $upload.Elapsed)
+
+    # API first: a new backend is additive to the old SPA, while a new SPA may call endpoints
+    # an old backend does not have yet. Nothing changes until the archive's SHA-256 and file
+    # count check.
+    $steps = @(
+        if ($withBackend) {
+            Switch-RemoteItemSet -AsStep -Root $web -Item $backendCode -Source 'backend' -Staging $codeStaging -Backup $codeBackup `
+                -Prepare $prepare -AfterSwap $afterSwap -NoBackup:$NoBackup
+        }
+        if ($withFrontend) {
+            Switch-RemoteDirectory -AsStep -Live "$web/dist" -NoBackup:$NoBackup
+        }
+        if ($withPlugin) {
+            Publish-PluginRepository -AsStep -Live "$web/plugin" -Version $repo.Version -IndexPath 'repo.json' -NoBackup:$NoBackup
+        }
+    )
+    Write-Step "Deploying on the host ($($targets -join ', '))..."
+    try {
+        Invoke-DeployBundle -Archive 'tarotgen-deploy.tgz' -Sha256 $archive.Sha256 -ExpectedFileCount $archive.FileCount -Step $steps
+    } catch {
+        if ($withBackend -and $_.Exception.Message -match '\(exit 6\)$') {
+            throw "The migrations failed (Phinx's message is above), so the deploy stopped and the previous code is back; nothing after the backend ran. The database is as the migrations left it. The snapshot from just before them is $snapshot; to put it back, with the site's writes stopped, run on the host:`n  $restoreDb"
+        }
+        if ($targets.Count -gt 1) {
+            throw "$($_.Exception.Message). With several targets, the ones before the failing step are live (the lines above say which) and were not smoke-checked."
+        }
+        throw
+    }
+
+    # -- Smoke check, through Cloudflare ------------------------------------------
+    $checks = @(
+        if ($withBackend) {
+            # A deck from the database through the API: both answer.
+            @{ Url = "$site/api/decks?deploy=$token"; Contains = '"deck_id"' }
+            # og.php, backend code, serves every page.
+            if (-not $withFrontend) { @{ Url = "$site/?deploy=$token"; Contains = 'id="app"' } }
+        }
+        if ($withFrontend) {
+            if ($entryScript) {
+                @{ Url = "$site/?deploy=$token"; Contains = $entryScript }
+                @{ Url = "$site$entryScript" }
+            } else {
+                @{ Url = "$site/?deploy=$token"; Contains = 'id="app"' }
+            }
+        }
+        if ($withPlugin) { @{ Url = "$site/plugin/repo.json?deploy=$token"; Contains = "latest.zip?v=$($repo.Version)" } }
+    )
+    Write-Step "Checking $site..."
+    try {
+        if ($NoBackup) {
+            # Nothing was kept to go back to.
+            Invoke-SmokeCheck -Check $checks -Attempts 3 -DelaySeconds 2 -NoRollback
+        } else {
+            # The reverse of the deploy. The code goes back without the database: the migrations
+            # are additive, so the previous code runs on the new schema (AGENTS.md section 10).
+            $rollback = @(
+                if ($withPlugin) { Restore-RemoteDirectory -Live "$web/plugin" -AsScript }
+                if ($withFrontend) { Restore-RemoteDirectory -Live "$web/dist" -AsScript }
+                if ($withBackend) { Restore-RemoteItemSet -Root $web -Item $backendCode -Backup $codeBackup -AsScript }
+            )
+            Invoke-SmokeCheck -Check $checks -Attempts 3 -DelaySeconds 2 -Rollback {
+                Invoke-RemoteStep -Script $rollback -FailureMessage 'Rolling back failed on the host'
+            }
+        }
+    } catch {
+        if ($withBackend) {
+            throw "$($_.Exception.Message)`nThe database stays as the migrations left it. The snapshot from just before them is $snapshot; to put it back, with the site's writes stopped, run on the host:`n  $restoreDb"
+        }
+        throw
+    }
+
+    # -- The data, once the release stays (backend) -----------------------------------
+    if ($withBackend) {
+        # The daily copies go in backups beside the database, named tarotgen-YYYY-MM-DD.db.gz:
+        # apart from the snapshots (tarotdb.db.pre-<time>.gz, beside the database), so neither
+        # pruning can match the other's names.
+        Write-Step 'Checking the daily database backup...'
+        try {
+            Install-BackupTimer -Name 'tarotgen' -Database $liveDb -Owner $dbOwner -Description 'TarotGen.io daily database backup'
+        } catch {
+            throw "The site is deployed and live, but its backup is not: $($_.Exception.Message)"
+        }
+
+        Write-Step 'Retiring the old nightly backup...'
+        if (-not (Invoke-RemoteWithRetry -Script $retire)) {
+            throw 'The site is deployed and live, and its daily backup is in place, but the old nightly backup was not retired (the lines above say why). Until a deploy replaces /etc/cron.d/tarotgen, it runs the old backup and retention after it, as before.'
+        }
+
+        if (-not $NoDbPull) {
+            # The pull's copy goes in the SSH user's home, not beside the live database:
+            # Copy-LiveDatabase runs sqlite3 as the SSH user, and whatever is made in the
+            # database's folder must be www-data's (AGENTS.md section 7).
+            $null = Copy-LiveDatabase -Database $liveDb -Destination $devDb -Snapshot 'tarotgen-db-pull.db'
         }
     }
-    $proc.WaitForExit()
-    $sw.Stop()
-    Write-Progress -Activity 'Uploading' -Completed
-    $code = $proc.ExitCode
-    $err = if ($killed) { "Upload exceeded ${maxSeconds}s and was aborted." }
-    elseif ($code -ne 0) { Get-Content $errFile -Raw -ErrorAction SilentlyContinue } else { '' }
-    Remove-Item $outFile, $errFile -Force -ErrorAction SilentlyContinue
-    return [pscustomobject]@{ Ok = ($code -eq 0); Err = $err; Elapsed = $sw.Elapsed }
+} finally {
+    Close-DeployConnection
+    if ($archive) { Remove-Item -LiteralPath $archive.Path -ErrorAction SilentlyContinue }
+    if ($repo) { Remove-Item -LiteralPath $repo.Path -Recurse -ErrorAction SilentlyContinue }
 }
 
-# -- Resolve connection settings (param > env var > gitignored local config) ---
-# scripts/deploy.config.ps1 (gitignored) may set $DeployVpsHost / $DeployVpsUser /
-# $DeployKeyPath / $DeployWebRoot. Copy scripts/deploy.config.example.ps1 to set
-# yours. Keeping the host, key path, and web root out of the tracked script means
-# no infrastructure details live in git history.
-$localConfig = Join-Path $PSScriptRoot 'deploy.config.ps1'
-if (Test-Path $localConfig) { . $localConfig }
-
-if (-not $VpsHost) { $VpsHost = if ($env:DEPLOY_VPS_HOST) { $env:DEPLOY_VPS_HOST } else { $DeployVpsHost } }
-if (-not $VpsUser) { $VpsUser = if ($env:DEPLOY_VPS_USER) { $env:DEPLOY_VPS_USER } elseif ($DeployVpsUser) { $DeployVpsUser } else { 'root' } }
-if (-not $KeyPath) { $KeyPath = if ($env:DEPLOY_KEY_PATH) { $env:DEPLOY_KEY_PATH } else { $DeployKeyPath } }
-if (-not $WebRoot) { $WebRoot = if ($env:DEPLOY_WEB_ROOT) { $env:DEPLOY_WEB_ROOT } else { $DeployWebRoot } }
-
-if (-not $VpsHost) { Fail "No deploy host configured. Pass -VpsHost, set `$env:DEPLOY_VPS_HOST, or create scripts/deploy.config.ps1 (copy scripts/deploy.config.example.ps1)." }
-if (-not $KeyPath) { Fail "No SSH key path configured. Pass -KeyPath, set `$env:DEPLOY_KEY_PATH, or set `$DeployKeyPath in scripts/deploy.config.ps1." }
-if (-not $WebRoot) { Fail "No web root configured. Pass -WebRoot, set `$env:DEPLOY_WEB_ROOT, or set `$DeployWebRoot in scripts/deploy.config.ps1." }
-
-# -- Resolve paths & tools -----------------------------------------------------
-$RepoRoot = Split-Path $PSScriptRoot -Parent
-$FrontendDir = Join-Path $RepoRoot "frontend"
-$BackendDir = Join-Path $RepoRoot "backend"
-$DistDir = Join-Path $FrontendDir "dist"
-
-if (-not (Test-Path $KeyPath)) { Fail "SSH key not found: $KeyPath" }
-
-function Resolve-PuttyTool($name) {
-    $cmd = Get-Command $name -ErrorAction SilentlyContinue
-    if ($cmd) { return $cmd.Source }
-    $candidate = Join-Path "C:\Program Files\PuTTY" "$name.exe"
-    if (Test-Path $candidate) { return $candidate }
-    Fail "$name not found. Install PuTTY (winget install PuTTY.PuTTY) or add it to PATH."
-}
-$pscp = Resolve-PuttyTool "pscp"
-$plink = Resolve-PuttyTool "plink"
-
-# Windows' own bsdtar, by full path: Git's GNU tar can come first on PATH, and it
-# reads "C:\..." as a remote host.
-$tar = Join-Path $env:SystemRoot 'System32\tar.exe'
-if (-not (Test-Path $tar)) { Fail "tar.exe not found at $tar (it ships with Windows 10 1803 and later)." }
-
-$remoteTarget = "$VpsUser@$VpsHost"
-
-# -- Bundles -------------------------------------------------------------------
-$BundleDir = Join-Path $env:TEMP 'tarotgen-deploy'
-Remove-Item $BundleDir -Recurse -Force -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force -Path $BundleDir | Out-Null
-$Bundles = [System.Collections.Generic.List[object]]::new()
-
-# Pack $Items (relative to $Root) into tarotgen-<Name>.tgz. $Install is the remote
-# shell that puts it live, run from <WebRoot> after every checksum has passed, with
-# `unpack <archive> <dir>` available; $Done is printed once the whole run succeeds.
-function Add-Bundle([string]$Name, [string]$Root, [string[]]$Items, [string]$Install, [string[]]$Done) {
-    $file = "tarotgen-$Name.tgz"
-    $path = Join-Path $BundleDir $file
-    # ustar, not the default pax: pax carries Windows file flags (SCHILY.fflags)
-    # that GNU tar on the droplet warns about for every entry.
-    & $tar --format ustar -czf $path -C $Root @Items
-    if ($LASTEXITCODE -ne 0) { Fail "Could not pack the $Name bundle (tar exit $LASTEXITCODE). Live site untouched." }
-    $count = @(& $tar -tzf $path | Where-Object { $_ -notmatch '/$' }).Count
-    $size = (Get-Item $path).Length
-    Write-Ok ("Packed {0} files into {1} ({2:N0} KB)." -f $count, $file, ($size / 1KB))
-    $Bundles.Add([pscustomobject]@{
-            Name    = $Name
-            File    = $file
-            Size    = $size
-            Sha256  = (Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant()
-            Install = $Install
-            Done    = $Done
-        })
-}
-
-# == Frontend ==================================================================
-function Add-FrontendBundle([switch]$SkipBuild, [switch]$NoBackup) {
-    if ($SkipBuild) {
-        Write-Step "Skipping frontend build (-SkipBuild); using existing dist/"
-    } else {
-        Write-Step "Building frontend (vite)..."
-        Push-Location $FrontendDir
-        try {
-            npm run build
-            if ($LASTEXITCODE -ne 0) { Fail "Frontend build failed (exit $LASTEXITCODE). Live site untouched." }
-        } finally { Pop-Location }
-    }
-    if (-not (Test-Path (Join-Path $DistDir "index.html"))) {
-        Fail "dist/index.html is missing - nothing to deploy."
-    }
-
-    $install = @"
-unpack tarotgen-frontend.tgz dist.new
-rm -rf dist.old
-if [ -d dist ]; then mv dist dist.old; fi
-mv dist.new/dist dist
-rm -rf dist.new
-"@
-    if ($NoBackup) { $install += "`nrm -rf dist.old" }
-    $install += "`necho 'frontend deployed'"
-
-    $done = @("[OK] Frontend deployed to ${remoteTarget}:$WebRoot/dist")
+Write-Host "`n[OK] Deployed $($targets -join ', ') to $($connection.Target):$web" -ForegroundColor Green
+if ($withBackend) {
     if (-not $NoBackup) {
-        $done += "Previous build kept at $WebRoot/dist.old (rollback: cd '$WebRoot' && rm -rf dist && mv dist.old dist)."
+        Write-Host "     Previous code kept in $web/$codeBackup." -ForegroundColor DarkGray
     }
-    $done += "Assets are content-hashed and the PWA auto-updates, so no manual cache bust is needed."
-
-    Add-Bundle -Name 'frontend' -Root $FrontendDir -Items @('dist') -Install $install -Done $done
+    Write-Host "     Database snapshot from before the migrations: $snapshot" -ForegroundColor DarkGray
+    Write-Host '     The .env, assets and the retired db scripts were not touched.' -ForegroundColor DarkGray
 }
-
-# == Backend ===================================================================
-# Runtime PHP payload (everything the live site executes); deliberately excludes
-# vendor/ (regenerated on the droplet), and the server-only db/, .env, assets/.
-# openapi.json is the committed API spec served at /api/openapi.json and rendered
-# by Scalar at /api/docs - it must ship even though swagger-php (which generates
-# it) is a dev-only dependency not installed in production. scripts/ ships because
-# cron runs scripts/retention.php (AUDIT 1.7); .htaccess keeps it off the web.
-$BackendPayload = @('api', 'includes', 'scripts', 'og.php', 'openapi.json', 'composer.json', 'composer.lock', '.htaccess')
-
-function Add-BackendBundle([switch]$NoBackup) {
-    Write-Step "Packing backend payload..."
-    foreach ($item in $BackendPayload) {
-        if (-not (Test-Path (Join-Path $BackendDir $item))) { Fail "Backend payload item not found: $(Join-Path $BackendDir $item)" }
-    }
-
-    $items = $BackendPayload -join ' '
-    $install = @"
-rm -rf .deploy.new
-unpack tarotgen-backend.tgz .deploy.new/payload
-stage='.deploy.new/payload'
-for p in $items; do
-  if [ ! -e "`$stage/`$p" ]; then echo "missing staged `$p" >&2; exit 3; fi
-done
-# Did production dependencies change since the live deploy?
-if cmp -s "`$stage/composer.lock" composer.lock 2>/dev/null; then deps_changed=0; else deps_changed=1; fi
-# Single rollback archive of the current backend.
-mkdir -p .deploy
-tar czf '.deploy/backend-prev.tgz' $items 2>/dev/null || true
-# Swap each path into place.
-for p in $items; do
-  rm -rf "`$p"
-  mv "`$stage/`$p" "`$p"
-done
-rm -rf '.deploy.new'
-if [ "`$deps_changed" = "1" ]; then
-  echo 'composer.lock changed - installing production dependencies on the droplet...'
-  if ! command -v composer >/dev/null 2>&1; then
-    echo 'composer not found on PATH - run composer install manually in $WebRoot' >&2; exit 4
-  fi
-  composer install --no-dev --optimize-autoloader --no-interaction
-else
-  echo 'composer.lock unchanged - skipping composer install.'
-fi
-"@
-    if ($NoBackup) { $install += "`nrm -f '.deploy/backend-prev.tgz'" }
-    $install += "`necho 'backend deployed'"
-
-    $done = @("[OK] Backend deployed to ${remoteTarget}:$WebRoot")
+if ($withFrontend) {
     if (-not $NoBackup) {
-        $done += "Previous backend archived at $WebRoot/.deploy/backend-prev.tgz"
-        $done += "(rollback: cd '$WebRoot' && tar xzf '.deploy/backend-prev.tgz' && composer install --no-dev -o)."
+        Write-Host "     Previous build kept at $web/dist.old." -ForegroundColor DarkGray
     }
-    $done += "Server-side data (TAROT_DATA_DIR: .env + database) and assets/ were not touched."
-
-    Add-Bundle -Name 'backend' -Root $BackendDir -Items $BackendPayload -Install $install -Done $done
+    Write-Host '     Assets are content-hashed and the PWA auto-updates, so no manual cache bust is needed.' -ForegroundColor DarkGray
 }
-
-# == Plugin (Dalamud custom repo) ==============================================
-# Publishes the FFXIV plugin to <WebRoot>/plugin as a self-hosted "custom repo":
-# latest.zip (the built plugin), icon.png, and repo.json (the pluginmaster users
-# add under Dalamud's /xlsettings). Independent of the site's dist/ and backend.
-function Add-PluginBundle {
-    $pluginProj = Join-Path $RepoRoot 'plugin\TarotGen.Plugin\TarotGen.Plugin.csproj'
-    if (-not (Test-Path $pluginProj)) { Fail "Plugin project not found: $pluginProj" }
-
-    Write-Step "Building plugin (Release)..."
-    # Clean bin/obj first. DalamudPackager's incremental packaging can otherwise
-    # leave a STALE latest.zip whose embedded manifest version lags the freshly
-    # generated repo.json - Dalamud then offers an update it can never reconcile
-    # (the downloaded zip reports the old version). A clean build guarantees the
-    # zip's manifest matches the version advertised in repo.json.
-    $pluginRoot = Join-Path $RepoRoot 'plugin\TarotGen.Plugin'
-    Remove-Item -Recurse -Force (Join-Path $pluginRoot 'bin'), (Join-Path $pluginRoot 'obj') -ErrorAction SilentlyContinue
-    & dotnet build $pluginProj -c Release --nologo | Out-Host
-    if ($LASTEXITCODE -ne 0) { Fail "Plugin build failed (exit $LASTEXITCODE). Live repo untouched." }
-
-    $outDir = Join-Path $RepoRoot 'plugin\TarotGen.Plugin\bin\Release\TarotGen.Plugin'
-    $zip = Join-Path $outDir 'latest.zip'
-    $manifestPath = Join-Path $outDir 'TarotGen.Plugin.json'
-    $iconPath = Join-Path $RepoRoot 'plugin\TarotGen.Plugin\images\icon.png'
-    foreach ($f in @($zip, $manifestPath, $iconPath)) {
-        if (-not (Test-Path $f)) { Fail "Expected plugin artifact missing: $f" }
+if ($withPlugin) {
+    if (-not $NoBackup) {
+        Write-Host "     Previous plugin repo kept at $web/plugin.old." -ForegroundColor DarkGray
     }
-
-    # Build the repo manifest (pluginmaster): the packaged manifest + download links.
-    $base = 'https://tarotgen.io/plugin'
-    $m = Get-Content $manifestPath -Raw | ConvertFrom-Json
-    # Cache-bust the download URL with the version. Cloudflare caches `latest.zip`
-    # (a static extension) keyed by full URL, so after a new upload it keeps serving
-    # the STALE cached zip - repo.json then advertises the new version while the
-    # downloaded zip reports the old one, and the in-game update can never reconcile.
-    # A per-version query string gives each release a distinct cache key (a miss),
-    # so Dalamud always pulls the matching zip fresh from the origin.
-    $zipUrl = "$base/latest.zip?v=$($m.AssemblyVersion)"
-    $m | Add-Member -NotePropertyName DownloadLinkInstall -NotePropertyValue $zipUrl -Force
-    $m | Add-Member -NotePropertyName DownloadLinkUpdate  -NotePropertyValue $zipUrl -Force
-    $m | Add-Member -NotePropertyName DownloadLinkTesting -NotePropertyValue $zipUrl -Force
-    $m | Add-Member -NotePropertyName IconUrl -NotePropertyValue "$base/icon.png" -Force
-
-    Write-Step "Staging plugin repo files..."
-    $stageRoot = Join-Path $env:TEMP 'tarot-plugin-deploy'
-    $stage = Join-Path $stageRoot 'plugin'
-    Remove-Item $stageRoot -Recurse -Force -ErrorAction SilentlyContinue
-    New-Item -ItemType Directory -Force -Path $stage | Out-Null
-    (ConvertTo-Json @($m) -Depth 12) | Set-Content -Path (Join-Path $stage 'repo.json') -Encoding UTF8
-    Copy-Item $zip -Destination (Join-Path $stage 'latest.zip')
-    Copy-Item $iconPath -Destination (Join-Path $stage 'icon.png')
-    Write-Ok ("Staged v{0}: repo.json, latest.zip, icon.png" -f $m.AssemblyVersion)
-
-    # Move the live dir ASIDE first and delete it only AFTER the new one is in
-    # place, so the window where plugin/ is absent shrinks from "duration of an
-    # rm -rf" to the instant between two renames. (During any absence, a request
-    # for latest.zip 404s via .htaccess rather than returning the SPA shell - see
-    # backend/.htaccess - so Cloudflare can't cache a broken 200-HTML under the
-    # .zip URL.)
-    $install = @"
-unpack tarotgen-plugin.tgz .plugin.new
-rm -rf plugin.old
-if [ -d plugin ]; then mv plugin plugin.old; fi
-mv .plugin.new/plugin plugin
-rm -rf .plugin.new plugin.old
-echo 'plugin published'
-"@
-    $done = @(
-        "[OK] Plugin published to ${remoteTarget}:$WebRoot/plugin",
-        "Custom repo URL to share with testers: $base/repo.json"
-    )
-
-    Add-Bundle -Name 'plugin' -Root $stageRoot -Items @('plugin') -Install $install -Done $done
+    Write-Host "     Custom repo URL to share with testers: $site/plugin/repo.json (v$($repo.Version))." -ForegroundColor DarkGray
 }
-
-# == Publish: one upload, one install ==========================================
-function Publish-Bundle {
-    $files = @($Bundles | ForEach-Object { $_.File })
-
-    # 1. Upload every bundle (1 connection).
-    Write-Step ("Uploading {0} ({1:N0} KB)..." -f ($files -join ' + '), (($Bundles | Measure-Object Size -Sum).Sum / 1KB))
-    $r = Invoke-Upload -Files $files
-    if (-not $r.Ok) {
-        Write-Host "    Upload failed - possibly the SSH rate limit (ufw limit ssh)." -ForegroundColor Yellow
-        Write-Host "    Waiting 35s for the 30s window to clear, then retrying once..." -ForegroundColor Yellow
-        Start-Sleep -Seconds 35
-        $r = Invoke-Upload -Files $files
-    }
-    if (-not $r.Ok) {
-        Fail @"
-Upload failed. Live site untouched.
-$($r.Err)
-  - If the .ppk has a passphrase, load it into Pageant first, then re-run:
-        pageant.exe "$KeyPath"
-  - First-ever connection from PuTTY also needs the host key cached once:
-        plink -i "$KeyPath" $remoteTarget   (accept the fingerprint)
-  - Otherwise verify the host ($VpsHost) and user ($VpsUser).
-"@
-    }
-    Write-Ok ("Upload finished in {0:mm\:ss}." -f $r.Elapsed)
-
-    # 2. Verify every checksum, then install each bundle in order (1 connection).
-    # A failed checksum stops the run before anything is touched; `set -e` stops it
-    # at the first failing step after that.
-    Write-Step "Verifying, unpacking and swapping into place..."
-    $sums = ($Bundles | ForEach-Object { "'$($_.Sha256)' '$($_.File)'" }) -join ' '
-    $remote = @"
-set -e
-test -d '$WebRoot'
-cd "`$HOME"
-printf '%s  %s\n' $sums | sha256sum -c --quiet -
-cd '$WebRoot'
-# unpack <archive in `$HOME> <dir>: a fresh <dir> holding the archive's files with
-# this server's usual owner, modes and mtimes rather than the archive's.
-unpack() {
-  rm -rf "`$2" && mkdir -p "`$2"
-  tar --no-same-owner --no-same-permissions --touch -xzf "`$HOME/`$1" -C "`$2"
-  find "`$2" -type d -exec chmod 755 {} +
-  find "`$2" -type f -exec chmod 644 {} +
-}
-"@
-    $remote += "`n" + (($Bundles | ForEach-Object { $_.Install }) -join "`n")
-    $remote += "`ncd `"`$HOME`" && rm -f $($files -join ' ')"
-
-    if (-not (Invoke-RemoteWithRetry $remote)) {
-        Fail @"
-Install failed; the lines above show how far it got (each target prints "<target> deployed").
-The uploaded bundles are left in the SSH user's home directory. To roll back on the host:
-  frontend: cd '$WebRoot' && rm -rf dist && mv dist.old dist
-  backend:  cd '$WebRoot' && tar xzf '.deploy/backend-prev.tgz' && composer install --no-dev -o
-"@
-    }
-
-    foreach ($bundle in $Bundles) {
-        Write-Host "`n$($bundle.Done[0])" -ForegroundColor Green
-        foreach ($line in $bundle.Done | Select-Object -Skip 1) { Write-Host "     $line" -ForegroundColor DarkGray }
-    }
-}
-
-# -- Dispatch ------------------------------------------------------------------
-Write-Host "Deploy target: $Target -> $remoteTarget : $WebRoot" -ForegroundColor Yellow
-switch ($Target) {
-    'frontend' { Add-FrontendBundle -SkipBuild:$SkipBuild -NoBackup:$NoBackup }
-    'backend' { Add-BackendBundle -NoBackup:$NoBackup }
-    'plugin' { Add-PluginBundle }
-    'both' { Add-FrontendBundle -SkipBuild:$SkipBuild -NoBackup:$NoBackup; Add-BackendBundle -NoBackup:$NoBackup }
-}
-Publish-Bundle

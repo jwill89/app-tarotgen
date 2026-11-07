@@ -11,9 +11,7 @@ use Tarot\Structure\ReadingTag;
 
 readonly class ReadingRepository
 {
-    public function __construct(private ReadingData $data)
-    {
-    }
+    public function __construct(private ReadingData $data) {}
 
     public function get(string $reading_id): ?Reading
     {

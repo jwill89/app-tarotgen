@@ -33,10 +33,12 @@ export const card = (deck_system_id: number, card_id: number, name: string): Dec
   reversed_advice: null,
 })
 
+const lenormandSystem = system(3, 'Lenormand', 'Len', { total_cards: 36 })
+
 export const systems = [
   system(1, 'Rider-Waite-Smith', 'RWS'),
   system(2, 'Thoth', 'Thoth'),
-  system(3, 'Lenormand', 'Len', { total_cards: 36 }),
+  lenormandSystem,
 ]
 
 /** A visitor's submission, waiting for review. */
@@ -49,7 +51,7 @@ export const pending = [solaBusca]
 
 /** Lenormand with its cards, as GET /admin/deck-systems/3 sends it (cut to two). */
 export const lenormand: DeckSystemWithCards = {
-  ...systems[2],
+  ...lenormandSystem,
   total_cards: 2,
   cards: [card(3, 1, 'Rider'), card(3, 2, 'Clover')],
 }

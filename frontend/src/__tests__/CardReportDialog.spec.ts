@@ -51,7 +51,9 @@ async function choose(label: string): Promise<void> {
 
 async function type(text: string): Promise<void> {
   const box = details()
-  if (!box) throw new Error('No details box')
+  if (!box) {
+    throw new Error('No details box')
+  }
   box.value = text
   box.dispatchEvent(new Event('input'))
   await flushPromises()
@@ -151,7 +153,7 @@ describe('CardReportDialog', () => {
     await type('  A speck near the top  ')
     await send()
 
-    expect(JSON.parse(String(api.mock.calls[0][1]?.body))).toEqual({
+    expect(JSON.parse(String(api.mock.calls[0]![1]?.body))).toEqual({
       deck_id: DECK,
       card_id: 17,
       card_name: 'The Star',

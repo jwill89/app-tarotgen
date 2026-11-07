@@ -59,7 +59,9 @@ async function load() {
     deckId: typeof deckChoice.value === 'number' ? deckChoice.value : null,
     days: period.value === 'all' ? null : Number(period.value),
   })
-  if (request !== latest) return
+  if (request !== latest) {
+    return
+  }
   loading.value = false
   if (!res.ok) {
     error.value = res.error
@@ -85,7 +87,9 @@ function key(c: CardCount): string {
 
 /** The deck a card is told apart by: only an unnamed card counted across decks has one. */
 function deckOf(c: CardCount): string | null {
-  if (c.deck_id === null || typeof deckChoice.value === 'number') return null
+  if (c.deck_id === null || typeof deckChoice.value === 'number') {
+    return null
+  }
   return deckLookup.value[c.deck_id]?.name ?? `Deck #${String(c.deck_id)}`
 }
 
@@ -195,6 +199,7 @@ function times(n: number): string {
   gap: 1rem;
   margin-bottom: 1.1rem;
 }
+
 .frequency__title {
   font-family: var(--myst-heading-font);
   font-size: 1.45rem;
@@ -202,10 +207,12 @@ function times(n: number): string {
   color: var(--myst-text-strong);
   line-height: 1.2;
 }
+
 .frequency__sub {
   color: var(--myst-text-muted);
   margin-top: 0.2rem;
 }
+
 .frequency__busy {
   color: var(--myst-text-dim);
 }
@@ -219,6 +226,7 @@ function times(n: number): string {
   margin-bottom: 1.1rem;
   border-bottom: 1px solid var(--myst-border);
 }
+
 .frequency__filters .field {
   margin-bottom: 0;
   min-width: min(16rem, 100%);
@@ -227,6 +235,7 @@ function times(n: number): string {
 .frequency__empty {
   color: var(--myst-text-muted);
 }
+
 .frequency__summary {
   color: var(--myst-text-dim);
   font-size: 0.85rem;
@@ -240,9 +249,11 @@ function times(n: number): string {
   margin: 0;
   padding: 0;
 }
+
 .frequency__list[aria-busy='true'] {
   opacity: 0.6;
 }
+
 .frequency__row {
   display: grid;
   grid-template-columns: minmax(9rem, 14rem) 1fr minmax(8.5rem, auto);
@@ -251,20 +262,24 @@ function times(n: number): string {
   padding: 0.55rem 0;
   border-top: 1px solid var(--myst-border);
 }
+
 .frequency__row:first-child {
   border-top: none;
 }
+
 .frequency__name {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
+
 .frequency__card {
   color: var(--myst-text-strong);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .frequency__deck {
   color: var(--myst-text-dim);
   font-size: 0.8rem;
@@ -278,14 +293,17 @@ function times(n: number): string {
   background: color-mix(in srgb, var(--myst-text) 6%, transparent);
   overflow: hidden;
 }
+
 .frequency__fill {
   display: flex;
   height: 100%;
   min-width: 4px;
 }
+
 .frequency__upright {
   background: var(--myst-gold);
 }
+
 .frequency__reversed {
   background: color-mix(in srgb, var(--myst-silver) 55%, transparent);
 }
@@ -297,26 +315,30 @@ function times(n: number): string {
   gap: 0.6rem;
   white-space: nowrap;
 }
+
 .frequency__count strong {
   color: var(--myst-gold-bright);
   font-variant-numeric: tabular-nums;
   min-width: 1.5ch;
   text-align: right;
 }
+
 .frequency__split {
   color: var(--myst-text-dim);
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
 }
+
 .frequency__more {
   margin-top: 0.6rem;
   padding-left: 0;
 }
 
-@media screen and (max-width: 600px) {
+@media screen and (width <= 600px) {
   .frequency__row {
     grid-template-columns: 1fr auto;
   }
+
   .frequency__bar {
     grid-column: 1 / -1;
     grid-row: 2;

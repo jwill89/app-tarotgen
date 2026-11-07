@@ -3,6 +3,7 @@
 .app-wrapper {
   display: flex;
   flex-direction: column;
+
   /* The bespoke fixed nav (.site-nav) is 64px tall; the body gets 64px top
        padding (below) to clear it. Subtract that here so wrapper + body-padding
        == one viewport instead of overflowing and forcing a needless scroll. */
@@ -24,9 +25,11 @@ body.has-fixed-nav {
   display: flex;
   flex-direction: column;
 }
+
 .app-wrapper > main:focus {
   outline: none;
 }
+
 .app-wrapper > main > section {
   flex: 1;
 }
@@ -53,6 +56,7 @@ body.has-fixed-nav {
 /* ── Reading Info ────────────────────────────────────────── */
 .reading-meta {
   padding: 0.5rem 1.25rem;
+
   /* Wide enough that rows (e.g. the Reading URL) don't wrap; fills its is-7
        column on desktop and caps sensibly when shown alone. */
   max-width: 44rem;
@@ -171,7 +175,7 @@ body.has-fixed-nav {
 }
 
 /* Stack label above value on narrow screens. */
-@media screen and (max-width: 600px) {
+@media screen and (width <= 600px) {
   .reading-meta .meta-row {
     grid-template-columns: 1fr;
     gap: 0.25rem;
@@ -186,7 +190,7 @@ body.has-fixed-nav {
   width: 100%;
   height: 100%;
   z-index: 9999;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgb(0 0 0 / 60%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -197,11 +201,13 @@ body.has-fixed-nav {
 .lightbox-overlay {
   position: fixed;
   inset: 0;
+
   /* Above .myst-modal (10501) so a lightbox opened from inside a dialog wins,
      and below .toast-viewport (11000) so report-a-scan toasts stay visible. */
   z-index: 10600;
-  background-color: rgba(0, 0, 0, 0.9);
+  background-color: rgb(0 0 0 / 90%);
   display: flex;
+
   /* Scrollable container: when the image (plus caption/controls) is taller
        than the viewport it can be scrolled. Using margin:auto on the child to
        center — rather than align-items:center — keeps tall content fully
@@ -232,7 +238,7 @@ body.has-fixed-nav {
   display: inline-block;
   max-width: 90vw;
   max-height: 80vh;
-  border: 3px solid white;
+  border: 3px solid rgb(255 255 255);
   border-radius: 32px;
   overflow: hidden;
   line-height: 0;
@@ -299,10 +305,10 @@ body.has-fixed-nav {
 }
 
 .lightbox-zoom-btn {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgb(255 255 255 / 12%);
   border: none;
   border-radius: 999px;
-  color: white;
+  color: rgb(255 255 255);
   min-width: 38px;
   height: 34px;
   padding: 0 10px;
@@ -320,7 +326,7 @@ body.has-fixed-nav {
 
 .lightbox-zoom-btn:hover:not(:disabled) {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgb(255 255 255 / 25%);
 }
 
 .lightbox-zoom-btn:disabled {
@@ -344,7 +350,7 @@ body.has-fixed-nav {
   right: 20px;
   background: none;
   border: none;
-  color: white;
+  color: rgb(255 255 255);
   font-size: 36px;
   cursor: pointer;
   z-index: 2;
@@ -362,10 +368,10 @@ body.has-fixed-nav {
   position: fixed;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(255 255 255 / 10%);
   border: none;
   border-radius: 50%;
-  color: white;
+  color: rgb(255 255 255);
   font-size: 28px;
   cursor: pointer;
   z-index: 2;
@@ -383,7 +389,7 @@ body.has-fixed-nav {
 
 .lightbox-nav:hover {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgb(255 255 255 / 25%);
 }
 
 .lightbox-prev {
@@ -408,7 +414,7 @@ body.has-fixed-nav {
 .spread-description {
   background-color: var(--myst-surface-2);
   color: var(--myst-text);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgb(255 255 255 / 8%);
 }
 
 .spread-description .content,
@@ -442,24 +448,24 @@ body.has-fixed-nav {
 .spread-details-body table th {
   background-color: var(--myst-surface-3);
   color: var(--myst-text-strong);
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: rgb(255 255 255 / 18%);
 }
 
 .spread-description .content table td,
 .spread-details-body table td {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgb(255 255 255 / 12%);
 }
 
 .spread-description .content table tbody tr:nth-child(even) td,
 .spread-details-body table tbody tr:nth-child(even) td {
-  background-color: rgba(255, 255, 255, 0.04);
+  background-color: rgb(255 255 255 / 4%);
 }
 
 /* Reading notes: same collapsible styling as spread details, but full width
    and sitting below the cards/details. */
 .reading-notes {
   background-color: var(--myst-surface-2);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgb(255 255 255 / 8%);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -467,9 +473,10 @@ body.has-fixed-nav {
 /* ── Spread Details (collapsible, reading page) ──────────── */
 .spread-details {
   background-color: var(--myst-surface-2);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgb(255 255 255 / 8%);
   border-radius: 8px;
   overflow: hidden;
+
   /* Fills its narrower is-5 column, leaving the wider share for the
        reading-details box so its rows don't wrap. */
 }
@@ -549,8 +556,8 @@ body.has-fixed-nav {
 
 .spread-canvas.has-grid {
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    linear-gradient(to right, rgb(255 255 255 / 6%) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 6%) 1px, transparent 1px);
   background-size: 2.5% 2.5%;
 }
 
@@ -589,10 +596,9 @@ body.has-fixed-nav {
   position: absolute;
   inset: 0;
   backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
   border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 40%);
 }
 
 .spread-face--reveal {
@@ -632,7 +638,7 @@ body.has-fixed-nav {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 50%);
 }
 
 /* Highlight the card whose details are currently shown */
@@ -660,7 +666,7 @@ body.has-fixed-nav {
   padding: 0.5rem 0.6rem;
   margin-bottom: 0.4rem;
   background-color: var(--myst-surface-2);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgb(255 255 255 / 8%);
   border-radius: 8px;
   color: var(--myst-text);
   cursor: pointer;
@@ -719,9 +725,9 @@ body.has-fixed-nav {
   gap: 0.5rem;
   min-height: 60px;
   padding: 0.5rem;
-  border: 1px dashed rgba(255, 255, 255, 0.25);
+  border: 1px dashed rgb(255 255 255 / 25%);
   border-radius: 8px;
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: rgb(255 255 255 / 6%);
 }
 
 .spread-token {
@@ -751,7 +757,7 @@ body.has-fixed-nav {
   background-color: var(--myst-surface-3);
   border: 2px solid var(--myst-hair-gold);
   border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 50%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -789,11 +795,11 @@ body.has-fixed-nav {
   transform: translate(-50%, -50%);
   pointer-events: none;
   line-height: 1;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  text-shadow: 0 1px 3px rgb(0 0 0 / 70%);
 }
 
 /* ── Mobile Responsive Adjustments ───────────────────────── */
-@media screen and (max-width: 768px) {
+@media screen and (width <= 768px) {
   .section {
     padding: 1.5rem 1rem;
   }
@@ -892,18 +898,22 @@ body.has-fixed-nav {
 .toggle-switch.is-compact {
   gap: 0.35rem;
 }
+
 .toggle-switch.is-compact .toggle-track {
   width: 2rem;
   height: 1.1rem;
 }
+
 .toggle-switch.is-compact .toggle-thumb {
   width: 0.85rem;
   height: 0.85rem;
   left: 0.15rem;
 }
+
 .toggle-switch.is-compact .toggle-track[data-state='checked'] .toggle-thumb {
   transform: translate(0.85rem, -50%);
 }
+
 .toggle-switch.is-compact .toggle-state {
   font-size: 0.8rem;
 }
@@ -912,8 +922,9 @@ body.has-fixed-nav {
 .home-action {
   height: 100%;
   display: block;
+
   /* Give the cards a visible edge now that the box shadow is gone. */
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgb(255 255 255 / 12%);
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease,
@@ -930,8 +941,8 @@ button.home-action {
 
 .home-action:hover {
   transform: translateY(-3px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
-  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 35%);
+  border-color: rgb(255 255 255 / 28%);
 }
 
 /* ── Mystical Theme (palette + Bulma variable mapping live in tokens.css) ── */
@@ -947,15 +958,17 @@ body {
    z-index elements, which would hide the z-index:-1 starfield below. */
 html {
   background-color: var(--myst-bg);
+
   /* Reserve the scrollbar gutter permanently so opening a modal — which locks
      body scroll and hides the scrollbar — never collapses the gutter and shifts
      the centered layout (and the fixed nav) sideways. */
   scrollbar-gutter: stable;
+
   /* Neutral graphite glow (no violet), with one faint warm gold pool low on the
      page so the canvas has depth without a colour cast. */
   background-image:
-    radial-gradient(1200px 620px at 15% -10%, rgba(255, 255, 255, 0.05), transparent 60%),
-    radial-gradient(1000px 700px at 110% 6%, rgba(255, 255, 255, 0.035), transparent 55%),
+    radial-gradient(1200px 620px at 15% -10%, rgb(255 255 255 / 5%), transparent 60%),
+    radial-gradient(1000px 700px at 110% 6%, rgb(255 255 255 / 3.5%), transparent 55%),
     radial-gradient(
       900px 820px at 50% 120%,
       color-mix(in srgb, var(--myst-gold) 6%, transparent),
@@ -968,6 +981,7 @@ body {
   /* Transparent so the StarField (z-index: -1) shows through. The twinkling
      starfield itself lives in src/components/StarField.vue. */
   background: transparent;
+
   /* Reka's modal scroll-lock adds an inline padding-right to body to compensate
      for the scrollbar it hides. With scrollbar-gutter: stable the gutter never
      collapses, so that compensation is redundant and would itself shift the
@@ -992,7 +1006,8 @@ body {
   border-radius: 16px;
   padding: 1.75rem 1.75rem 1.5rem;
 }
-@media screen and (max-width: 600px) {
+
+@media screen and (width <= 600px) {
   .settings-panel {
     padding: 1.25rem 1.1rem;
   }
@@ -1012,6 +1027,7 @@ body {
 }
 
 /* ── Admin / data tables ─────────────────────────────────── */
+
 /* Elevated, restrained treatment shared by every admin table: quiet uppercase
    headers under a thin gold rule, hairline row separators instead of heavy zebra
    striping, comfortable density, and a calm hover. */
@@ -1055,7 +1071,7 @@ body {
 .table.is-hoverable tbody tr:not(.is-selected):hover,
 .table.is-hoverable.is-striped tbody tr:not(.is-selected):hover,
 .table.is-hoverable.is-striped tbody tr:not(.is-selected):hover:nth-child(even) {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: rgb(255 255 255 / 3%);
 }
 
 /* The actions column is always last; pin it to the right edge. */
@@ -1103,7 +1119,7 @@ body {
 }
 
 .myst-iconbtn:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgb(255 255 255 / 6%);
   color: var(--myst-text);
 }
 
@@ -1242,6 +1258,7 @@ body {
 }
 
 /* ── Callout Box ─────────────────────────────────────────── */
+
 /* A reusable highlighted panel for drawing attention to grouped
    options or informational asides, styled within the dark theme. */
 .myst-callout {
@@ -1252,7 +1269,14 @@ body {
   padding: 1.25rem 1.5rem;
 }
 
+/* A link in the callout's sentences: the gold alone sits too close to the text
+   around it (2:1, WCAG 1.4.1 asks 3:1), so it is underlined as well. */
+.myst-callout p a {
+  text-decoration: underline;
+}
+
 /* ── Segmented Control ───────────────────────────────────── */
+
 /* A pill-shaped two-or-more-option toggle (replaces radio buttons
    for binary/ternary choices). */
 .myst-segmented {
@@ -1282,7 +1306,7 @@ body {
   border-right: 1px solid var(--myst-border-strong);
 }
 
-.myst-segmented__btn:hover:not(.is-active):not([data-state='on']) {
+.myst-segmented__btn:hover:not(.is-active, [data-state='on']) {
   background: var(--myst-surface);
   color: var(--myst-text);
 }
@@ -1318,26 +1342,32 @@ body {
     border-color 0.2s ease,
     box-shadow 0.2s ease;
 }
+
 .myst-select:hover {
   border-color: var(--myst-hair-gold);
 }
+
 .myst-select:focus-visible {
   outline: none;
   border-color: var(--myst-hair-gold);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 12%, transparent);
 }
+
 .myst-select[data-placeholder] {
   color: var(--myst-text-dim);
 }
+
 .myst-select[data-disabled] {
   opacity: 0.55;
   cursor: not-allowed;
 }
+
 .myst-select__icon {
   flex: none;
   color: var(--myst-text-muted);
   font-size: 0.8rem;
 }
+
 .myst-select__content {
   z-index: 10650;
   min-width: var(--reka-select-trigger-width);
@@ -1345,12 +1375,14 @@ body {
   background: var(--myst-chrome);
   border: 1px solid var(--myst-border-strong);
   border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 45%);
   overflow: hidden;
 }
+
 .myst-select__viewport {
   padding: 0.35rem;
 }
+
 .myst-select__item {
   display: flex;
   align-items: center;
@@ -1362,17 +1394,21 @@ body {
   user-select: none;
   outline: none;
 }
+
 .myst-select__item[data-highlighted] {
   background: var(--myst-surface-3);
   color: var(--myst-gold-bright);
 }
+
 .myst-select__item[data-state='checked'] {
   color: var(--myst-gold-bright);
 }
+
 .myst-select__item[data-disabled] {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
 .myst-select__check {
   margin-left: auto;
   color: var(--myst-gold);
@@ -1392,9 +1428,10 @@ body {
   color: var(--myst-text);
   font-size: 0.8rem;
   line-height: 1.35;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
   user-select: none;
 }
+
 .myst-tooltip__arrow {
   fill: var(--myst-surface-3);
 }
@@ -1406,7 +1443,7 @@ body {
   border: 1px solid var(--myst-hair-gold);
   border-radius: 12px;
   padding: 6px;
-  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 18px 46px rgb(0 0 0 / 55%);
   z-index: 10650; /* above the dialog layers — see .myst-select__content */
   font-family:
     system-ui,
@@ -1416,19 +1453,23 @@ body {
     sans-serif;
   transform-origin: var(--reka-dropdown-menu-content-transform-origin);
 }
+
 .myst-menu[data-state='open'] {
   animation: myst-menu-in 0.16s ease;
 }
+
 @keyframes myst-menu-in {
   from {
     opacity: 0;
     transform: translateY(-6px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: none;
   }
 }
+
 .myst-menu-item {
   display: flex;
   align-items: center;
@@ -1444,31 +1485,37 @@ body {
     background 0.18s ease,
     color 0.18s ease;
 }
+
 .myst-menu-item .mi-icon {
   color: var(--myst-gold);
   width: 1.15em;
   display: inline-flex;
   justify-content: center;
 }
+
 .myst-menu-item[data-highlighted],
 .myst-menu-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgb(255 255 255 / 6%);
   color: var(--myst-text);
 }
+
 .myst-menu-item--danger,
 .myst-menu-item--danger .mi-icon {
   color: var(--myst-danger);
 }
+
 .myst-menu-item--danger[data-highlighted],
 .myst-menu-item--danger:hover {
   background: color-mix(in srgb, var(--myst-danger) 12%, transparent);
   color: var(--myst-danger);
 }
+
 .myst-menu-sep {
   height: 1px;
   background: var(--myst-border);
   margin: 6px 4px;
 }
+
 .myst-menu-label {
   display: flex;
   align-items: center;
@@ -1480,6 +1527,7 @@ body {
   color: var(--myst-text-soft);
   font-weight: 700;
 }
+
 .myst-menu-label .mi-icon {
   color: var(--myst-gold);
 }
@@ -1491,11 +1539,12 @@ body {
   z-index: 100;
   background: color-mix(in srgb, var(--myst-scrim) 66%, transparent);
   backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
 }
+
 .myst-dialog-overlay[data-state='open'] {
   animation: myst-fade-in 0.2s ease;
 }
+
 .myst-dialog {
   position: fixed;
   z-index: 101;
@@ -1507,7 +1556,7 @@ body {
   border: 1px solid var(--myst-hair-gold);
   border-radius: 16px;
   padding: 26px 26px 24px;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 30px 80px rgb(0 0 0 / 60%);
   font-family:
     system-ui,
     -apple-system,
@@ -1515,27 +1564,33 @@ body {
     Roboto,
     sans-serif;
 }
+
 .myst-dialog[data-state='open'] {
   animation: myst-dialog-in 0.2s ease;
 }
+
 @keyframes myst-fade-in {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
 }
+
 @keyframes myst-dialog-in {
   from {
     opacity: 0;
     transform: translate(-50%, -46%) scale(0.97);
   }
+
   to {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
   }
 }
+
 .myst-dialog-title {
   font-family: var(--myst-heading-font);
   letter-spacing: 0.04em;
@@ -1544,11 +1599,13 @@ body {
   color: var(--myst-text);
   margin: 0 0 6px;
 }
+
 .myst-dialog-desc {
   color: var(--myst-text-muted);
   font-size: 0.92rem;
   margin: 0 0 18px;
 }
+
 .myst-dialog-close {
   position: absolute;
   top: 14px;
@@ -1568,10 +1625,12 @@ body {
     color 0.2s ease,
     background 0.2s ease;
 }
+
 .myst-dialog-close:hover {
   color: var(--myst-text);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgb(255 255 255 / 6%);
 }
+
 .myst-dialog-close:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
@@ -1580,12 +1639,14 @@ body {
 /* reading-code dialog form */
 .code-dialog-form {
   display: flex;
+
   /* Stretch so the submit button matches the input's height exactly. Keep the
      input free of vertical margins — a stray margin inflates the flex line and
      the stretched button then overhangs the input. */
   align-items: stretch;
   gap: 10px;
 }
+
 .code-dialog-form .code-dialog-input {
   flex: 1;
   min-width: 0;
@@ -1596,14 +1657,17 @@ body {
   font-size: 1rem;
   padding: 12px 14px;
 }
+
 .code-dialog-form .code-dialog-input::placeholder {
   color: var(--myst-text-soft);
 }
+
 .code-dialog-form .code-dialog-input:focus {
   outline: none;
   border-color: var(--myst-hair-gold);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 12%, transparent);
 }
+
 .btn-view {
   display: inline-flex;
   align-items: center;
@@ -1628,10 +1692,12 @@ body {
     transform 0.2s ease,
     box-shadow 0.2s ease;
 }
+
 .btn-view:hover {
   background: var(--myst-aqua-bright);
   transform: translateY(-1px);
 }
+
 .btn-view:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-aqua) 40%, transparent);
@@ -1644,11 +1710,12 @@ body {
   z-index: 10500;
   background: color-mix(in srgb, var(--myst-scrim) 72%, transparent);
   backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
 }
+
 .myst-modal-overlay[data-state='open'] {
   animation: myst-fade-in 0.2s ease;
 }
+
 .myst-modal {
   position: fixed;
   z-index: 10501;
@@ -1662,7 +1729,7 @@ body {
   background: var(--myst-surface);
   border: 1px solid var(--myst-hair-gold);
   border-radius: 16px;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 30px 80px rgb(0 0 0 / 60%);
   overflow: hidden;
   font-family:
     system-ui,
@@ -1671,17 +1738,21 @@ body {
     Roboto,
     sans-serif;
 }
+
 .myst-modal[data-state='open'] {
   animation: myst-dialog-in 0.2s ease;
 }
+
 /* A dialog opened from inside the lightbox (e.g. the card report form) must
    clear .lightbox-overlay (10600) yet stay under selects/menus (10650). */
 .myst-modal-overlay.is-over-lightbox {
   z-index: 10610;
 }
+
 .myst-modal.is-over-lightbox {
   z-index: 10611;
 }
+
 .myst-modal-head {
   flex: none;
   display: flex;
@@ -1691,6 +1762,7 @@ body {
   padding: 1.1rem 1.25rem;
   border-bottom: 1px solid var(--myst-border);
 }
+
 .myst-modal-title {
   font-family: var(--myst-heading-font);
   font-size: 1.25rem;
@@ -1698,6 +1770,7 @@ body {
   color: var(--myst-gold);
   margin: 0;
 }
+
 .myst-modal-close {
   flex: none;
   cursor: pointer;
@@ -1716,14 +1789,17 @@ body {
     background-color 0.15s ease,
     color 0.15s ease;
 }
+
 .myst-modal-close:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgb(255 255 255 / 10%);
   color: var(--myst-text);
 }
+
 .myst-modal-close:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
 }
+
 .myst-modal-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -1732,9 +1808,11 @@ body {
   color: var(--myst-text);
   line-height: 1.5;
 }
+
 .myst-modal-foot {
   flex: none;
   display: flex;
+
   /* Four actions (a deck-system submission's preview) wrap on a phone instead of
      running off the dialog's left edge. */
   flex-wrap: wrap;
@@ -1748,28 +1826,35 @@ body {
 .collapsible-anim {
   overflow: hidden;
 }
+
 .collapsible-anim[data-state='open'] {
   animation: collapsible-down 0.24s ease;
 }
+
 .collapsible-anim[data-state='closed'] {
   animation: collapsible-up 0.2s ease;
 }
+
 @keyframes collapsible-down {
   from {
     height: 0;
   }
+
   to {
     height: var(--reka-collapsible-content-height);
   }
 }
+
 @keyframes collapsible-up {
   from {
     height: var(--reka-collapsible-content-height);
   }
+
   to {
     height: 0;
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
   .collapsible-anim[data-state='open'],
   .collapsible-anim[data-state='closed'] {
@@ -1783,6 +1868,7 @@ body {
   top: 4.9rem; /* clear the 64px fixed nav */
   right: 1rem;
   z-index: 11000;
+
   /* Reka's modal scroll-lock sets body { pointer-events: none }, which would
      otherwise make toasts raised from inside a dialog/lightbox un-dismissable. */
   pointer-events: auto;
@@ -1795,6 +1881,7 @@ body {
   list-style: none;
   outline: none;
 }
+
 .toast-item {
   display: flex;
   align-items: flex-start;
@@ -1805,7 +1892,7 @@ body {
   background: var(--myst-surface);
   border: 1px solid var(--myst-border-strong);
   border-left-width: 4px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 50%);
   font-family:
     system-ui,
     -apple-system,
@@ -1813,40 +1900,51 @@ body {
     Roboto,
     sans-serif;
 }
+
 .toast-item--success {
   border-left-color: var(--myst-success);
 }
+
 .toast-item--error {
   border-left-color: var(--myst-danger);
 }
+
 .toast-item--warning {
   border-left-color: var(--myst-warning);
 }
+
 .toast-item--info {
   border-left-color: var(--myst-info);
 }
+
 .toast-icon {
   flex: none;
   margin-top: 0.1rem;
 }
+
 .toast-item--success .toast-icon {
   color: var(--myst-success);
 }
+
 .toast-item--error .toast-icon {
   color: var(--myst-danger);
 }
+
 .toast-item--warning .toast-icon {
   color: var(--myst-warning);
 }
+
 .toast-item--info .toast-icon {
   color: var(--myst-info);
 }
+
 .toast-message {
   flex: 1 1 auto;
   line-height: 1.35;
   font-size: 0.95rem;
   overflow-wrap: anywhere;
 }
+
 .toast-close {
   flex: none;
   cursor: pointer;
@@ -1859,6 +1957,7 @@ body {
   line-height: 1;
   transition: opacity 0.15s ease;
 }
+
 .toast-close:hover {
   opacity: 1;
 }
@@ -1867,47 +1966,58 @@ body {
 .toast-item[data-state='open'] {
   animation: toast-in 0.24s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .toast-item[data-state='closed'] {
   animation: toast-out 0.15s ease-in;
 }
+
 .toast-item[data-swipe='move'] {
   transform: translateX(var(--reka-toast-swipe-move-x));
 }
+
 .toast-item[data-swipe='cancel'] {
   transform: translateX(0);
   transition: transform 0.2s ease;
 }
+
 .toast-item[data-swipe='end'] {
   animation: toast-swipe-out 0.2s ease-out;
 }
+
 @keyframes toast-in {
   from {
     transform: translateX(120%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
   }
 }
+
 @keyframes toast-out {
   from {
     opacity: 1;
   }
+
   to {
     transform: translateX(120%);
     opacity: 0;
   }
 }
+
 @keyframes toast-swipe-out {
   from {
     transform: translateX(var(--reka-toast-swipe-end-x));
   }
+
   to {
     transform: translateX(120%);
     opacity: 0;
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
   .toast-item[data-state='open'],
   .toast-item[data-state='closed'],
@@ -1921,13 +2031,16 @@ body {
   position: relative;
   display: block;
 }
+
 .myst-combobox__anchor {
   position: relative;
   display: block;
 }
+
 .myst-combobox__anchor .input {
   padding-right: 2.4em; /* room for the chevron trigger */
 }
+
 .myst-combobox__trigger {
   position: absolute;
   top: 0;
@@ -1946,29 +2059,35 @@ body {
     color 0.2s ease,
     transform 0.2s ease;
 }
+
 .myst-combobox__trigger:hover {
   color: var(--myst-text);
 }
+
 .myst-combobox__trigger[data-state='open'] {
   transform: rotate(180deg);
 }
+
 .myst-combobox__content {
   z-index: 10650; /* above the dialog layers — see .myst-select__content */
   width: var(--reka-combobox-trigger-width);
   background: var(--myst-surface);
   border: 1px solid var(--myst-border-strong);
   border-radius: var(--bulma-radius);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 50%);
   overflow: hidden;
 }
+
 .myst-combobox__content[data-state='open'] {
   animation: myst-menu-in 0.16s ease;
 }
+
 .myst-combobox__viewport {
   max-height: 300px;
   overflow-y: auto;
   padding: 4px;
 }
+
 .myst-combobox__group {
   padding: 0.45em 0.6em 0.25em;
   font-size: 0.72rem;
@@ -1977,10 +2096,12 @@ body {
   letter-spacing: 0.05em;
   color: var(--myst-text-muted);
 }
+
 .myst-combobox__group-wrap:not(:first-child) .myst-combobox__group {
   border-top: 1px solid var(--myst-border);
   margin-top: 4px;
 }
+
 .myst-combobox__item {
   display: flex;
   align-items: center;
@@ -1992,17 +2113,21 @@ body {
   outline: none;
   user-select: none;
 }
+
 .myst-combobox__item[data-highlighted] {
   background: var(--myst-surface-3);
 }
+
 .myst-combobox__item[data-state='checked'] {
   font-weight: 600;
 }
+
 .myst-combobox__item-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .myst-combobox__item-artist {
   font-size: 0.75rem;
   color: var(--myst-text-dim);
@@ -2010,11 +2135,13 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .myst-combobox__card-count {
   font-size: 0.75rem;
   color: var(--myst-text-dim);
   white-space: nowrap;
 }
+
 .myst-combobox__extra {
   font-size: 0.7rem;
   background: var(--myst-surface-3);
@@ -2023,6 +2150,7 @@ body {
   border-radius: 3px;
   white-space: nowrap;
 }
+
 .myst-combobox__star {
   flex-shrink: 0;
   cursor: pointer;
@@ -2034,17 +2162,20 @@ body {
   padding: 0.1em 0.3em;
   color: var(--myst-text-muted);
 }
+
 .myst-combobox__star:hover,
 .myst-combobox__star.is-active {
   opacity: 1;
   color: var(--myst-gold);
 }
+
 .myst-combobox__empty {
   padding: 0.75em;
   color: var(--myst-text-muted);
   text-align: center;
   font-style: italic;
 }
+
 .myst-combobox__item--none {
   border-bottom: 1px solid var(--myst-border);
   border-radius: 0;
@@ -2052,6 +2183,7 @@ body {
   font-style: italic;
   color: var(--myst-text-muted);
 }
+
 .myst-combobox__clear {
   position: absolute;
   top: 0;
@@ -2068,9 +2200,11 @@ body {
   font-size: 0.8rem;
   transition: color 0.2s ease;
 }
+
 .myst-combobox__clear:hover {
   color: var(--myst-text);
 }
+
 .myst-combobox__anchor.has-clear .input {
   padding-right: 4.2em;
 }
@@ -2084,8 +2218,9 @@ body {
   flex-wrap: wrap;
   justify-content: center;
 }
+
 .pagination-list-reka [data-selected] {
   background: var(--myst-aqua-deep);
-  color: white;
+  color: rgb(255 255 255);
   border-color: var(--myst-aqua-deep);
 }

@@ -29,6 +29,7 @@ defineProps<{
 .page-header {
   margin-bottom: 1.75rem;
 }
+
 .page-header__row {
   display: flex;
   align-items: flex-end;
@@ -36,6 +37,7 @@ defineProps<{
   gap: 1rem;
   flex-wrap: wrap;
 }
+
 .page-header__title {
   font-family: var(--myst-heading-font);
   letter-spacing: 0.02em;
@@ -44,19 +46,23 @@ defineProps<{
   line-height: 1.1;
   margin: 0;
 }
+
 .page-header__actions {
   display: flex;
+
   /* Several actions (admin Spreads has three) wrap on a phone instead of widening the page. */
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
 }
+
 .page-header__sub {
   color: var(--myst-text-muted);
   font-size: 1.05rem;
   margin: 0.4rem 0 0;
   max-width: 62ch;
 }
+
 .page-header__rule {
   margin-top: 0.9rem;
   height: 2px;

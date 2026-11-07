@@ -23,17 +23,18 @@ function dismiss() {
 </script>
 
 <template>
+  <!-- A landmark of its own, so its words aren't left outside the page's regions. -->
   <Transition name="cookie-banner">
-    <div v-if="visible" class="cookie-banner">
+    <section v-if="visible" class="cookie-banner" aria-label="Cookie notice">
       <div class="cookie-banner__content">
         <span class="cookie-banner__text">
           <FontAwesomeIcon :icon="byPrefixAndName.fas['cookie-bite']" />
           This site uses essential cookies to keep you logged in. No tracking or advertising cookies
           are used.
         </span>
-        <button class="button is-small is-primary" @click="dismiss">Got it</button>
+        <button type="button" class="button is-small is-primary" @click="dismiss">Got it</button>
       </div>
-    </div>
+    </section>
   </Transition>
 </template>
 
@@ -47,7 +48,7 @@ function dismiss() {
   background: var(--myst-surface-2);
   border-top: 1px solid var(--myst-border-strong);
   padding: 0.75rem 1.25rem;
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 -2px 12px rgb(0 0 0 / 40%);
 }
 
 .cookie-banner__content {

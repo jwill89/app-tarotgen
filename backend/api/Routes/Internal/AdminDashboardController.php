@@ -16,8 +16,7 @@ class AdminDashboardController extends AbstractController
 {
     public function __construct(
         private readonly StatsService $stats,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Get(
         path: '/admin/stats',

@@ -1,6 +1,3 @@
-// @vitest-environment jsdom
-// DOMPurify strips scripts in jsdom, not in happy-dom (see markdown.spec.ts), and
-// these notes are rendered through it.
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import ChangelogDialog from '@/components/admin/ChangelogDialog.vue'
 import type { ChangelogRelease } from '@/utils/changelog'

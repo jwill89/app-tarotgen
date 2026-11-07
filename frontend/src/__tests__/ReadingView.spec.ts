@@ -14,7 +14,7 @@ import { cardBackImageUrls, cardImageUrls } from '@/utils/cardImages'
 import { mountWithApp, cleanup, signIn, stubApi, testRouter, testUser } from './helpers/app'
 import type { Deck, LockedReading, Reading, ReadingInfo } from '@/types'
 
-// Drawing the export needs a 2D canvas, which happy-dom lacks; the export itself
+// Drawing the export needs a 2D canvas, which jsdom lacks; the export itself
 // is useReadingExport's to test. Here: what the page asks it to draw.
 const exportReading = vi.fn<(options: unknown) => Promise<void>>(async () => {})
 vi.mock('@/composables/useReadingExport', () => ({
@@ -111,7 +111,9 @@ const button = (name: string) => {
   const found = [...document.body.querySelectorAll<HTMLButtonElement>('button')].find(
     (b) => b.textContent.trim() === name || b.getAttribute('aria-label') === name,
   )
-  if (!found) throw new Error(`No "${name}" button`)
+  if (!found) {
+    throw new Error(`No "${name}" button`)
+  }
   return found
 }
 const hasButton = (name: string) =>
@@ -128,7 +130,9 @@ function words(el: Element): string {
   const parts: string[] = []
   while (walker.nextNode()) {
     const text = walker.currentNode.textContent?.trim()
-    if (text) parts.push(text)
+    if (text) {
+      parts.push(text)
+    }
   }
   return parts.join(' ')
 }
@@ -145,11 +149,28 @@ function exportOption(size: string): HTMLButtonElement {
   const found = [...document.body.querySelectorAll<HTMLButtonElement>('.export-option')].find(
     (b) => b.querySelector('strong')?.textContent === size,
   )
-  if (!found) throw new Error(`No "${size}" option`)
+  if (!found) {
+    throw new Error(`No "${size}" option`)
+  }
   return found
 }
 
 const cardButtons = (wrapper: VueWrapper) => wrapper.findAll('.spread-flip')
+const cardNames = (wrapper: VueWrapper) =>
+  cardButtons(wrapper).map((b) => b.attributes('aria-label'))
+
+/**
+ * Expects nothing a screen reader could read out of a face-down card's button to
+ * name it: not its own name, nor an image's alt or title, nor a description.
+ */
+function expectNothingNames(wrapper: VueWrapper, index: number, cardName: string): void {
+  const card = cardButtons(wrapper)[index]!
+  expect(card.attributes('aria-label')).toMatch(/^Face-down card \d/)
+  expect(card.attributes('aria-describedby')).toBeUndefined()
+  expect(card.findAll('[title]')).toHaveLength(0)
+  expect(card.findAll('img').map((i) => i.attributes('alt'))).toEqual(['', ''])
+  expect(card.html()).not.toContain(cardName)
+}
 const captions = (wrapper: VueWrapper) =>
   wrapper.findAll('.reading-grid-caption').map((c) => c.text())
 const detailRows = (wrapper: VueWrapper) =>
@@ -232,7 +253,9 @@ describe('ReadingView', () => {
       const pending = new Promise<{ body: Reading }>((resolve) => (answer = resolve))
       const api = stubApi({ 'GET /decks': { body: [rws] } })
       api.mockImplementation(async (input: string) => {
-        if (input.endsWith('/decks')) return Response.json([rws])
+        if (input.endsWith('/decks')) {
+          return Response.json([rws])
+        }
         return Response.json((await pending).body)
       })
       const { wrapper } = await openReading()
@@ -257,14 +280,49 @@ describe('ReadingView', () => {
       ])
     })
 
+    it('names each face-down card by its number alone, and by the card once it is turned', async () => {
+      loads(reading())
+      const { wrapper } = await openReading()
+
+      expect(cardNames(wrapper)).toEqual(['Face-down card 1', 'Face-down card 2'])
+      expectNothingNames(wrapper, 0, 'The Magician')
+      expectNothingNames(wrapper, 1, 'Card #79')
+
+      await cardButtons(wrapper)[1]!.trigger('click')
+
+      expect(cardNames(wrapper)).toEqual(['Face-down card 1', 'Card 2: Card #79, reversed'])
+      expect(wrapper.findAll('.spread-face--reveal img')[1]!.attributes('alt')).toBe('Card #79')
+      expectNothingNames(wrapper, 0, 'The Magician')
+    })
+
+    it("pages the lightbox past a revealed card to a face-down one's back, unnamed", async () => {
+      loads(reading())
+      const { wrapper } = await openReading()
+      const first = cardButtons(wrapper)[0]!
+
+      await first.trigger('click')
+      await first.trigger('click')
+      await flushPromises()
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))
+      await flushPromises()
+
+      expect(lightbox()?.querySelector('img')?.getAttribute('src')).toBe(
+        cardBackImageUrls(1).display,
+      )
+      expect(lightbox()?.querySelector('.lightbox-caption')?.textContent.trim()).toBe(
+        'Face-down card 2',
+      )
+      expect(lightbox()?.textContent).not.toContain('Card #79')
+    })
+
     it('reveals a card when it is clicked, naming unnamed cards by number', async () => {
       loads(reading())
       const { wrapper } = await openReading()
 
-      await cardButtons(wrapper)[1].trigger('click')
+      await cardButtons(wrapper)[1]!.trigger('click')
 
       expect(captions(wrapper)).toEqual(['Card 1', 'Card #79 (Reversed)'])
-      expect(wrapper.findAll('.spread-face--reveal img')[1].attributes('src')).toBe(
+      expect(wrapper.findAll('.spread-face--reveal img')[1]!.attributes('src')).toBe(
         cardImageUrls(1, 79).thumb,
       )
     })
@@ -273,9 +331,9 @@ describe('ReadingView', () => {
       loads(reading())
       const { wrapper } = await openReading()
 
-      expect(cardButtons(wrapper)[0].attributes('tabindex')).toBe('0')
-      await cardButtons(wrapper)[0].trigger('keydown', { key: 'Enter' })
-      await cardButtons(wrapper)[1].trigger('keydown', { key: ' ' })
+      expect(cardButtons(wrapper)[0]!.attributes('tabindex')).toBe('0')
+      await cardButtons(wrapper)[0]!.trigger('keydown', { key: 'Enter' })
+      await cardButtons(wrapper)[1]!.trigger('keydown', { key: ' ' })
 
       expect(captions(wrapper)).toEqual(['The Magician', 'Card #79 (Reversed)'])
     })
@@ -283,7 +341,7 @@ describe('ReadingView', () => {
     it('enlarges a revealed card in the lightbox, which Escape closes back to the card', async () => {
       loads(reading())
       const { wrapper } = await openReading()
-      const card = cardButtons(wrapper)[0]
+      const card = cardButtons(wrapper)[0]!
 
       await card.trigger('click')
       expect(lightbox()).toBeUndefined()
@@ -337,9 +395,30 @@ describe('ReadingView', () => {
       ])
     })
 
+    it('names each face-down card by its number and position alone until it is turned', async () => {
+      loads(reading({ reading_info: spreadInfo }))
+      const { wrapper } = await openReading()
+
+      expect(cardNames(wrapper)).toEqual([
+        'Face-down card 1, Past',
+        'Face-down card 2, Present',
+        'Face-down card 3, Future',
+      ])
+      expectNothingNames(wrapper, 0, 'The Star')
+      expectNothingNames(wrapper, 1, 'The Moon')
+      expectNothingNames(wrapper, 2, 'The Sun')
+
+      await cardButtons(wrapper)[1]!.trigger('click')
+
+      expect(cardNames(wrapper)[1]).toBe('Card 2, Present: The Moon, reversed')
+      expectNothingNames(wrapper, 2, 'The Sun')
+    })
+
     it('says under each position what it asks, where the spread says, on screen and on paper', async () => {
       const spread = spreadInfo.spread
-      if (!spread) throw new Error('spreadInfo has a spread')
+      if (!spread) {
+        throw new Error('spreadInfo has a spread')
+      }
       const described: ReadingInfo = {
         ...spreadInfo,
         spread: {
@@ -359,14 +438,14 @@ describe('ReadingView', () => {
       expect(
         wrapper
           .findAll('.reading-print-cards tbody tr')
-          .map((row) => words(row.findAll('td')[1].element)),
+          .map((row) => words(row.findAll('td')[1]!.element)),
       ).toEqual(['Past — What led here', 'Present', 'Future'])
     })
 
     it('reveals a card clicked on the spread, then enlarges it', async () => {
       loads(reading({ reading_info: spreadInfo }))
       const { wrapper } = await openReading()
-      const present = wrapper.findAll('.spread-card .spread-flip')[1]
+      const present = wrapper.findAll('.spread-card .spread-flip')[1]!
 
       await present.trigger('click')
       expect(detailRows(wrapper)[1]).toBe('Present The Moon (Reversed)')
@@ -385,16 +464,16 @@ describe('ReadingView', () => {
         row: wrapper.findAll('.spread-detail-row').findIndex((r) => r.classes('is-active')),
       })
 
-      await wrapper.findAll('.spread-card')[2].trigger('mouseenter')
+      await wrapper.findAll('.spread-card')[2]!.trigger('mouseenter')
       expect(active()).toEqual({ card: 2, row: 2 })
 
-      await wrapper.findAll('.spread-card')[2].trigger('mouseleave')
+      await wrapper.findAll('.spread-card')[2]!.trigger('mouseleave')
       expect(active()).toEqual({ card: -1, row: -1 })
 
-      await wrapper.findAll('.spread-card .spread-flip')[0].trigger('focusin')
+      await wrapper.findAll('.spread-card .spread-flip')[0]!.trigger('focusin')
       expect(active()).toEqual({ card: 0, row: 0 })
 
-      await wrapper.findAll('.spread-detail-row')[1].trigger('mouseenter')
+      await wrapper.findAll('.spread-detail-row')[1]!.trigger('mouseenter')
       expect(active()).toEqual({ card: 1, row: 1 })
     })
 
@@ -402,7 +481,7 @@ describe('ReadingView', () => {
       loads(reading({ reading_info: spreadInfo }))
       const { wrapper } = await openReading()
 
-      await wrapper.findAll('.spread-detail-row')[1].trigger('click')
+      await wrapper.findAll('.spread-detail-row')[1]!.trigger('click')
 
       expect(detailRows(wrapper)[1]).toBe('Present The Moon (Reversed)')
     })
@@ -424,7 +503,7 @@ describe('ReadingView', () => {
       loads(reading({ reading_info: spreadInfo }))
       await openReading()
 
-      expect(useRecentReadings().recent.value[0].summary).toBe('Past, Present, Future')
+      expect(useRecentReadings().recent.value[0]!.summary).toBe('Past, Present, Future')
     })
 
     it('asks the owner to place newly drawn cards that have no position yet', async () => {
@@ -491,7 +570,9 @@ describe('ReadingView', () => {
     it('says when the connection failed', async () => {
       const api = loads(reading())
       api.mockImplementation(async (input: string) => {
-        if (input.endsWith('/decks')) return Response.json([rws])
+        if (input.endsWith('/decks')) {
+          return Response.json([rws])
+        }
         throw new TypeError('Failed to fetch')
       })
       await openReading()
@@ -540,7 +621,7 @@ describe('ReadingView', () => {
       const [, init] = api.mock.calls.at(-1) ?? []
       expect(JSON.parse(String(init?.body))).toEqual({ password: 'open sesame' })
       expect(meta(wrapper)['Reading ID']).toBe('abc123')
-      expect(useRecentReadings().recent.value[0].summary).toBe('My secret reading')
+      expect(useRecentReadings().recent.value[0]!.summary).toBe('My secret reading')
     })
 
     it("shows the server's message for a wrong password, and lets the user retry", async () => {
@@ -758,7 +839,9 @@ describe('ReadingView', () => {
       await click('Draw More Cards')
       const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]')
       const count = dialog?.querySelector<HTMLInputElement>('#reading-number-of-cards')
-      if (!count) throw new Error('No card count field')
+      if (!count) {
+        throw new Error('No card count field')
+      }
       count.value = '3'
       count.dispatchEvent(new Event('input'))
       count.dispatchEvent(new Event('change'))
@@ -891,7 +974,7 @@ describe('ReadingView', () => {
     })
     loads(reading(), { 'GET /readings/xyz789': { body: other } })
     const { wrapper, router } = await openReading()
-    await cardButtons(wrapper)[0].trigger('click')
+    await cardButtons(wrapper)[0]!.trigger('click')
 
     await router.push('/reading/xyz789')
     await flushPromises()
@@ -923,7 +1006,9 @@ describe('ReadingView', () => {
         (l) => l.textContent.trim() === label,
       )
       const control = found && document.getElementById(found.htmlFor)
-      if (!(control instanceof HTMLInputElement)) throw new Error(`No "${label}" field`)
+      if (!(control instanceof HTMLInputElement)) {
+        throw new Error(`No "${label}" field`)
+      }
       return control
     }
 

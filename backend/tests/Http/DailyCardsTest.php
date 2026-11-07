@@ -108,7 +108,7 @@ final class DailyCardsTest extends HttpTestCase
         $this->assertSame($this->userId, $rows[0]['user_id']);
         $named = new DateTimeImmutable($today)->format('j F Y');
         $this->assertSame("Daily card — {$named}", $rows[0]['reading_name']);
-        $info = json_decode((string)$rows[0]['reading_info'], true, 512, JSON_THROW_ON_ERROR);
+        $info = json_decode((string) $rows[0]['reading_info'], true, 512, JSON_THROW_ON_ERROR);
         $this->assertIsArray($info);
         $this->assertSame([$this->deckId, 'generated', 1], [$info['deck_id'], $info['origin'], count($info['draw'])]);
         $this->assertSame(
@@ -209,7 +209,7 @@ final class DailyCardsTest extends HttpTestCase
         $this->assertSame(0, $this->rowCount('readings'));
 
         // A deck id sent as a numeric string is still a deck id.
-        $this->assertJsonResponse(201, $this->draw(self::day(), ['deck_id' => (string)$this->deckId]));
+        $this->assertJsonResponse(201, $this->draw(self::day(), ['deck_id' => (string) $this->deckId]));
     }
 
     public function testTheMonthListsTheDaysDrawn(): void

@@ -102,7 +102,7 @@ final class AccountSessionsTest extends HttpTestCase
         $this->assertNotNull($cookie);
         $expires = $this->rows("SELECT expires FROM sessions WHERE id = '" . hash('sha256', $cookie) . "'");
         $this->assertCount(1, $expires);
-        $this->assertGreaterThan(time() + Session::REMEMBER_ME_LIFETIME - 60, (int)$expires[0]['expires']);
+        $this->assertGreaterThan(time() + Session::REMEMBER_ME_LIFETIME - 60, (int) $expires[0]['expires']);
     }
 
     public function testALinkedPluginsTokenCannotSignTheAccountOut(): void

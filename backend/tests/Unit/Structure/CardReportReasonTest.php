@@ -24,7 +24,7 @@ final class CardReportReasonTest extends TestCase
             self::markTestSkipped('The plugin source is not checked out.');
         }
 
-        $code = (string)file_get_contents($source);
+        $code = (string) file_get_contents($source);
         $this->assertSame(1, preg_match('/IReadOnlyList<CardReportReason> All =\s*\[(.*?)\];/s', $code, $list));
         preg_match_all('/new\("([a-z_]+)"/', $list[1], $keys);
 

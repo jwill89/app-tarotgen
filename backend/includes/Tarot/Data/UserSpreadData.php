@@ -48,13 +48,13 @@ class UserSpreadData extends AbstractData
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             ':user_id'     => $userId,
-            ':name'        => mb_substr(trim((string)($data['name'] ?? '')), 0, 200),
-            ':description' => (string)($data['description'] ?? ''),
+            ':name'        => mb_substr(trim((string) ($data['name'] ?? '')), 0, 200),
+            ':description' => (string) ($data['description'] ?? ''),
             ':card_count'  => count($positions),
             ':positions'   => json_encode($positions, JSON_THROW_ON_ERROR),
         ]);
 
-        $id = (int)$this->db->lastInsertId();
+        $id = (int) $this->db->lastInsertId();
         $result = $this->retrieve($userId, $id);
         return $result[0] ?? null;
     }
@@ -72,12 +72,12 @@ class UserSpreadData extends AbstractData
 
         if (array_key_exists('name', $data)) {
             $fields[] = 'name = :name';
-            $params[':name'] = mb_substr(trim((string)$data['name']), 0, 200);
+            $params[':name'] = mb_substr(trim((string) $data['name']), 0, 200);
         }
 
         if (array_key_exists('description', $data)) {
             $fields[] = 'description = :description';
-            $params[':description'] = (string)$data['description'];
+            $params[':description'] = (string) $data['description'];
         }
 
         if (array_key_exists('positions', $data)) {

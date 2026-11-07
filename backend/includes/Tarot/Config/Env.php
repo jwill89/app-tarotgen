@@ -68,7 +68,7 @@ final class Env
             return $default;
         }
 
-        return (string)$value;
+        return (string) $value;
     }
 
     /**

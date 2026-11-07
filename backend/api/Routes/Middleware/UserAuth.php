@@ -15,9 +15,7 @@ use Tarot\Utility\Session;
  */
 readonly class UserAuth
 {
-    public function __construct(private UserRepository $users)
-    {
-    }
+    public function __construct(private UserRepository $users) {}
 
     public function __invoke(Request $request, Handler $handler): ResponseInterface
     {

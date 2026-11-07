@@ -35,7 +35,9 @@ function spreadsIn(category: SpreadCategory): string {
 
 async function add(): Promise<void> {
   const name = newName.value.trim()
-  if (!name || adding.value) return
+  if (!name || adding.value) {
+    return
+  }
   adding.value = true
   const created = await api.post<SpreadCategory>(
     endpoints.admin.spreadCategories.list,
@@ -82,14 +84,22 @@ async function saveRename(category: SpreadCategory): Promise<void> {
 async function move(index: number, by: -1 | 1): Promise<void> {
   const ids = props.categories.map((c) => c.category_id)
   const target = index + by
-  if (target < 0 || target >= ids.length) return
-  ;[ids[index], ids[target]] = [ids[target], ids[index]]
+  const here = ids[index]
+  const there = ids[target]
+  // Off either end of the list: nothing to swap with.
+  if (here === undefined || there === undefined) {
+    return
+  }
+  ids[index] = there
+  ids[target] = here
   busy.value = true
   const reordered = await api.put<SpreadCategory[]>(endpoints.admin.spreadCategories.order, {
     category_ids: ids,
   })
   busy.value = false
-  if (reordered) emit('changed')
+  if (reordered) {
+    emit('changed')
+  }
 }
 
 async function remove(category: SpreadCategory): Promise<void> {
@@ -99,14 +109,18 @@ async function remove(category: SpreadCategory): Promise<void> {
     confirmLabel: 'Remove',
     danger: true,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
   busy.value = true
   const removed = await api.del(
     endpoints.admin.spreadCategories.byId(category.category_id),
     'Category removed.',
   )
   busy.value = false
-  if (removed) emit('changed')
+  if (removed) {
+    emit('changed')
+  }
 }
 </script>
 
@@ -214,6 +228,7 @@ async function remove(category: SpreadCategory): Promise<void> {
   list-style: none;
   margin: 0 0 1.25rem;
 }
+
 .category-row {
   display: flex;
   align-items: center;
@@ -222,30 +237,36 @@ async function remove(category: SpreadCategory): Promise<void> {
   padding: 0.35rem 0;
   border-bottom: 1px solid var(--myst-border);
 }
+
 .category-row__order {
   width: 1.5rem;
   text-align: right;
   font-size: 0.8rem;
   color: var(--myst-text-dim);
 }
+
 .category-row__name {
   flex: 1 1 auto;
   color: var(--myst-text);
 }
+
 .category-row__count {
   font-size: 0.8rem;
   color: var(--myst-text-muted);
   white-space: nowrap;
 }
+
 .category-row__rename {
   flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
+
 .category-row__rename .input {
   max-width: 20rem;
 }
+
 .category-add .field {
   max-width: 28rem;
 }

@@ -14,13 +14,6 @@ import BaseSelect from '@/components/BaseSelect.vue'
 import SpreadCanvasEditor from '@/components/SpreadCanvasEditor.vue'
 import type { SpreadSlotBase } from '@/components/spreadCanvas'
 
-/** A position's description is capped at this (the API's NormalizesPositions). */
-const POSITION_DESCRIPTION_MAX = 280
-
-interface EditorSlot extends SpreadSlotBase {
-  description: string
-}
-
 const props = withDefaults(
   defineProps<{
     spread: SpreadDraft | null
@@ -33,7 +26,7 @@ const props = withDefaults(
     categories: undefined,
   },
 )
-const uid = useId()
+
 const emit = defineEmits<{
   save: [
     payload: {
@@ -47,6 +40,14 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
+/** A position's description is capped at this (the API's NormalizesPositions). */
+const POSITION_DESCRIPTION_MAX = 280
+
+interface EditorSlot extends SpreadSlotBase {
+  description: string
+}
+
+const uid = useId()
 const name = ref('')
 const description = ref('')
 const categoryId = ref<number | null>(null)
@@ -104,7 +105,10 @@ watch(() => props.spread, init, { immediate: true })
 watch(
   () => props.categories,
   (list) => {
-    if (categoryId.value === null && list && list.length > 0) categoryId.value = list[0].category_id
+    const first = list?.[0]
+    if (categoryId.value === null && first) {
+      categoryId.value = first.category_id
+    }
   },
 )
 
@@ -207,7 +211,11 @@ defineExpose({
     <div class="field">
       <label :for="uid + '-description'" class="label">
         <span :id="uid + '-description-caption'">Description (Markdown)</span>
-        <button class="button is-small is-text ml-2" @click="showPreview = !showPreview">
+        <button
+          type="button"
+          class="button is-small is-text ml-2"
+          @click="showPreview = !showPreview"
+        >
           {{ showPreview ? 'Edit' : 'Preview' }}
         </button>
       </label>
@@ -273,7 +281,7 @@ defineExpose({
             </div>
           </template>
           <template #footer>
-            <button class="button is-primary" @click="close">Done</button>
+            <button type="button" class="button is-primary" @click="close">Done</button>
           </template>
         </BaseModal>
       </template>
@@ -283,13 +291,18 @@ defineExpose({
 
     <div class="field is-grouped mt-4">
       <div class="control">
-        <button class="button is-success" :class="{ 'is-loading': saving }" @click="onSave">
+        <button
+          type="button"
+          class="button is-success"
+          :class="{ 'is-loading': saving }"
+          @click="onSave"
+        >
           <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['floppy-disk']" /></span>
           <span>{{ props.saveLabel }}</span>
         </button>
       </div>
       <div class="control">
-        <button class="button" @click="emit('cancel')">Cancel</button>
+        <button type="button" class="button" @click="emit('cancel')">Cancel</button>
       </div>
     </div>
   </div>
@@ -304,8 +317,8 @@ defineExpose({
   font-size: 0.62rem;
   line-height: 1.1;
   text-align: center;
-  color: white;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  color: rgb(255 255 255);
+  text-shadow: 0 1px 3px rgb(0 0 0 / 80%);
   overflow: hidden;
   max-height: 2.4em;
 }

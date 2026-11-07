@@ -41,7 +41,7 @@ final class OriginGuard
         // → not a browser CSRF vector (SameSite=Lax covers browsers); allow.
         if ($sourceHost !== null && !$this->isAllowedHost($sourceHost, $request)) {
             $response = new Response();
-            $response->getBody()->write((string)json_encode(['error' => 'Cross-origin request blocked.']));
+            $response->getBody()->write((string) json_encode(['error' => 'Cross-origin request blocked.']));
             return $response->withStatus(403)->withHeader('Content-Type', 'application/json');
         }
 

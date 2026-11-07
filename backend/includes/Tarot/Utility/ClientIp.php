@@ -73,7 +73,7 @@ final class ClientIp
     public static function resolve(ServerRequestInterface $request): string
     {
         $server = $request->getServerParams();
-        $remote = (string)($server['REMOTE_ADDR'] ?? '');
+        $remote = (string) ($server['REMOTE_ADDR'] ?? '');
 
         if ($remote !== '' && self::isCloudflare($remote)) {
             $forwarded = trim($request->getHeaderLine('CF-Connecting-IP'));
@@ -100,7 +100,7 @@ final class ClientIp
         if (!isset($parts[1])) {
             return $ip === $subnet;
         }
-        $maskBits = (int)$parts[1];
+        $maskBits = (int) $parts[1];
 
         $ipBin     = @inet_pton($ip);
         $subnetBin = @inet_pton($subnet);

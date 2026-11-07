@@ -24,7 +24,7 @@ final class SpecialCardDataTest extends TestCase
     {
         $db = new PDO('sqlite::memory:');
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $db->exec((string)file_get_contents(dirname(__DIR__, 3) . '/db/schema.sql'));
+        $db->exec((string) file_get_contents(dirname(__DIR__, 3) . '/db/schema.sql'));
         $db->exec('PRAGMA foreign_keys = ON');
         $db->exec("INSERT INTO decks (deck_id, name) VALUES (1, 'Thoth'), (2, 'Marseille')");
 

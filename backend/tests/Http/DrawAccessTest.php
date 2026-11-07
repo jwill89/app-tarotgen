@@ -126,10 +126,10 @@ final class DrawAccessTest extends HttpTestCase
         $this->configureTurnstile();
 
         // The site's New Draw form posts form-encoded fields, not JSON.
-        $refused = $this->postForm('/readings/generate', ['deck_id' => (string)$this->deckId]);
+        $refused = $this->postForm('/readings/generate', ['deck_id' => (string) $this->deckId]);
         $this->assertSame(['error' => self::CAPTCHA_FAILED], $this->assertJsonResponse(400, $refused));
 
-        $this->assertJsonResponse(201, $this->postForm('/readings/generate', ['deck_id' => (string)$this->deckId, 'turnstile_token' => self::PASSED]));
+        $this->assertJsonResponse(201, $this->postForm('/readings/generate', ['deck_id' => (string) $this->deckId, 'turnstile_token' => self::PASSED]));
     }
 
     /**
@@ -350,9 +350,7 @@ final class DrawAccessTest extends HttpTestCase
         $this->setEnv('CLOUDFLARE_TURNSTILE_SECRET', '1x0000000000000000000000000000000AA');
         $this->replaceService(TurnstileService::class, new class ($this->verified) extends TurnstileService {
             /** @param ArrayObject<int,array<string,string>> $verified */
-            public function __construct(private readonly ArrayObject $verified)
-            {
-            }
+            public function __construct(private readonly ArrayObject $verified) {}
 
             #[\Override]
             protected function postSiteVerify(array $payload): array

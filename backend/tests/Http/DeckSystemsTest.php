@@ -207,7 +207,7 @@ final class DeckSystemsTest extends HttpTestCase
         $this->useSessionCookie(null);
         $response = $this->get($path);
 
-        return [$response->getStatusCode(), (string)$response->getBody(), $response->getHeaderLine('Cache-Control'), $this->sessionCookie() !== null];
+        return [$response->getStatusCode(), (string) $response->getBody(), $response->getHeaderLine('Cache-Control'), $this->sessionCookie() !== null];
     }
 
     /** @return array{name:string,short_name:string,total_cards:int,cards:list<array{name:string}>} */

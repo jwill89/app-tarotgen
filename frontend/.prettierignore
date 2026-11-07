@@ -3,7 +3,6 @@ coverage
 test-results
 playwright-report
 node_modules
-eslint-config
 public
 src/types/api.generated.ts
 # Rules copied verbatim out of bulma.min.css — keep them byte-identical to the

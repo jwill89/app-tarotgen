@@ -49,7 +49,7 @@ final class PluginAuthFlowTest extends HttpTestCase
         $this->assertDocumented('post', '/plugin/authorize', 200, $approved);
         $this->assertIsString($approved['redirect_uri']);
         $this->assertStringStartsWith(self::REDIRECT . '?code=', $approved['redirect_uri']);
-        parse_str((string)parse_url($approved['redirect_uri'], PHP_URL_QUERY), $query);
+        parse_str((string) parse_url($approved['redirect_uri'], PHP_URL_QUERY), $query);
         $this->assertSame('xyz', $query['state']);
         $code = $query['code'];
         $this->assertIsString($code);
@@ -317,7 +317,7 @@ final class PluginAuthFlowTest extends HttpTestCase
         $this->useSessionCookie(null);
 
         $this->assertIsString($approved['redirect_uri']);
-        parse_str((string)parse_url($approved['redirect_uri'], PHP_URL_QUERY), $query);
+        parse_str((string) parse_url($approved['redirect_uri'], PHP_URL_QUERY), $query);
         $this->assertIsString($query['code']);
         return $query['code'];
     }
@@ -334,6 +334,6 @@ final class PluginAuthFlowTest extends HttpTestCase
     {
         $stmt = $this->db->prepare('SELECT id FROM plugin_tokens WHERE token_hash = ?');
         $stmt->execute([hash('sha256', $token)]);
-        return (int)$stmt->fetchColumn();
+        return (int) $stmt->fetchColumn();
     }
 }

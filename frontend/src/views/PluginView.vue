@@ -12,7 +12,7 @@ const { success: toastSuccess, error: toastError } = useToasts()
 // Things the plugin can do in-game, mirroring the plugin's in-scope feature set.
 const features = [
   {
-    icon: byPrefixAndName.fas['cards'],
+    icon: byPrefixAndName.fas.cards,
     title: 'Draw a reading',
     body: 'Pick a public spread or do a free draw (with reversals) without leaving the game.',
   },
@@ -22,7 +22,7 @@ const features = [
     body: 'Open any reading — including password-protected ones — straight from its code.',
   },
   {
-    icon: byPrefixAndName.fas['link'],
+    icon: byPrefixAndName.fas.link,
     title: 'Link your account',
     body: 'Optional: lock readings, sort pickers by your favorites, and track your history.',
   },
@@ -134,8 +134,10 @@ async function copyRepoUrl(): Promise<void> {
                   <h3 class="aside-title">In-game commands</h3>
                   <dl class="cmd-list">
                     <div v-for="c in commands" :key="c.cmd" class="cmd">
-                      <code>{{ c.cmd }}</code>
-                      <span>{{ c.label }}</span>
+                      <dt>
+                        <code>{{ c.cmd }}</code>
+                      </dt>
+                      <dd>{{ c.label }}</dd>
                     </div>
                   </dl>
                 </aside>
@@ -335,8 +337,11 @@ async function copyRepoUrl(): Promise<void> {
   margin-bottom: 0;
 }
 
-.cmd code {
+.cmd dt {
   align-self: flex-start;
+}
+
+.cmd code {
   padding: 0.2rem 0.55rem;
   background: var(--myst-bg-2);
   border: 1px solid var(--myst-border-strong);
@@ -345,7 +350,8 @@ async function copyRepoUrl(): Promise<void> {
   font-size: 0.85rem;
 }
 
-.cmd span {
+.cmd dd {
+  margin: 0;
   color: var(--myst-text-muted);
   font-size: 0.85rem;
 }
@@ -405,7 +411,7 @@ async function copyRepoUrl(): Promise<void> {
 }
 
 /* Desktop/tablet: the reference column gets a hairline divider from the steps. */
-@media screen and (min-width: 769px) {
+@media screen and (width >= 769px) {
   .aside {
     border-left: 1px solid var(--myst-hair-gold);
     padding-left: 1.9rem;
@@ -413,7 +419,7 @@ async function copyRepoUrl(): Promise<void> {
   }
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (width <= 768px) {
   .feature-grid {
     grid-template-columns: 1fr;
   }

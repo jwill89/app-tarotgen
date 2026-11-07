@@ -18,7 +18,7 @@ public static class ReadingFormat
         if (info?.Spread != null && !string.IsNullOrWhiteSpace(info.Spread.Name))
             return info.Spread.Name;
 
-        int count = info?.Draw.Count ?? 0;
+        var count = info?.Draw.Count ?? 0;
         return $"Free Draw ({count} card{(count == 1 ? string.Empty : "s")})";
     }
 }

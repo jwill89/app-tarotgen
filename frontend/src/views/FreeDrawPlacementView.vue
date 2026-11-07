@@ -58,8 +58,8 @@ const spreadName = ref('')
 const spreadDescription = ref('')
 const spreadSaveMode = ref<'public' | 'personal'>('personal')
 const spreadSaveModeOptions = [
-  { value: 'personal', label: 'Personal', icon: byPrefixAndName.fas['lock'] },
-  { value: 'public', label: 'Public', icon: byPrefixAndName.fas['globe'] },
+  { value: 'personal', label: 'Personal', icon: byPrefixAndName.fas.lock },
+  { value: 'public', label: 'Public', icon: byPrefixAndName.fas.globe },
 ]
 const spreadSaving = ref(false)
 
@@ -131,7 +131,9 @@ watch(
 const allPlaced = computed(() => slots.value.length > 0 && slots.value.every((s) => s.placed))
 
 function cardThumb(cardId: number): string {
-  if (!deck.value) return ''
+  if (!deck.value) {
+    return ''
+  }
   return cardImageUrls(deck.value.deck_id, cardId).thumb
 }
 
@@ -283,7 +285,7 @@ function skipSaveSpread() {
                     </div>
                   </template>
                   <template #footer>
-                    <button class="button is-primary" @click="close">Done</button>
+                    <button type="button" class="button is-primary" @click="close">Done</button>
                   </template>
                 </BaseModal>
               </template>
@@ -293,6 +295,7 @@ function skipSaveSpread() {
             <div class="field mt-4">
               <div class="buttons">
                 <button
+                  type="button"
                   class="button is-primary"
                   :class="{ 'is-loading': saving }"
                   :disabled="!allPlaced || saving"
@@ -302,6 +305,7 @@ function skipSaveSpread() {
                   <span>Finalize Placement</span>
                 </button>
                 <button
+                  type="button"
                   class="button"
                   @click="router.push({ name: 'reading', params: { id: readingId } })"
                 >
@@ -371,8 +375,9 @@ function skipSaveSpread() {
     </div>
 
     <template #footer>
-      <button class="button" @click="skipSaveSpread">Skip</button>
+      <button type="button" class="button" @click="skipSaveSpread">Skip</button>
       <button
+        type="button"
         class="button is-primary"
         :class="{ 'is-loading': spreadSaving }"
         :disabled="spreadSaving || !spreadName.trim()"

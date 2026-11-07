@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-using System.Net.Http;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -66,7 +63,7 @@ public sealed class Plugin : IDalamudPlugin
 
         this.windowSystem.AddWindow(this.mainWindow);
 
-        this.commandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
+        this.commandManager.AddHandler(CommandName, new CommandInfo(this.OnCommand)
         {
             HelpMessage = "Open TarotGen. Also: /tarot <code|url> opens that reading.",
         });

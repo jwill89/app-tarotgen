@@ -36,8 +36,7 @@ class CardReportController extends AbstractController
     public function __construct(
         private readonly CardReportRepository $reports,
         private readonly DeckRepository $decks,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Post(
         path: '/card-reports',
@@ -94,8 +93,8 @@ class CardReportController extends AbstractController
         }
 
         $body      = $this->parsedBody($request);
-        $deckId    = (int)($body['deck_id'] ?? 0);
-        $cardId    = (int)($body['card_id'] ?? -1);
+        $deckId    = (int) ($body['deck_id'] ?? 0);
+        $cardId    = (int) ($body['card_id'] ?? -1);
         $cardName  = Input::string($body['card_name'] ?? null, 120);
         $reasonKey = Input::string($body['reason'] ?? null, 32);
         $reason    = CardReportReason::tryFrom($reasonKey);

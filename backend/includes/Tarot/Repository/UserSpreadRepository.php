@@ -7,9 +7,7 @@ use Tarot\Structure\UserSpread;
 
 readonly class UserSpreadRepository
 {
-    public function __construct(private UserSpreadData $data)
-    {
-    }
+    public function __construct(private UserSpreadData $data) {}
 
     /**
      * List all of a user's personal spreads.

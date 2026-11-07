@@ -25,8 +25,7 @@ class AdminDeckController extends AbstractController
         private readonly DeckRepository $decks,
         private readonly SpecialCardRepository $specialCards,
         private readonly CardImageService $cardImages,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Get(
         path: '/admin/decks',
@@ -96,7 +95,7 @@ class AdminDeckController extends AbstractController
     {
         $params = $this->parsedBody($request);
 
-        if (trim((string)($params['name'] ?? '')) === '') {
+        if (trim((string) ($params['name'] ?? '')) === '') {
             return $response->withJson(['error' => 'Name is required'], 400);
         }
 
@@ -135,7 +134,7 @@ class AdminDeckController extends AbstractController
     )]
     public function approveDeck(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $deck_id = (int)($args['deck_id'] ?? 0);
+        $deck_id = (int) ($args['deck_id'] ?? 0);
 
         $deck = $this->decks->update($deck_id, ['approved' => true]);
 
@@ -180,7 +179,7 @@ class AdminDeckController extends AbstractController
         @set_time_limit(0);
         ignore_user_abort(true);
 
-        $deck_id = (int)($args['deck_id'] ?? 0);
+        $deck_id = (int) ($args['deck_id'] ?? 0);
         if ($deck_id < 1) {
             return $response->withJson(['error' => 'Invalid deck ID'], 400);
         }
@@ -254,11 +253,11 @@ class AdminDeckController extends AbstractController
     )]
     public function updateDeck(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $deck_id = (int)($args['deck_id'] ?? 0);
+        $deck_id = (int) ($args['deck_id'] ?? 0);
         $params = $this->parsedBody($request);
 
         // A rename may not blank the name, any more than a create may leave it out.
-        if (array_key_exists('name', $params) && trim((string)$params['name']) === '') {
+        if (array_key_exists('name', $params) && trim((string) $params['name']) === '') {
             return $response->withJson(['error' => 'Name is required'], 400);
         }
 
@@ -275,7 +274,7 @@ class AdminDeckController extends AbstractController
         // Enabling a deck creates its on-disk image folders. This was previously
         // the dedicated POST …/usable action; it is now a PATCH field carrying the
         // same side effect.
-        if (array_key_exists('usable', $params) && (bool)$params['usable']) {
+        if (array_key_exists('usable', $params) && (bool) $params['usable']) {
             $this->cardImages->ensureDeckFolders($deck->deck_id);
         }
 
@@ -300,7 +299,7 @@ class AdminDeckController extends AbstractController
     )]
     public function deleteDeck(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $deck_id = (int)($args['deck_id'] ?? 0);
+        $deck_id = (int) ($args['deck_id'] ?? 0);
 
         $result = $this->decks->delete($deck_id);
 
@@ -334,7 +333,7 @@ class AdminDeckController extends AbstractController
     )]
     public function getSpecialCards(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $deck_id = (int)($args['deck_id'] ?? 0);
+        $deck_id = (int) ($args['deck_id'] ?? 0);
 
         return $response->withJson($this->specialCards->getAll($deck_id));
     }
@@ -372,7 +371,7 @@ class AdminDeckController extends AbstractController
     )]
     public function createSpecialCard(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $deck_id = (int)($args['deck_id'] ?? 0);
+        $deck_id = (int) ($args['deck_id'] ?? 0);
         if (!($this->decks->get($deck_id) instanceof Deck)) {
             return $response->withJson(['error' => 'Deck not found'], 404);
         }
@@ -421,8 +420,8 @@ class AdminDeckController extends AbstractController
     )]
     public function updateSpecialCard(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $deck_id = (int)($args['deck_id'] ?? 0);
-        $card_id = (int)($args['card_id'] ?? 0);
+        $deck_id = (int) ($args['deck_id'] ?? 0);
+        $card_id = (int) ($args['card_id'] ?? 0);
         $params = $this->parsedBody($request);
 
         $card = $this->specialCards->update($deck_id, $card_id, $params);
@@ -453,8 +452,8 @@ class AdminDeckController extends AbstractController
     )]
     public function deleteSpecialCard(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $deck_id = (int)($args['deck_id'] ?? 0);
-        $card_id = (int)($args['card_id'] ?? 0);
+        $deck_id = (int) ($args['deck_id'] ?? 0);
+        $card_id = (int) ($args['card_id'] ?? 0);
 
         $result = $this->specialCards->delete($deck_id, $card_id);
 

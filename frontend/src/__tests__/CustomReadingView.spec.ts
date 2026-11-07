@@ -106,7 +106,9 @@ const buttonIn = (root: ParentNode, name: string) => {
       b.getAttribute('aria-label') === name ||
       b.getAttribute('title') === name,
   )
-  if (!found) throw new Error(`No "${name}" button`)
+  if (!found) {
+    throw new Error(`No "${name}" button`)
+  }
   return found
 }
 async function click(name: string, root: ParentNode = body()): Promise<void> {
@@ -126,7 +128,9 @@ async function choose(triggerId: string, label: string): Promise<void> {
   const option = [...body().querySelectorAll<HTMLElement>('[role="option"]')].find(
     (o) => o.textContent.trim() === label,
   )
-  if (!option) throw new Error(`No "${label}" option`)
+  if (!option) {
+    throw new Error(`No "${label}" option`)
+  }
   option.focus()
   option.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
   await flushPromises()
@@ -315,7 +319,7 @@ describe('CustomReadingView', () => {
       visibility: 'private',
     })
     expect(sentPayload(api)).not.toHaveProperty('password')
-    expect(useRecentReadings().recent.value[0].summary).toBe('1 card')
+    expect(useRecentReadings().recent.value[0]!.summary).toBe('1 card')
   })
 
   it("shows the server's error and stays on the form", async () => {
@@ -385,7 +389,9 @@ describe('CustomReadingView', () => {
         .mockReset()
         .mockImplementation((_el: HTMLElement, opts: Record<string, unknown>) => {
           const callback = opts.callback
-          if (typeof callback === 'function') solve = (token) => callback(token)
+          if (typeof callback === 'function') {
+            solve = (token) => callback(token)
+          }
           return 'widget-1'
         })
       turnstile.reset.mockReset()

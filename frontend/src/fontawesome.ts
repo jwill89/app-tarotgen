@@ -20,7 +20,7 @@
  * self-hosted — no CDN requests, no pageview/impression metering.
  */
 import { config } from '@fortawesome/fontawesome-svg-core'
-import type { IconDefinition, IconPrefix } from '@fortawesome/fontawesome-svg-core'
+import type { IconDefinition, IconName, IconPrefix } from '@fortawesome/fontawesome-svg-core'
 // We import the core CSS ourselves so it's part of the bundle (sizing, spin
 // keyframes, fa-layers, etc.). config.autoAddCss=false stops the runtime inject.
 import '@fortawesome/fontawesome-svg-core/styles.css'
@@ -170,14 +170,19 @@ config.autoAddCss = false
  * Index the imported icon definitions into `{ [prefix]: { [iconName]: def } }`.
  * Each IconDefinition already carries its own `prefix` and `iconName`, so we
  * don't have to hand-maintain the kebab-case names.
+ *
+ * Keyed by Font Awesome's own name union, not any string: a name that is no icon
+ * at all fails to type-check, and a lookup reads as an icon rather than as an
+ * index that may find nothing. One that is an icon but isn't registered here is
+ * still undefined at runtime (the trade-off above).
  */
-function index(defs: IconDefinition[]): Record<IconPrefix, Record<string, IconDefinition>> {
+function index(defs: IconDefinition[]): Record<IconPrefix, Record<IconName, IconDefinition>> {
   // Built up incrementally, so buckets are genuinely absent until first seen.
-  const map: Partial<Record<IconPrefix, Record<string, IconDefinition>>> = {}
+  const map: Partial<Record<IconPrefix, Partial<Record<IconName, IconDefinition>>>> = {}
   for (const def of defs) {
     ;(map[def.prefix] ??= {})[def.iconName] = def
   }
-  return map as Record<IconPrefix, Record<string, IconDefinition>>
+  return map as Record<IconPrefix, Record<IconName, IconDefinition>>
 }
 
 export const byPrefixAndName = index([

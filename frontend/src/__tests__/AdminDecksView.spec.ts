@@ -74,7 +74,9 @@ function approvedTable(): Element {
     (h) => h.textContent.trim() === 'Approved Decks',
   )
   const panel = heading?.parentElement?.querySelector(':scope > .settings-panel')
-  if (!panel) throw new Error('No approved-decks table')
+  if (!panel) {
+    throw new Error('No approved-decks table')
+  }
   return panel
 }
 

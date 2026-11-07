@@ -27,7 +27,9 @@ const codeDialog = () =>
 async function submitCode(code: string): Promise<void> {
   const dialog = codeDialog()
   const input = dialog?.querySelector<HTMLInputElement>('input[aria-label="Reading Code"]')
-  if (!input) throw new Error('No reading code box')
+  if (!input) {
+    throw new Error('No reading code box')
+  }
   input.value = code
   input.dispatchEvent(new Event('input'))
   dialog?.querySelector('form')?.dispatchEvent(new Event('submit'))

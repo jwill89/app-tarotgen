@@ -15,7 +15,9 @@ async function lists() {
     },
   })
   await mountWithApp(Page, { path: '/admin/deck-systems' })
-  if (!held) throw new Error('Not mounted')
+  if (!held) {
+    throw new Error('Not mounted')
+  }
   return held
 }
 

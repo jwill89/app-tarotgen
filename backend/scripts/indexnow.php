@@ -65,7 +65,7 @@ function sitemapUrls(string $path): array
 
     $urls = [];
     foreach ($xml->url as $entry) {
-        $loc = trim((string)$entry->loc);
+        $loc = trim((string) $entry->loc);
         if ($loc !== '') {
             $urls[] = $loc;
         }

@@ -51,7 +51,9 @@ async function approvePending(p: PendingSpread, categoryId: number | null = null
   )
   busyPendingId.value = null
   if (result) {
-    if (previewing.value?.pending_id === p.pending_id) previewing.value = null
+    if (previewing.value?.pending_id === p.pending_id) {
+      previewing.value = null
+    }
     await loadPending()
   }
 }
@@ -68,15 +70,21 @@ async function rejectPending(p: PendingSpread) {
     confirmLabel: 'Reject',
     danger: true,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
   busyPendingId.value = p.pending_id
   const result = await api.del(
     endpoints.admin.pendingSpreads.byId(p.pending_id),
     'Submission rejected.',
   )
   busyPendingId.value = null
-  if (!result) return
-  if (previewing.value?.pending_id === p.pending_id) previewing.value = null
+  if (!result) {
+    return
+  }
+  if (previewing.value?.pending_id === p.pending_id) {
+    previewing.value = null
+  }
   await loadPending()
 }
 
@@ -122,9 +130,7 @@ onMounted(() => {
                     />
                     <IconButton
                       :icon="byPrefixAndName.fas['check']"
-                      :label="
-                        categories.length > 0 ? `Approve into ${categories[0].name}` : 'Approve'
-                      "
+                      :label="categories[0] ? `Approve into ${categories[0].name}` : 'Approve'"
                       intent="success"
                       :loading="busyPendingId === p.pending_id"
                       @click="approvePending(p)"
@@ -166,7 +172,7 @@ onMounted(() => {
         </ol>
       </div>
 
-      <div v-if="previewing.description" class="content mt-4" style="white-space: pre-wrap">
+      <div v-if="previewing.description" class="content mt-4 submission-description">
         {{ previewing.description }}
       </div>
 
@@ -183,6 +189,7 @@ onMounted(() => {
 
     <template v-if="previewing" #footer>
       <button
+        type="button"
         class="button is-success"
         :class="{ 'is-loading': busyPendingId === previewing.pending_id }"
         @click="approvePending(previewing, approveCategoryId)"
@@ -190,16 +197,20 @@ onMounted(() => {
         <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['check']" /></span>
         <span>Approve</span>
       </button>
-      <button class="button is-danger" @click="rejectPending(previewing)">
+      <button type="button" class="button is-danger" @click="rejectPending(previewing)">
         <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" /></span>
         <span>Reject</span>
       </button>
-      <button class="button" @click="previewing = null">Close</button>
+      <button type="button" class="button" @click="previewing = null">Close</button>
     </template>
   </BaseModal>
 </template>
 
 <style scoped>
+.submission-description {
+  white-space: pre-wrap;
+}
+
 .pending-position-list {
   list-style: decimal;
   margin-left: 1.5rem;

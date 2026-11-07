@@ -39,7 +39,9 @@ export function useDailyCards() {
       sendJson('POST', { day, deck_id: deckId, use_reversals: useReversals }),
       "Couldn't draw your card.",
     )
-    if (res.ok) return { ok: true, card: res.data }
+    if (res.ok) {
+      return { ok: true, card: res.data }
+    }
 
     const taken = res.status === 409
     const existing = taken ? (res.data as { reading_id?: unknown } | null) : null

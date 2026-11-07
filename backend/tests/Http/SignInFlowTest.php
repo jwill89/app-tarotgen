@@ -41,7 +41,7 @@ final class SignInFlowTest extends HttpTestCase
             $this->assertJsonResponse(403, $this->signIn($this->password))
         );
 
-        parse_str((string)parse_url($registered['activation_link'], PHP_URL_QUERY), $query);
+        parse_str((string) parse_url($registered['activation_link'], PHP_URL_QUERY), $query);
         $this->assertJsonResponse(200, $this->post('/auth/activate', ['token' => $query['token'] ?? '']));
 
         $this->assertSame(

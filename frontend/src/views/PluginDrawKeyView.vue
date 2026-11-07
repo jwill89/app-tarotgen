@@ -78,6 +78,7 @@ async function getKey(): Promise<void> {
         <p v-if="error" class="help is-danger mb-3" role="alert">{{ error }}</p>
 
         <button
+          type="button"
           class="button is-primary"
           :class="{ 'is-loading': submitting }"
           :disabled="submitting || (turnstileEnabled && !turnstileToken)"

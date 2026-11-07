@@ -1,37 +1,28 @@
-import { defineConfig, devices } from '@playwright/test'
-import { BASE_URL, DATA_DIR, PORT } from './e2e/env'
+import { defineConfig } from '@playwright/test'
+import { playwrightDefaults } from '../shared/test/e2e/playwright.js'
+import { BASE_URL, DATA_DIR, PORT } from './e2e/env.ts'
 
-// The smoke run (AUDIT §8.6): the built SPA and the real API behind PHP's
-// built-in server, routed as production's .htaccess routes them
-// (e2e/server/router.php), on a seeded throwaway database. `npm run build` first.
-// Locally on Windows it drives the installed Edge, so nothing is downloaded; CI
-// installs Playwright's Chromium.
-const channel = process.platform === 'win32' && !process.env.CI ? 'msedge' : undefined
-
+// The end-to-end run (`npm run test:e2e`, AUDIT §8.6), on shared-tooling's Playwright
+// settings: the SPA built, then served with the real API by PHP's built-in server,
+// routed as production's .htaccess routes them (e2e/server/router.php), on a throwaway
+// database the backend's migrations build and e2e/server/prepare.php seeds. Locally on
+// Windows it drives the installed Edge and CI the runner's Chrome, so no browser is
+// downloaded.
 export default defineConfig({
-  testDir: 'e2e',
-  // One server, one database: the steps share state, so they run in order.
-  workers: 1,
-  fullyParallel: false,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [['github'], ['list']] : 'list',
-  outputDir: 'test-results',
-  use: {
-    baseURL: BASE_URL,
-    trace: 'retain-on-failure',
-  },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], channel } }],
+  ...playwrightDefaults,
+  use: { ...playwrightDefaults.use, baseURL: BASE_URL },
   webServer: {
     // The rate limiters keep their counts in PHP's temp dir: the run's own, so
-    // reports and sign-ins from earlier local runs can't trip them.
-    command: `php e2e/server/prepare.php "${DATA_DIR}" ${BASE_URL} && php -d sys_temp_dir="${DATA_DIR}/tmp" -S 127.0.0.1:${String(PORT)} -t dist e2e/server/router.php`,
+    // reports and sign-ins from earlier local runs can't trip them. PHP's server
+    // logs every request to stderr, which goes to server.log in the data dir.
+    command: [
+      'npx vite build --logLevel warn',
+      `php e2e/server/prepare.php "${DATA_DIR}" ${BASE_URL}`,
+      `php -d sys_temp_dir="${DATA_DIR}/tmp" -S 127.0.0.1:${String(PORT)} -t dist e2e/server/router.php 2> "${DATA_DIR}/server.log"`,
+    ].join(' && '),
     url: `${BASE_URL}/api/config`,
     env: { TAROT_DATA_DIR: DATA_DIR },
     reuseExistingServer: false,
-    // PHP's built-in server logs every request to stderr. A failure keeps a trace
-    // (test-results/); DEBUG=pw:webserver shows the server's output.
-    stdout: 'ignore',
-    stderr: 'ignore',
+    timeout: 180_000,
   },
 })

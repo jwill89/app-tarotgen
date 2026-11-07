@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Numerics;
 using TarotGen.Plugin.Models;
 
@@ -40,9 +38,9 @@ public static class SpreadLayout
             maxY = Math.Max(maxY, (float)p.Y);
         }
 
-        float bboxW = maxX - minX + halfW * 2f;
-        float bboxH = maxY - minY + halfH * 2f;
-        float scale = Math.Max(1f, Math.Min(100f / bboxW, 100f / bboxH) * 0.92f);
+        var bboxW = maxX - minX + halfW * 2f;
+        var bboxH = maxY - minY + halfH * 2f;
+        var scale = Math.Max(1f, Math.Min(100f / bboxW, 100f / bboxH) * 0.92f);
 
         return new Fit(Math.Min(scale, 2.5f), (minX + maxX) / 2f, (minY + maxY) / 2f);
     }
@@ -50,7 +48,7 @@ public static class SpreadLayout
     /// <summary>A card's size in canvas-percent {w, h} at the given fit.</summary>
     public static Vector2 CardSizePct(Fit fit)
     {
-        float w = CardWidthPct * fit.Scale;
+        var w = CardWidthPct * fit.Scale;
         return new Vector2(w, w * CardAspect);
     }
 

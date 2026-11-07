@@ -254,9 +254,7 @@ final class AuthLoginTest extends HttpTestCase
         $this->setEnv('CLOUDFLARE_TURNSTILE_SITEKEY', '1x00000000000000000000AA');
         $this->setEnv('CLOUDFLARE_TURNSTILE_SECRET', '1x0000000000000000000000000000000AA');
         $this->replaceService(TurnstileService::class, new class ($passes) extends TurnstileService {
-            public function __construct(private readonly bool $passes)
-            {
-            }
+            public function __construct(private readonly bool $passes) {}
 
             #[\Override]
             protected function postSiteVerify(array $payload): array
@@ -273,6 +271,6 @@ final class AuthLoginTest extends HttpTestCase
         $this->assertNotNull($cookie);
         $row = $this->rows("SELECT expires FROM sessions WHERE id = '" . hash('sha256', $cookie) . "'");
         $this->assertCount(1, $row);
-        return (int)$row[0]['expires'];
+        return (int) $row[0]['expires'];
     }
 }

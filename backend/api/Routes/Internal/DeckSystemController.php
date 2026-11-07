@@ -18,8 +18,7 @@ class DeckSystemController extends AbstractController
         private readonly DeckSystemRepository $systems,
         private readonly UserRepository $users,
         private readonly AdminAuth $admin,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Get(
         path: '/deck-systems',
@@ -73,7 +72,7 @@ class DeckSystemController extends AbstractController
     )]
     public function getSystem(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $id = (int)($args['id'] ?? 0);
+        $id = (int) ($args['id'] ?? 0);
 
         $system = $this->visibleSystem($id);
         if ($system === null) {
@@ -140,9 +139,9 @@ class DeckSystemController extends AbstractController
         $isAdmin = $user->is_admin;
         $params  = $this->parsedBody($request);
 
-        $name      = trim((string)($params['name'] ?? ''));
-        $shortName = trim((string)($params['short_name'] ?? ''));
-        $totalCards = (int)($params['total_cards'] ?? 78);
+        $name      = trim((string) ($params['name'] ?? ''));
+        $shortName = trim((string) ($params['short_name'] ?? ''));
+        $totalCards = (int) ($params['total_cards'] ?? 78);
 
         if ($name === '' || $shortName === '') {
             return $response->withJson(['error' => 'Name and Short Name are required.'], 400);
@@ -164,7 +163,7 @@ class DeckSystemController extends AbstractController
 
         // Validate that each card has at least a name
         foreach ($cards as $i => $card) {
-            if (!is_array($card) || trim((string)($card['name'] ?? '')) === '') {
+            if (!is_array($card) || trim((string) ($card['name'] ?? '')) === '') {
                 return $response->withJson(['error' => "Card #" . ($i + 1) . " requires a name."], 400);
             }
         }
@@ -187,7 +186,7 @@ class DeckSystemController extends AbstractController
         foreach ($cards as $i => $card) {
             $cardData[] = [
                 'card_id'           => $i + 1,
-                'name'              => trim((string)($card['name'] ?? '')),
+                'name'              => trim((string) ($card['name'] ?? '')),
                 'keywords'          => $card['keywords'] ?? null,
                 'meaning'           => $card['meaning'] ?? null,
                 'advice'            => $card['advice'] ?? null,

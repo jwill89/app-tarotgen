@@ -32,9 +32,7 @@ class PasskeyDecoys
     private ?string $key = null;
 
     /** @param string|null $keyFile Where the key lives; null for the default beside the database. */
-    public function __construct(private readonly ?string $keyFile = null)
-    {
-    }
+    public function __construct(private readonly ?string $keyFile = null) {}
 
     /**
      * The stand-in credential ids for $email (raw bytes, like a stored id once
@@ -108,6 +106,6 @@ class PasskeyDecoys
             return null;
         }
 
-        return (string)hex2bin(trim($hex));
+        return (string) hex2bin(trim($hex));
     }
 }

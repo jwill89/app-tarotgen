@@ -117,7 +117,7 @@ final class ReadingInput
             return null;
         }
         if (is_string($days) && ctype_digit($days)) {
-            $days = (int)$days;
+            $days = (int) $days;
         }
         if (!in_array($days, self::EXPIRY_DAYS, true)) {
             throw new ApiException('A reading made without an account can be kept for 1, 7 or 30 days, or the usual year.', 400);
@@ -158,7 +158,7 @@ final class ReadingInput
     public static function access(array $params, bool $hasPassword = false, int $status = 400): array
     {
         $visibility = self::visibility($params['visibility'] ?? null);
-        $password = is_scalar($params['password'] ?? null) ? (string)$params['password'] : '';
+        $password = is_scalar($params['password'] ?? null) ? (string) $params['password'] : '';
 
         if ($visibility === 'private' || $visibility === 'link') {
             return ['is_private' => $visibility === 'private', 'password_hash' => null];
@@ -201,7 +201,7 @@ final class ReadingInput
     {
         $text = self::queryString($query, 'q');
         $deckId = self::queryString($query, 'deck_id');
-        if ($deckId !== '' && (!ctype_digit($deckId) || (int)$deckId < 1)) {
+        if ($deckId !== '' && (!ctype_digit($deckId) || (int) $deckId < 1)) {
             throw new ApiException("deck_id must be a deck's id.", 400);
         }
 
@@ -230,7 +230,7 @@ final class ReadingInput
 
         return new ReadingFilter(
             text: $text === '' ? null : mb_substr($text, 0, self::SEARCH_MAX),
-            deckId: $deckId === '' ? null : (int)$deckId,
+            deckId: $deckId === '' ? null : (int) $deckId,
             spread: $spread === '' ? null : $spread,
             tag: $tag === '' ? null : $tag,
             from: $from?->setTimezone($utc)->format(Clock::FORMAT),

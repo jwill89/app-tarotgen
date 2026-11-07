@@ -47,8 +47,11 @@ async function saveName() {
   nameSaving.value = true
   try {
     const res = await changeDisplayName(displayName.value)
-    if (res.ok) toasts.success('Display name updated.')
-    else nameError.value = res.error ?? 'Could not update display name.'
+    if (res.ok) {
+      toasts.success('Display name updated.')
+    } else {
+      nameError.value = res.error ?? 'Could not update display name.'
+    }
   } finally {
     nameSaving.value = false
   }
@@ -86,7 +89,9 @@ const setLinkError = ref('')
 
 async function emailSetPasswordLink() {
   const email = currentUser.value?.email
-  if (!email) return
+  if (!email) {
+    return
+  }
   setLinkError.value = ''
   setLinkSending.value = true
   try {
@@ -142,7 +147,9 @@ async function signOutOtherDevices() {
       'Every other browser and device signed in to your account will be signed out. This browser stays signed in.',
     confirmLabel: 'Sign out other devices',
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
 
   sessionsError.value = ''
   endingSessions.value = true
@@ -178,7 +185,9 @@ async function removeAccount() {
     confirmLabel: 'Delete my account',
     danger: true,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
 
   deleting.value = true
   try {
@@ -269,7 +278,9 @@ async function removePasskey(id: number, name: string) {
     confirmLabel: 'Remove',
     danger: true,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
 
   passkeyError.value = ''
   const res = await deletePasskey(id)
@@ -282,10 +293,15 @@ async function removePasskey(id: number, name: string) {
 
 async function editPasskeyName(id: number, currentName: string) {
   const newName = prompt('Rename passkey:', currentName)
-  if (!newName || newName.trim() === currentName) return
+  if (!newName || newName.trim() === currentName) {
+    return
+  }
   const res = await renamePasskey(id, newName.trim())
-  if (res.ok) toasts.success('Passkey renamed.')
-  else passkeyError.value = res.error ?? 'Could not rename passkey.'
+  if (res.ok) {
+    toasts.success('Passkey renamed.')
+  } else {
+    passkeyError.value = res.error ?? 'Could not rename passkey.'
+  }
 }
 
 async function handleTogglePasswordLogin() {
@@ -299,7 +315,9 @@ async function handleTogglePasswordLogin() {
       confirmLabel: 'Disable password login',
       danger: true,
     })
-    if (!ok) return
+    if (!ok) {
+      return
+    }
   }
 
   passkeyTogglingPw.value = true
@@ -337,7 +355,9 @@ async function revokePluginToken(token: PluginToken) {
     confirmLabel: 'Revoke',
     danger: true,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
 
   const done = await revokeToken(token.id)
   if (done) {
@@ -485,6 +505,7 @@ async function revokePluginToken(token: PluginToken) {
                 Your Google account is linked. You can sign in with Google.
               </p>
               <button
+                type="button"
                 class="button is-warning"
                 :class="{ 'is-loading': unlinking }"
                 :disabled="!canUnlinkGoogle"
@@ -500,7 +521,7 @@ async function revokePluginToken(token: PluginToken) {
             </template>
             <template v-else>
               <p class="mb-3">Link your Google account to enable one-click sign in.</p>
-              <button class="button is-info" @click="linkGoogle">
+              <button type="button" class="button is-info" @click="linkGoogle">
                 <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fab['google']" /></span>
                 <span>Link Google Account</span>
               </button>
@@ -537,6 +558,7 @@ async function revokePluginToken(token: PluginToken) {
                 <div class="passkey-actions">
                   <Tooltip text="Rename">
                     <button
+                      type="button"
                       class="button is-small"
                       aria-label="Rename"
                       @click="editPasskeyName(pk.passkey_id, pk.name)"
@@ -548,6 +570,7 @@ async function revokePluginToken(token: PluginToken) {
                   </Tooltip>
                   <Tooltip text="Remove">
                     <button
+                      type="button"
                       class="button is-small is-danger is-light"
                       aria-label="Remove"
                       :disabled="!canRemovePasskey"
@@ -583,6 +606,7 @@ async function revokePluginToken(token: PluginToken) {
               </div>
               <div class="control">
                 <button
+                  type="button"
                   class="button is-info"
                   :class="{ 'is-loading': passkeyRegistering }"
                   @click="addPasskey"
@@ -604,6 +628,7 @@ async function revokePluginToken(token: PluginToken) {
                   sign-in.
                 </p>
                 <button
+                  type="button"
                   class="button"
                   :class="[
                     currentUser?.password_login_disabled ? 'is-success' : 'is-warning',
@@ -682,6 +707,7 @@ async function revokePluginToken(token: PluginToken) {
                 <div class="passkey-actions">
                   <Tooltip v-if="!t.revoked_at" text="Revoke">
                     <button
+                      type="button"
                       class="button is-small is-danger is-light"
                       @click="revokePluginToken(t)"
                     >
@@ -749,6 +775,7 @@ async function revokePluginToken(token: PluginToken) {
                 {{ deleteError }}
               </div>
               <button
+                type="button"
                 class="button is-danger"
                 :class="{ 'is-loading': deleting }"
                 @click="removeAccount"
@@ -768,6 +795,7 @@ async function revokePluginToken(token: PluginToken) {
 .danger-zone {
   border: 1px solid var(--myst-danger);
 }
+
 .passkey-item {
   display: flex;
   align-items: center;
@@ -775,18 +803,22 @@ async function revokePluginToken(token: PluginToken) {
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--myst-border);
 }
+
 .passkey-item:last-child {
   border-bottom: none;
 }
+
 .passkey-info {
   display: flex;
   align-items: center;
   gap: 0.25rem;
   flex-wrap: wrap;
 }
+
 .passkey-name {
   font-weight: 600;
 }
+
 .passkey-actions {
   display: flex;
   gap: 0.25rem;

@@ -56,67 +56,76 @@ export function useLayoutTools(
     return toValue(snapToGrid) ? Math.round(c / snapStep) * snapStep : round2(c)
   }
 
+  /** The cards at these indices, skipping any the layout no longer has. */
+  function pointsAt(indices: number[]): XYPoint[] {
+    return indices.flatMap((i) => slots[i] ?? [])
+  }
+
   /** Center all placed cards in the panel, preserving relative spacing. */
   function centerAll(): void {
-    const idx = toValue(placedIndexes)
-    if (idx.length === 0) return
-    const xs = idx.map((i) => slots[i].x)
-    const ys = idx.map((i) => slots[i].y)
+    const points = pointsAt(toValue(placedIndexes))
+    if (points.length === 0) {
+      return
+    }
+    const xs = points.map((p) => p.x)
+    const ys = points.map((p) => p.y)
     const dx = 50 - (Math.min(...xs) + Math.max(...xs)) / 2
     const dy = 50 - (Math.min(...ys) + Math.max(...ys)) / 2
-    idx.forEach((i) => {
-      slots[i].x = round2(clampPct(slots[i].x + dx))
-      slots[i].y = round2(clampPct(slots[i].y + dy))
+    points.forEach((p) => {
+      p.x = round2(clampPct(p.x + dx))
+      p.y = round2(clampPct(p.y + dy))
     })
   }
 
   /** Align selected cards' edges/centers on one axis (needs 2+). */
   function align(edge: AlignEdge): void {
-    const idx = [...selected.value]
-    if (idx.length < 2) return
-    const xs = idx.map((i) => slots[i].x)
-    const ys = idx.map((i) => slots[i].y)
+    const points = pointsAt([...selected.value])
+    if (points.length < 2) {
+      return
+    }
+    const xs = points.map((p) => p.x)
+    const ys = points.map((p) => p.y)
 
     switch (edge) {
       case 'left': {
         const v = snapVal(Math.min(...xs))
-        idx.forEach((i) => {
-          slots[i].x = v
+        points.forEach((p) => {
+          p.x = v
         })
         break
       }
       case 'right': {
         const v = snapVal(Math.max(...xs))
-        idx.forEach((i) => {
-          slots[i].x = v
+        points.forEach((p) => {
+          p.x = v
         })
         break
       }
       case 'hcenter': {
         const v = round2((Math.min(...xs) + Math.max(...xs)) / 2)
-        idx.forEach((i) => {
-          slots[i].x = v
+        points.forEach((p) => {
+          p.x = v
         })
         break
       }
       case 'top': {
         const v = snapVal(Math.min(...ys))
-        idx.forEach((i) => {
-          slots[i].y = v
+        points.forEach((p) => {
+          p.y = v
         })
         break
       }
       case 'bottom': {
         const v = snapVal(Math.max(...ys))
-        idx.forEach((i) => {
-          slots[i].y = v
+        points.forEach((p) => {
+          p.y = v
         })
         break
       }
       case 'vmiddle': {
         const v = round2((Math.min(...ys) + Math.max(...ys)) / 2)
-        idx.forEach((i) => {
-          slots[i].y = v
+        points.forEach((p) => {
+          p.y = v
         })
         break
       }
@@ -130,33 +139,43 @@ export function useLayoutTools(
    * matching positions instead of being pulled apart.
    */
   function distribute(axis: 'h' | 'v'): void {
-    const idx = [...selected.value]
-    if (idx.length < 3) return
+    const points = pointsAt([...selected.value])
+    if (points.length < 3) {
+      return
+    }
 
-    const coord = (i: number): number => (axis === 'h' ? slots[i].x : slots[i].y)
-    const apply = (i: number, v: number): void => {
-      if (axis === 'h') slots[i].x = v
-      else slots[i].y = v
+    const coord = (p: XYPoint): number => (axis === 'h' ? p.x : p.y)
+    const apply = (p: XYPoint, v: number): void => {
+      if (axis === 'h') {
+        p.x = v
+      } else {
+        p.y = v
+      }
     }
 
     const TOLERANCE = 1 // percent within which cards count as one row/column
-    const sorted = idx.slice().sort((a, b) => coord(a) - coord(b))
-    const groups: number[][] = []
-    for (const i of sorted) {
-      const last = groups[groups.length - 1] as number[] | undefined
-      if (last && Math.abs(coord(i) - coord(last[0])) <= TOLERANCE) {
-        last.push(i)
+    const sorted = points.slice().sort((a, b) => coord(a) - coord(b))
+    // Each group is led by its first card, which the next one is measured from.
+    const groups: { lead: XYPoint; members: XYPoint[] }[] = []
+    for (const p of sorted) {
+      const last = groups.at(-1)
+      if (last && Math.abs(coord(p) - coord(last.lead)) <= TOLERANCE) {
+        last.members.push(p)
       } else {
-        groups.push([i])
+        groups.push({ lead: p, members: [p] })
       }
     }
-    if (groups.length < 2) return
+    const firstGroup = groups[0]
+    const lastGroup = groups.at(-1)
+    if (groups.length < 2 || !firstGroup || !lastGroup) {
+      return
+    }
 
-    const first = coord(groups[0][0])
-    const step = (coord(groups[groups.length - 1][0]) - first) / (groups.length - 1)
+    const first = coord(firstGroup.lead)
+    const step = (coord(lastGroup.lead) - first) / (groups.length - 1)
     groups.forEach((group, k) => {
       const v = round2(first + step * k)
-      group.forEach((i) => apply(i, v))
+      group.members.forEach((p) => apply(p, v))
     })
   }
 

@@ -66,7 +66,9 @@ describe('AdminListPage', () => {
     async function openEditor(entry: string) {
       const router = testWebRouter()
       await router.push(entry)
-      if (entry !== '/admin/spreads/new') await router.push('/admin/spreads/new')
+      if (entry !== '/admin/spreads/new') {
+        await router.push('/admin/spreads/new')
+      }
       const { wrapper } = await mountWithApp(AdminListPage, {
         props: { title: 'Add Spread', back: returning },
         router,

@@ -14,8 +14,11 @@ function button(name: string, root: ParentNode = document.body): HTMLButtonEleme
   const found = [...root.querySelectorAll('button')].filter(
     (b) => text(b) === name || b.getAttribute('aria-label') === name,
   )
-  if (found.length !== 1) throw new Error(`Expected one "${name}" button, found ${found.length}`)
-  return found[0]
+  const [only] = found
+  if (!only || found.length !== 1) {
+    throw new Error(`Expected one "${name}" button, found ${found.length}`)
+  }
+  return only
 }
 
 async function click(el: HTMLElement) {
@@ -25,7 +28,9 @@ async function click(el: HTMLElement) {
 
 async function answer(choice: string) {
   const open = document.body.querySelector<HTMLElement>('[role="alertdialog"]')
-  if (!open) throw new Error('No confirm dialog is open')
+  if (!open) {
+    throw new Error('No confirm dialog is open')
+  }
   await click(button(choice, open))
 }
 
@@ -67,7 +72,9 @@ describe('HomeView', () => {
       const input = document.body.querySelector<HTMLInputElement>(
         'input[aria-label="Reading Code"]',
       )
-      if (!input) throw new Error('No reading code field')
+      if (!input) {
+        throw new Error('No reading code field')
+      }
 
       input.value = '  abc123 '
       input.dispatchEvent(new Event('input'))

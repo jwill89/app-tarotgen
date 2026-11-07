@@ -185,7 +185,7 @@ describe('virtual:changelog', () => {
     }
     const newestFirst = released.every(
       ({ version }, i) =>
-        i === 0 || released[i - 1].version.localeCompare(version, 'en', { numeric: true }) > 0,
+        i === 0 || released[i - 1]!.version.localeCompare(version, 'en', { numeric: true }) > 0,
     )
     expect(newestFirst).toBe(true)
     expect(released.at(-1)?.version).toBe('1.0.0')

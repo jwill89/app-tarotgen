@@ -39,8 +39,11 @@ function dismiss(id: number): void {
 
 function push(type: ToastType, message: string, options: ToastOptions = {}): number {
   // Mirror problems to the console so they're recoverable after the toast goes.
-  if (type === 'error') console.error('[toast] ' + message, options.detail ?? '')
-  else if (type === 'warning') console.warn('[toast] ' + message, options.detail ?? '')
+  if (type === 'error') {
+    console.error('[toast] ' + message, options.detail ?? '')
+  } else if (type === 'warning') {
+    console.warn('[toast] ' + message, options.detail ?? '')
+  }
 
   const id = nextId++
   // Reka's <ToastRoot> owns the auto-dismiss timer (with pause-on-hover), so we

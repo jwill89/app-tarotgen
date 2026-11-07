@@ -398,7 +398,7 @@ final class ReadingGenerateTest extends HttpTestCase
         $this->assertIsArray($reading['reading_info']);
         $spread = $reading['reading_info']['spread'] ?? null;
 
-        return [count($this->draw($reading)), is_array($spread) ? (string)$spread['name'] : null];
+        return [count($this->draw($reading)), is_array($spread) ? (string) $spread['name'] : null];
     }
 
     /**

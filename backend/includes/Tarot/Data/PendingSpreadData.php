@@ -53,14 +53,14 @@ class PendingSpreadData extends AbstractData
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
-            ':name'        => mb_substr(trim((string)($data['name'] ?? '')), 0, 200),
-            ':description' => (string)($data['description'] ?? ''),
-            ':card_count'  => (int)($data['card_count'] ?? count($positions)),
+            ':name'        => mb_substr(trim((string) ($data['name'] ?? '')), 0, 200),
+            ':description' => (string) ($data['description'] ?? ''),
+            ':card_count'  => (int) ($data['card_count'] ?? count($positions)),
             ':positions'   => json_encode($positions, JSON_THROW_ON_ERROR),
             ':user_id'     => $userId,
         ]);
 
-        $id = (int)$this->db->lastInsertId();
+        $id = (int) $this->db->lastInsertId();
         $result = $this->retrieve($id);
         return $result[0] ?? null;
     }

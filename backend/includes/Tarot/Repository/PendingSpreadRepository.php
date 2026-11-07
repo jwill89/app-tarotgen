@@ -14,8 +14,7 @@ readonly class PendingSpreadRepository
         private PendingSpreadData $data,
         private SpreadRepository $spreads,
         private PDO $db,
-    ) {
-    }
+    ) {}
 
     /**
      * @return list<PendingSpread>|PendingSpread

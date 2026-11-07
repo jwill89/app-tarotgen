@@ -89,9 +89,7 @@ final class PasswordResetTest extends HttpTestCase
         }));
         $this->replaceService(Mailer::class, new class ($steps) extends Mailer {
             /** @param ArrayObject<int,string> $steps */
-            public function __construct(private readonly ArrayObject $steps)
-            {
-            }
+            public function __construct(private readonly ArrayObject $steps) {}
 
             #[\Override]
             public function isConfigured(): bool
@@ -257,7 +255,7 @@ final class PasswordResetTest extends HttpTestCase
     {
         $link = $this->assertJsonResponse(200, $this->forgot(self::EMAIL))['reset_link'] ?? null;
         $this->assertIsString($link);
-        parse_str((string)parse_url($link, PHP_URL_QUERY), $query);
+        parse_str((string) parse_url($link, PHP_URL_QUERY), $query);
         $this->assertIsString($query['token'] ?? null);
         return $query['token'];
     }

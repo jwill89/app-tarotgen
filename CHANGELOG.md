@@ -20,22 +20,116 @@ push to `main`, after the full gate passes, if the current version
 release body taken from that version's section below. So bump the version and
 update its section here in the same commit — no manual tagging.
 
-## [Unreleased]
+## [5.5.0] - 2026-11-06
+
+The repo moves onto **shared-tooling** (v1.3.0, the `shared/` submodule): the
+lint, test, CI and deploy pieces the owner's projects share. The schema moves
+to Phinx migrations, which the deploy now runs, and the database gets a daily
+backup the deploy keeps in place.
+
+> **Deploying it.** A clone needs `git submodule update --init` first, and the
+> Font Awesome token now goes in `~/.npmrc`. The first backend deploy checks the
+> live database against the baseline migration; if they differ, the baseline
+> refuses, changing nothing in the database, and the previous code goes back.
+> It also installs the daily backup and retires the old nightly one. The old
+> copies in `/var/backups/tarotgen/nightly` stay: once
+> `journalctl -u tarotgen-backup` shows the new backup running, remove them with
+> `sudo rm -r /var/backups/tarotgen/nightly`.
+
+### Added
+
+- **An end-to-end suite of 18 tests** (Playwright, on shared-tooling's
+  settings): each main page, opened by its address, must pass axe at WCAG 2.2
+  AA, and a guest's reading and card report must reach an admin. It runs in the
+  runner's Chrome in CI and the installed Edge locally, and builds the SPA
+  itself.
+- **A daily database backup:** a systemd timer, as www-data, at 10:00 UTC,
+  keeps a checked, gzipped copy (`/var/lib/tarotgen/db/backups/`) for 28 days.
+  The backend deploy installs it and keeps it current.
+- **Phinx migrations** (`backend/db/migrations/`, `composer migrate`): a
+  baseline that builds today's schema on an empty database and, on any other,
+  checks it is exactly that schema and refuses if not. `db/schema.sql` is
+  generated from them; the tests load it, and the end-to-end suite's database
+  is built by them.
+- `Taskfile.yml`: `task` runs the day-to-day commands, the shared ones included.
+- `npm run gen:check`, `composer docs:check` and `composer normalize:check`,
+  the checks CI runs on the generated files and `composer.json`.
 
 ### Changed
 
 - Node 26, now the LTS, is the minimum for building the frontend
   (`frontend/.nvmrc`, `engines`); CI builds and tests on it.
-- The shared ESLint config now needs ESLint 10.14, Prettier 3.9.10 and
-  TypeScript 6.0.3 or later; the frontend's ranges and lockfile follow it.
+- The frontend's ESLint, Prettier, Stylelint and tsconfigs extend
+  shared-tooling's `@jwill89/lint-web`, which replaces the `eslint-config`
+  submodule; the frontend needs ESLint 10.14, Prettier 3.9.10, Stylelint 17.16
+  and TypeScript 6.0.3 or later. `curly` and `noUncheckedIndexedAccess` now
+  apply, and Stylelint starts from the standard config.
+- Vitest runs on jsdom with the shared settings; the coverage floor stays at
+  96 / 92 / 95 / 97%.
+- PHPStan, PHP CS Fixer and Rector start from shared-tooling's PHP bases (casts
+  are now written `(int) $x`), and the coverage check is the shared script,
+  still at 95% of lines and 88% of methods. `composer.json` has a name and a
+  description.
+- The plugin's analyzers and code style come from shared-tooling, through
+  `plugin/Directory.Build.props`; any warning still fails the build.
+- PSScriptAnalyzer lints every tracked script with the shared settings, and
+  `.editorconfig`, `.gitattributes` and markdownlint's config come from
+  shared-tooling too.
+- **CI is shared-tooling's workflows**, pinned to v1.3.0 (frontend, backend,
+  end-to-end, plugin, scripts and docs), then the release job. `plugin.yml`
+  only packages the plugin; its build and format checks are CI's plugin job.
+  CI no longer uses the `ESLINT_CONFIG_TOKEN` secret.
+- The Font Awesome token lives in `~/.npmrc`; `frontend/.npmrc` is tracked and
+  holds none.
+- **Deploys run on shared-tooling's deploy module:** one archive, one SSH
+  connection held for the whole run, and one remote run. They need PowerShell
+  7.4 and PuTTY's plink 0.85 or later (pscp is no longer used). `-Target both`
+  deploys the backend first.
+- **A backend deploy builds the new code whole on the droplet**
+  (`composer install --no-dev` every time), snapshots the database
+  (`tarotdb.db.pre-<UTC time>.gz`, the newest three kept), swaps the code in and
+  runs the migrations. If they fail, the previous code goes back and the
+  command that restores the snapshot is printed.
+- **Every deploy is checked through Cloudflare** afterwards: the API and the
+  database (`/api/decks`) after a backend deploy, the home page and its script
+  after a frontend one, `repo.json` after a plugin one. If a check fails, what
+  the deploy changed goes back; the database stays as migrated, with the
+  command that restores the snapshot printed.
+- After a backend deploy passes, it pulls a copy of the live database into
+  `backend/db/tarotdb.db` (`-NoDbPull` skips it).
+- New deploy settings `-SiteUrl` (the address the check fetches; default
+  `https://tarotgen.io`) and `-ConfigPath`; `-VpsUser` has no default.
+- Retention runs alone in `/etc/cron.d/tarotgen`, at 10:30 UTC, and only once
+  that day's backup exists. The deploy installs the cron file.
+- The privacy page says deleted data can stay in the backups for up to 28 days
+  (it said 14), as the daily backup now keeps them; last updated November 6,
+  2026.
 - Signing up and asking for a password reset no longer wait for the email to
   send: on the server's PHP-FPM, the email goes out after the answer.
+
+### Removed
+
+- The `frontend/eslint-config` submodule, `PSScriptAnalyzerSettings.psd1`,
+  `plugin/.editorconfig` and `backend/bin/coverage-check.php`, replaced by
+  shared-tooling's.
+- The old nightly backup: `scripts/server/tarotgen-backup.sh`, and on the
+  droplet `/usr/local/sbin/tarotgen-backup`, which the deploy removes.
 
 ### Fixed
 
 - Forgot Password answered an address with an account more slowly than one
   without (it waited for the email to send), so timing it could tell whether an
   address had an account. The answer now comes before the email.
+- The gold buttons' white text read at 2.4:1 against the gold; it is dark now,
+  as on the aqua buttons.
+- The grey hint text read at 2.7 to 4.2:1 on the dark surfaces. A new token,
+  `--myst-text-grey`, lightens it to at least 4.5:1 on every one, under a hover
+  too; printed, it is darker instead.
+- A screen reader could name a face-down card before it was turned. A card
+  that is still face down is now "Face-down card 1" ("Face-down card 1, Past"
+  in a spread), and "Card 1, Past: The Moon, reversed" once turned; its images
+  and number badges give nothing away. The lightbox shows a face-down card's
+  back, named only by its number, with no Report button.
 
 ## [5.4.0] — 2026-10-30
 
@@ -746,8 +840,8 @@ grew from an anonymous reading generator into a full account-based platform.
 
 ### Changed
 
-- Replaced the single `index.php` entrypoint and jQuery front-end with a Slim 4
-  + PHP-DI backend (autowired container, compiled to disk in production) and a
+- Replaced the single `index.php` entrypoint and jQuery front-end with a Slim 4 +
+  PHP-DI backend (autowired container, compiled to disk in production) and a
   built SPA bundle.
 - Moved PHP sessions to a **database-backed handler** with self-managed garbage
   collection, session-fixation protection (ID regeneration on privilege

@@ -36,10 +36,14 @@ const myTags = ref<ReadingTag[]>([])
 const mySpreads = ref<ReadingSpread[]>([])
 
 function summarize(r: AccountReading): string {
-  if (r.reading_name) return r.reading_name
+  if (r.reading_name) {
+    return r.reading_name
+  }
   try {
     const info = r.reading_info
-    if (info.spread?.name) return info.spread.name
+    if (info.spread?.name) {
+      return info.spread.name
+    }
     // Stored reading_info may be malformed (hence the try/catch) — draw can be absent.
     const draw = info.draw as DrawCard[] | undefined
     const n = draw?.length ?? 0
@@ -77,7 +81,9 @@ const isFiltered = computed(() =>
 /** Change some of the URL's filters; any change but paging starts again at page 1. */
 function setQuery(changes: Record<string, string | null>): void {
   const merged: LocationQueryRaw = { ...route.query, ...changes }
-  if (!('page' in changes)) merged.page = null
+  if (!('page' in changes)) {
+    merged.page = null
+  }
   // A cleared filter leaves the address rather than staying as `?tag=`.
   const query = Object.fromEntries(
     Object.entries(merged).filter(([, value]) => value !== null && value !== ''),
@@ -102,7 +108,9 @@ function onSearch(): void {
 watch(
   () => fromQuery('q'),
   (q) => {
-    if (q !== search.value.trim()) search.value = q
+    if (q !== search.value.trim()) {
+      search.value = q
+    }
   },
 )
 onBeforeUnmount(() => {
@@ -198,7 +206,9 @@ async function load() {
   const request = ++latest
   loading.value = true
   const res = await listReadingsPage(page.value, PER_PAGE, filters.value)
-  if (request !== latest) return
+  if (request !== latest) {
+    return
+  }
   loading.value = false
   if (!res.ok) {
     // Shown in place of the list — an empty list would read as "no readings yet".
@@ -231,7 +241,9 @@ async function loadSpreads(): Promise<void> {
 watch(
   () => route.query,
   () => {
-    if (route.name === 'account-readings') void load()
+    if (route.name === 'account-readings') {
+      void load()
+    }
   },
 )
 
@@ -249,7 +261,9 @@ async function removeReading(r: AccountReading) {
     confirmLabel: 'Delete',
     danger: true,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
 
   deletingId.value = r.reading_id
   try {
@@ -383,7 +397,12 @@ onMounted(() => {
 
           <div v-else-if="loadError" class="notification is-danger is-light">
             <p class="mb-3">Couldn't load your readings. {{ loadError }}</p>
-            <button class="button is-small" :class="{ 'is-loading': loading }" @click="load">
+            <button
+              type="button"
+              class="button is-small"
+              :class="{ 'is-loading': loading }"
+              @click="load"
+            >
               Try again
             </button>
           </div>
@@ -418,10 +437,12 @@ onMounted(() => {
                       {{ summarize(r) }}
                       <!-- A spoken space between the title and the tag, which the
                            template compiler would otherwise drop. -->
+                      <!-- eslint-disable vue/no-useless-mustaches -- the space is text the template compiler would drop as the first child of the <template>, and Prettier would move -->
                       <template v-if="r.daily_card_day"
                         >{{ ' '
                         }}<span class="tag is-link is-light ml-1">Daily card</span></template
                       >
+                      <!-- eslint-enable vue/no-useless-mustaches -->
                       <p v-if="r.question" class="reading-question">“{{ r.question }}”</p>
                       <p v-if="r.querent" class="reading-querent">For {{ r.querent }}</p>
                       <p v-if="r.tags.length" class="reading-tags">
@@ -454,9 +475,11 @@ onMounted(() => {
                       </span>
                       <span v-else class="has-text-grey mr-1">{{ visibilityLabels.link }}</span>
                       <!-- A spoken space before the tag, as for the daily card's. -->
+                      <!-- eslint-disable vue/no-useless-mustaches -- the space is text the template compiler would drop as the first child of the <template>, and Prettier would move -->
                       <template v-if="r.hide_user"
                         >{{ ' ' }}<span class="tag is-info is-light">Name hidden</span></template
                       >
+                      <!-- eslint-enable vue/no-useless-mustaches -->
                     </td>
                     <td>
                       <div class="buttons are-small">
@@ -469,13 +492,14 @@ onMounted(() => {
                           /></span>
                           <span>View</span>
                         </router-link>
-                        <button class="button" @click="editing = r">
+                        <button type="button" class="button" @click="editing = r">
                           <span class="icon"
                             ><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']"
                           /></span>
                           <span>Edit</span>
                         </button>
                         <button
+                          type="button"
                           class="button is-danger"
                           :class="{ 'is-loading': deletingId === r.reading_id }"
                           @click="removeReading(r)"

@@ -22,8 +22,7 @@ class ContactController extends AbstractController
         private readonly ContactRepository $contacts,
         private readonly UserRepository $users,
         private readonly TurnstileService $turnstile,
-    ) {
-    }
+    ) {}
 
     #[OAS\Operation\Post(
         path: '/contacts',
@@ -69,9 +68,9 @@ class ContactController extends AbstractController
         }
 
         $params  = $this->parsedBody($request);
-        $name    = trim((string)($params['name'] ?? ''));
-        $email   = trim((string)($params['email'] ?? ''));
-        $message = trim((string)($params['message'] ?? ''));
+        $name    = trim((string) ($params['name'] ?? ''));
+        $email   = trim((string) ($params['email'] ?? ''));
+        $message = trim((string) ($params['message'] ?? ''));
 
         if ($name === '' || $email === '' || $message === '') {
             return $response->withJson(
@@ -89,7 +88,7 @@ class ContactController extends AbstractController
         // checks, so a malformed request costs no call to Cloudflare. A failed
         // challenge is a refused message: like the others, it isn't counted.
         if ($this->turnstile->isConfigured()) {
-            $token = (string)($params['turnstile_token'] ?? '');
+            $token = (string) ($params['turnstile_token'] ?? '');
             if (!$this->turnstile->verify($token, $ip)) {
                 return $response->withJson(['error' => 'Captcha verification failed. Please try again.'], 400);
             }

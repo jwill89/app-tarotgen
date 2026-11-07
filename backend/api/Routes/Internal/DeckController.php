@@ -20,8 +20,7 @@ class DeckController extends AbstractController
         private readonly CardNameResolver $cardNames,
         private readonly UserRepository $users,
         private readonly AdminAuth $admin,
-    ) {
-    }
+    ) {}
 
     /**
      * @param array<string,string> $args
@@ -70,7 +69,7 @@ class DeckController extends AbstractController
             return $this->cacheable($response->withJson($data), true);
         }
 
-        $deck = $this->visibleDeck((int)$deck_id);
+        $deck = $this->visibleDeck((int) $deck_id);
         if ($deck === null) {
             return $response->withJson(['error' => 'InvalidDeckID'], 404);
         }
@@ -109,7 +108,7 @@ class DeckController extends AbstractController
     )]
     public function getDeckCards(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $deck = $this->visibleDeck((int)($args['deck_id'] ?? 0));
+        $deck = $this->visibleDeck((int) ($args['deck_id'] ?? 0));
         if ($deck === null) {
             return $response->withJson(['error' => 'InvalidDeckID'], 404);
         }
@@ -176,8 +175,8 @@ class DeckController extends AbstractController
 
         $params = $this->parsedBody($request);
 
-        $name   = trim((string)($params['name'] ?? ''));
-        $artist = trim((string)($params['artist'] ?? ''));
+        $name   = trim((string) ($params['name'] ?? ''));
+        $artist = trim((string) ($params['artist'] ?? ''));
 
         if ($name === '' || $artist === '') {
             return $response->withJson(['error' => 'Name and Artist are required.'], 400);
@@ -186,9 +185,9 @@ class DeckController extends AbstractController
         $deck = $this->decks->create([
             'name'             => $name,
             'artist'           => $artist,
-            'purchase_url'     => trim((string)($params['purchase_url'] ?? '')),
-            'deck_system_id'   => (int)($params['deck_system_id'] ?? 1),
-            'additional_cards' => (int)($params['additional_cards'] ?? 0),
+            'purchase_url'     => trim((string) ($params['purchase_url'] ?? '')),
+            'deck_system_id'   => (int) ($params['deck_system_id'] ?? 1),
+            'additional_cards' => (int) ($params['additional_cards'] ?? 0),
             'approved'         => false,
             'usable'           => false,
             'submitted_by'     => $user->user_id,

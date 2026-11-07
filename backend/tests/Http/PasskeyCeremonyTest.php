@@ -332,8 +332,8 @@ final class PasskeyCeremonyTest extends HttpTestCase
             [self::cborInt(1), self::cborInt(2)],     // kty: EC2
             [self::cborInt(3), self::cborInt(-7)],    // alg: ES256
             [self::cborInt(-1), self::cborInt(1)],    // crv: P-256
-            [self::cborInt(-2), self::cborBytes(str_pad((string)$point['x'], 32, "\0", STR_PAD_LEFT))],
-            [self::cborInt(-3), self::cborBytes(str_pad((string)$point['y'], 32, "\0", STR_PAD_LEFT))],
+            [self::cborInt(-2), self::cborBytes(str_pad((string) $point['x'], 32, "\0", STR_PAD_LEFT))],
+            [self::cborInt(-3), self::cborBytes(str_pad((string) $point['y'], 32, "\0", STR_PAD_LEFT))],
         ]);
 
         $authData = hash('sha256', $tamper['rpId'] ?? self::HOST, true)
@@ -385,7 +385,7 @@ final class PasskeyCeremonyTest extends HttpTestCase
         $this->assertNotNull($cookie);
         $row = $this->rows("SELECT expires FROM sessions WHERE id = '" . hash('sha256', $cookie) . "'");
         $this->assertCount(1, $row);
-        return (int)$row[0]['expires'];
+        return (int) $row[0]['expires'];
     }
 
     private static function newKey(): OpenSSLAsymmetricKey

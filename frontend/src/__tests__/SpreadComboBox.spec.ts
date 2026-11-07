@@ -313,7 +313,7 @@ describe('SpreadComboBox', () => {
     document.body.querySelector<HTMLElement>('.myst-combobox__star')?.click()
     await flushPromises()
 
-    expect(api.mock.calls[0][1]?.body).toBe(
+    expect(api.mock.calls[0]![1]?.body).toBe(
       JSON.stringify({ spread_type: 'personal', spread_id: 9 }),
     )
   })

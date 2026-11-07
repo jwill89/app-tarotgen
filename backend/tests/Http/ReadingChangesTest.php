@@ -316,7 +316,7 @@ final class ReadingChangesTest extends HttpTestCase
     {
         $stmt = $this->db->prepare('SELECT reading_info FROM readings WHERE reading_id = ?');
         $stmt->execute([$id]);
-        $info = json_decode((string)$stmt->fetchColumn(), true, 512, JSON_THROW_ON_ERROR);
+        $info = json_decode((string) $stmt->fetchColumn(), true, 512, JSON_THROW_ON_ERROR);
         $this->assertIsArray($info);
         return $info;
     }

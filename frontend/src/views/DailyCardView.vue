@@ -144,7 +144,9 @@ watch(todayCard, () => {
 })
 const todayImage = computed(() => {
   const card = todayKept.value
-  if (!card || imageStep.value === 'none') return null
+  if (!card || imageStep.value === 'none') {
+    return null
+  }
   const urls = cardImageUrls(card.deck_id, card.card_id)
   return imageStep.value === 'thumb' ? urls.thumb : urls.png
 })
@@ -190,7 +192,9 @@ async function loadMonth(target: string) {
   month.value = target
   monthLoading.value = true
   const res = await fetchMonth(target)
-  if (request !== latest) return
+  if (request !== latest) {
+    return
+  }
   monthLoading.value = false
   if (!res.ok) {
     monthError.value = res.error
@@ -268,9 +272,11 @@ onMounted(() => {
                 <div class="daily-today__text">
                   <p class="daily-today__name">{{ todayKept.card_name }}</p>
                   <p class="daily-today__meta">
+                    <!-- eslint-disable vue/no-useless-mustaches -- the spaces around the dot are text Prettier would move out of the <template> -->
                     <template v-if="todayKept.reversed"
                       ><span class="daily-today__reversed">Reversed</span>{{ ' · ' }}</template
                     ><span>{{ todayKept.deck_name }}</span>
+                    <!-- eslint-enable vue/no-useless-mustaches -->
                   </p>
                   <router-link
                     class="button is-link is-outlined mt-4"
@@ -434,12 +440,14 @@ onMounted(() => {
   margin-top: 1rem;
   max-width: 26rem;
 }
+
 .daily-today__drawn {
   display: flex;
   align-items: center;
   gap: 1.75rem;
   margin-top: 1rem;
 }
+
 .daily-today__figure {
   flex: none;
   width: 9.5rem;
@@ -449,18 +457,21 @@ onMounted(() => {
   background: var(--myst-surface);
   overflow: hidden;
 }
+
 .daily-today__figure img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
+
 .daily-today__name {
   font-family: var(--myst-heading-font);
   font-size: 1.9rem;
   line-height: 1.15;
   color: var(--myst-text-strong);
 }
+
 .daily-today__meta {
   display: flex;
   flex-wrap: wrap;
@@ -468,15 +479,18 @@ onMounted(() => {
   margin-top: 0.35rem;
   color: var(--myst-text-muted);
 }
+
 .daily-today__reversed {
   color: var(--myst-silver);
 }
+
 .daily-today__deleted {
   max-width: 34rem;
   margin-top: 1rem;
   color: var(--myst-text-muted);
 }
-@media screen and (max-width: 600px) {
+
+@media screen and (width <= 600px) {
   .daily-today__drawn {
     flex-direction: column;
     align-items: flex-start;
@@ -492,6 +506,7 @@ onMounted(() => {
   gap: 1rem;
   margin-bottom: 1rem;
 }
+
 .daily-calendar__title {
   font-family: var(--myst-heading-font);
   font-size: 1.45rem;
@@ -499,6 +514,7 @@ onMounted(() => {
   color: var(--myst-text-strong);
   text-align: center;
 }
+
 .daily-calendar__nav {
   display: inline-flex;
   align-items: center;
@@ -514,14 +530,17 @@ onMounted(() => {
     color 0.15s ease,
     border-color 0.15s ease;
 }
+
 .daily-calendar__nav:hover:not(:disabled) {
   color: var(--myst-gold-bright);
   border-color: var(--myst-hair-gold);
 }
+
 .daily-calendar__nav:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 35%, transparent);
 }
+
 .daily-calendar__nav:disabled {
   opacity: 0.35;
   cursor: default;
@@ -533,9 +552,11 @@ onMounted(() => {
   border-collapse: separate;
   border-spacing: 4px;
 }
+
 .daily-calendar__grid[aria-busy='true'] {
   opacity: 0.6;
 }
+
 .daily-calendar__grid th {
   padding: 0 0 0.35rem;
   font-size: 0.72rem;
@@ -545,6 +566,7 @@ onMounted(() => {
   color: var(--myst-text-dim);
   text-align: center;
 }
+
 .daily-calendar__grid td {
   padding: 0;
   vertical-align: top;
@@ -562,10 +584,12 @@ onMounted(() => {
   color: var(--myst-text-muted);
   overflow: hidden;
 }
+
 .daily-calendar__day.is-future {
   color: var(--myst-text-dim);
   border-color: transparent;
 }
+
 .daily-calendar__day.is-drawn {
   border-color: var(--myst-hair-gold);
   background: color-mix(in srgb, var(--myst-gold) 6%, transparent);
@@ -575,37 +599,45 @@ onMounted(() => {
     background-color 0.15s ease,
     border-color 0.15s ease;
 }
+
 .daily-calendar__day.is-drawn:hover {
   background: color-mix(in srgb, var(--myst-gold) 12%, transparent);
   border-color: var(--myst-gold);
 }
+
 .daily-calendar__day.is-drawn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 35%, transparent);
 }
+
 /* Drawn, but its reading is gone: the gold edge of a drawn day, broken, and
    no hover, as there is nothing to open. */
 .daily-calendar__day.is-deleted {
   border-style: dashed;
   border-color: var(--myst-hair-gold);
 }
+
 .daily-calendar__day.is-deleted .daily-calendar__card {
   color: var(--myst-text-dim);
 }
+
 .daily-calendar__day.is-today {
   border-color: var(--myst-gold);
   box-shadow: inset 0 0 0 1px var(--myst-gold);
 }
+
 .daily-calendar__top {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 0.25rem;
 }
+
 .daily-calendar__num {
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
 }
+
 /* Reversed, said quietly; the link's label says it in full. */
 .daily-calendar__rev {
   font-size: 0.6rem;
@@ -614,10 +646,12 @@ onMounted(() => {
   text-transform: uppercase;
   color: var(--myst-silver);
 }
+
 .is-today .daily-calendar__num {
   color: var(--myst-gold-bright);
   font-weight: 700;
 }
+
 .daily-calendar__card {
   font-size: 0.75rem;
   line-height: 1.25;
@@ -627,25 +661,29 @@ onMounted(() => {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
 .daily-calendar__mark {
   display: none;
 }
 
 /* A phone has no room for card names: a drawn day keeps a gold mark instead
    (its name is still in the link's label). */
-@media screen and (max-width: 600px) {
+@media screen and (width <= 600px) {
   .daily-calendar__grid {
     border-spacing: 2px;
   }
+
   .daily-calendar__day {
     height: 3rem;
     padding: 0.3rem;
     align-items: center;
   }
+
   .daily-calendar__card,
   .daily-calendar__rev {
     display: none;
   }
+
   .daily-calendar__mark {
     display: block;
     width: 6px;
@@ -653,6 +691,7 @@ onMounted(() => {
     border-radius: 50%;
     background: var(--myst-gold);
   }
+
   .daily-calendar__day.is-deleted .daily-calendar__mark {
     background: transparent;
     border: 1px solid var(--myst-gold);

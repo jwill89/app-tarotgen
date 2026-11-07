@@ -18,8 +18,7 @@ readonly class CardNameResolver
     public function __construct(
         private DeckSystemRepository $deckSystems,
         private SpecialCardRepository $specialCards,
-    ) {
-    }
+    ) {}
 
     /**
      * Map a list of card IDs to their display names for $deck.

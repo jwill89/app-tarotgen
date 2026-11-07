@@ -20,8 +20,8 @@
  * caller with a card-count field can resync it.
  */
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, computed, watch, useId } from 'vue'
-import type { StyleValue } from 'vue'
+import { ref, computed, watch, useId, useTemplateRef } from 'vue'
+import type { ComponentPublicInstance, StyleValue } from 'vue'
 import type { SpreadSlotBase } from '@/components/spreadCanvas'
 import { usePanZoom } from '@/composables/usePanZoom'
 import { useLayoutTools } from '@/composables/useLayoutTools'
@@ -40,9 +40,6 @@ import {
 } from 'reka-ui'
 import ToggleSwitch from '@/components/ToggleSwitch.vue'
 import Tooltip from '@/components/Tooltip.vue'
-
-const slots = defineModel<T[]>({ required: true })
-const trayCaptionId = useId()
 
 const props = withDefaults(
   defineProps<{
@@ -65,11 +62,12 @@ const props = withDefaults(
     trayHint: '(click to place, then drag to position)',
   },
 )
-
 const emit = defineEmits<{
   /** Fired after an undo/redo restore so a caller can resync its card-count. */
   restore: [length: number]
 }>()
+const slots = defineModel<T[]>({ required: true })
+const trayCaptionId = useId()
 
 defineSlots<{
   /** Interior of a placed card (rendered after the order badge). */
@@ -86,7 +84,7 @@ defineSlots<{
 
 const snapToGrid = ref(true)
 const editIndex = ref<number | null>(null)
-const canvasRef = ref<HTMLElement | null>(null)
+const canvasRef = useTemplateRef<HTMLElement>('canvasRef')
 let draggingIndex = -1
 
 // Canvas pan/zoom (on-screen only; coordinates stay 0–100%).
@@ -106,24 +104,29 @@ const {
   canvasStyle,
 } = usePanZoom({ max: props.zoomMax })
 
+// The viewport element, which pan/zoom measures: a function ref, since the
+// composable owns the ref it reads.
+function setViewport(el: Element | ComponentPublicInstance | null): void {
+  viewportRef.value = el instanceof HTMLElement ? el : null
+}
+
 // A background drag pans; a background click (no drag) deselects.
 function onCanvasPointerUp(e: PointerEvent) {
   onPanEnd(e)
-  if (!wasDragged()) clearSelection()
+  if (!wasDragged()) {
+    clearSelection()
+  }
 }
 
-const unplacedIndexes = computed(() =>
-  slots.value
-    .map((s, i) => ({ s, i }))
-    .filter((x) => !x.s.placed)
-    .map((x) => x.i),
+// Each slot with its index, so the template has both without indexing back in.
+const unplacedSlots = computed(() =>
+  slots.value.map((slot, i) => ({ slot, i })).filter((x) => !x.slot.placed),
 )
-const placedIndexes = computed(() =>
-  slots.value
-    .map((s, i) => ({ s, i }))
-    .filter((x) => x.s.placed)
-    .map((x) => x.i),
+const placedSlots = computed(() =>
+  slots.value.map((slot, i) => ({ slot, i })).filter((x) => x.slot.placed),
 )
+const unplacedIndexes = computed(() => unplacedSlots.value.map((x) => x.i))
+const placedIndexes = computed(() => placedSlots.value.map((x) => x.i))
 
 // Multi-select + alignment/distribution/centering + snap (shared).
 const {
@@ -176,24 +179,38 @@ watch(editIndex, (val, old) => {
 
 function placeFromTray(index: number) {
   // Cascade new placements so they don't stack exactly.
+  const slot = slots.value[index]
+  if (!slot) {
+    return
+  }
   const placedCount = placedIndexes.value.length
-  slots.value[index].x = snapVal(40 + (placedCount % 5) * 5)
-  slots.value[index].y = snapVal(40 + Math.floor(placedCount / 5) * 8)
-  slots.value[index].placed = true
+  slot.x = snapVal(40 + (placedCount % 5) * 5)
+  slot.y = snapVal(40 + Math.floor(placedCount / 5) * 8)
+  slot.placed = true
   setSelection([index])
 }
 
 function unplace(index: number) {
-  slots.value[index].placed = false
-  if (selected.value.has(index)) toggleSelection(index)
-  if (editIndex.value === index) editIndex.value = null
+  const slot = slots.value[index]
+  if (!slot) {
+    return
+  }
+  slot.placed = false
+  if (selected.value.has(index)) {
+    toggleSelection(index)
+  }
+  if (editIndex.value === index) {
+    editIndex.value = null
+  }
 }
 
 function onCardPointerDown(e: PointerEvent, index: number) {
   e.stopPropagation() // don't let the background pan handler also fire
 
   // Right/middle click: let the card's context menu handle it — no drag/select.
-  if (e.button !== 0) return
+  if (e.button !== 0) {
+    return
+  }
 
   // Shift/Ctrl/Cmd-click toggles multi-selection without starting a drag.
   if (e.shiftKey || e.ctrlKey || e.metaKey) {
@@ -212,12 +229,15 @@ function onCardPointerDown(e: PointerEvent, index: number) {
 }
 
 function onDrag(e: PointerEvent) {
-  if (draggingIndex < 0 || !canvasRef.value) return
+  const slot = slots.value[draggingIndex]
+  if (!slot || !canvasRef.value) {
+    return
+  }
   const rect = canvasRef.value.getBoundingClientRect()
   const x = ((e.clientX - rect.left) / rect.width) * 100
   const y = ((e.clientY - rect.top) / rect.height) * 100
-  slots.value[draggingIndex].x = snapVal(x)
-  slots.value[draggingIndex].y = snapVal(y)
+  slot.x = snapVal(x)
+  slot.y = snapVal(y)
 }
 
 function endDrag(e?: PointerEvent) {
@@ -230,9 +250,15 @@ function endDrag(e?: PointerEvent) {
 }
 
 function rotate(index: number, delta: number) {
-  let r = (slots.value[index].rotation + delta) % 360
-  if (r < 0) r += 360
-  slots.value[index].rotation = r
+  const slot = slots.value[index]
+  if (!slot) {
+    return
+  }
+  let r = (slot.rotation + delta) % 360
+  if (r < 0) {
+    r += 360
+  }
+  slot.rotation = r
 }
 
 function openEdit(index: number) {
@@ -255,13 +281,14 @@ defineExpose({ resetHistory, clearSelection, setSelection })
       >
       <div class="spread-token-tray" role="group" :aria-labelledby="trayCaptionId">
         <button
-          v-for="i in unplacedIndexes"
+          v-for="{ slot, i } in unplacedSlots"
           :key="'tray-' + i"
+          type="button"
           class="spread-token"
           :title="'Place card ' + (i + 1)"
           @click="placeFromTray(i)"
         >
-          <slot name="tray-token" :item="slots[i]" :index="i"
+          <slot name="tray-token" :item="slot" :index="i"
             ><span>{{ i + 1 }}</span></slot
           >
         </button>
@@ -442,7 +469,7 @@ defineExpose({ resetHistory, clearSelection, setSelection })
             </ToolbarButton>
           </Tooltip>
           <Tooltip text="Reset zoom">
-            <ToolbarButton class="button is-small" style="min-width: 3.5rem" @click="resetZoom">
+            <ToolbarButton class="button is-small zoom-reset" @click="resetZoom">
               {{ Math.round(zoom * 100) }}%
             </ToolbarButton>
           </Tooltip>
@@ -462,7 +489,7 @@ defineExpose({ resetHistory, clearSelection, setSelection })
       </div>
 
       <div
-        ref="viewportRef"
+        :ref="setViewport"
         class="spread-canvas-viewport"
         :class="{ 'is-zoomed': zoom > 1 }"
         :style="viewportStyle"
@@ -477,23 +504,23 @@ defineExpose({ resetHistory, clearSelection, setSelection })
           :class="{ 'has-grid': snapToGrid }"
           :style="canvasStyle"
         >
-          <template v-for="i in placedIndexes" :key="'card-' + i">
+          <template v-for="{ slot, i } in placedSlots" :key="'card-' + i">
             <ContextMenuRoot :modal="false" @update:open="(o: boolean) => o && setSelection([i])">
               <ContextMenuTrigger as-child>
                 <div
                   class="spread-card spread-card--editor"
                   :class="{ 'is-selected': isSelected(i) }"
                   :style="{
-                    left: slots[i].x + '%',
-                    top: slots[i].y + '%',
-                    '--rotation': slots[i].rotation + 'deg',
+                    left: slot.x + '%',
+                    top: slot.y + '%',
+                    '--rotation': slot.rotation + 'deg',
                   }"
                   @pointerdown="onCardPointerDown($event, i)"
                   @pointermove="onDrag"
                   @pointerup="endDrag"
                 >
                   <span class="spread-order-badge">{{ i + 1 }}</span>
-                  <slot name="card" :item="slots[i]" :index="i" />
+                  <slot name="card" :item="slot" :index="i" />
                 </div>
               </ContextMenuTrigger>
               <ContextMenuPortal>
@@ -510,7 +537,7 @@ defineExpose({ resetHistory, clearSelection, setSelection })
                     /></span>
                     <span>Rotate right</span>
                   </ContextMenuItem>
-                  <slot name="context-menu-extra" :item="slots[i]" :index="i" />
+                  <slot name="context-menu-extra" :item="slot" :index="i" />
                   <ContextMenuItem class="myst-menu-item" @select="openEdit(i)">
                     <span class="mi-icon"
                       ><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']"
@@ -535,12 +562,13 @@ defineExpose({ resetHistory, clearSelection, setSelection })
             <div
               v-if="selectedCount === 1 && isSelected(i)"
               class="card-controls"
-              :style="{ left: slots[i].x + '%', top: slots[i].y - CARD_HALF_H + '%' }"
+              :style="{ left: slot.x + '%', top: slot.y - CARD_HALF_H + '%' }"
               @pointerdown.stop
               @pointerup.stop
             >
               <Tooltip text="Rotate left">
                 <button
+                  type="button"
                   class="button is-small"
                   tabindex="-1"
                   aria-label="Rotate left"
@@ -553,6 +581,7 @@ defineExpose({ resetHistory, clearSelection, setSelection })
               </Tooltip>
               <Tooltip text="Rotate right">
                 <button
+                  type="button"
                   class="button is-small"
                   tabindex="-1"
                   aria-label="Rotate right"
@@ -563,9 +592,10 @@ defineExpose({ resetHistory, clearSelection, setSelection })
                   /></span>
                 </button>
               </Tooltip>
-              <slot name="card-controls-extra" :item="slots[i]" :index="i" />
+              <slot name="card-controls-extra" :item="slot" :index="i" />
               <Tooltip :text="editLabel">
                 <button
+                  type="button"
                   class="button is-small is-info"
                   tabindex="-1"
                   :aria-label="editLabel"
@@ -578,6 +608,7 @@ defineExpose({ resetHistory, clearSelection, setSelection })
               </Tooltip>
               <Tooltip text="Remove from layout">
                 <button
+                  type="button"
                   class="button is-small is-danger"
                   tabindex="-1"
                   aria-label="Remove from layout"
@@ -597,7 +628,7 @@ defineExpose({ resetHistory, clearSelection, setSelection })
     <!-- Caller-owned edit modal; this component owns editIndex + the undo coupling. -->
     <slot
       name="edit-modal"
-      :item="editIndex !== null ? slots[editIndex] : null"
+      :item="editIndex !== null ? (slots[editIndex] ?? null) : null"
       :index="editIndex"
       :close="closeEdit"
     />
@@ -605,6 +636,10 @@ defineExpose({ resetHistory, clearSelection, setSelection })
 </template>
 
 <style scoped>
+.zoom-reset {
+  min-width: 3.5rem;
+}
+
 /* One continuous toolbar bar: a single rounded surface holding flat icon buttons
    + the snap toggle, instead of a row of separate button pills. */
 .spread-tools {
@@ -614,11 +649,13 @@ defineExpose({ resetHistory, clearSelection, setSelection })
   border: 1px solid var(--myst-border-strong);
   border-radius: 11px;
 }
+
 .spread-tools > .label {
   font-size: 0.85rem;
   color: var(--myst-text);
   margin-right: 0.2rem;
 }
+
 .spread-tools-hint {
   min-width: 4.5rem;
   margin-right: 0.15rem;
@@ -631,16 +668,19 @@ defineExpose({ resetHistory, clearSelection, setSelection })
   box-shadow: none;
   color: var(--myst-text-muted);
 }
+
 .spread-tools :deep(.button:hover:not([disabled])) {
   background: var(--myst-surface-3);
   color: var(--myst-gold-bright);
   border-color: transparent;
 }
+
 .spread-tools :deep(.button:focus-visible) {
   background: var(--myst-surface-3);
   color: var(--myst-gold-bright);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--myst-gold) 45%, transparent);
 }
+
 .spread-tools :deep(.button[disabled]) {
   background: transparent;
   border-color: transparent;
@@ -674,6 +714,7 @@ defineExpose({ resetHistory, clearSelection, setSelection })
   flex: 1 1 auto;
   outline: none;
 }
+
 .spread-toolbar:focus-visible {
   outline: 2px solid var(--myst-gold-bright);
   outline-offset: 2px;
@@ -693,7 +734,7 @@ defineExpose({ resetHistory, clearSelection, setSelection })
   border-radius: 8px;
   background: var(--myst-surface);
   border: 1px solid var(--myst-border-strong);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 50%);
 }
 
 .card-controls .button,

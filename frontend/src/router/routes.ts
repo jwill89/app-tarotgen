@@ -18,7 +18,9 @@ export const routes: RouteRecordRaw[] = [
     },
     beforeEnter: (to) => {
       const rid = to.query.rid as string | undefined
-      if (rid) return { name: 'reading', params: { id: rid } }
+      if (rid) {
+        return { name: 'reading', params: { id: rid } }
+      }
     },
   },
   {

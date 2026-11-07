@@ -42,7 +42,7 @@ final class AdminDecksTest extends HttpTestCase
         $this->signInAs($admin->user_id);
         $response = $this->request('DELETE', "/admin/decks/{$doomed->deck_id}");
 
-        $this->assertSame(204, $response->getStatusCode(), (string)$response->getBody());
+        $this->assertSame(204, $response->getStatusCode(), (string) $response->getBody());
         foreach (['decks', 'special_cards', 'card_reports', 'card_report_submissions', 'user_favorite_decks'] as $table) {
             $this->assertSame(1, $this->rowCount($table), "{$table} should keep only the other deck's row");
         }

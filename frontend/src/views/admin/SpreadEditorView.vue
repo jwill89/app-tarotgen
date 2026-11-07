@@ -35,7 +35,9 @@ const state = ref<'loading' | 'ready' | 'missing' | 'failed'>(id === null ? 'rea
 const loadError = ref('')
 
 const title = computed(() => {
-  if (id === null) return 'Add Spread'
+  if (id === null) {
+    return 'Add Spread'
+  }
   return state.value === 'missing' ? 'Spread Not Found' : 'Edit Spread'
 })
 
@@ -73,13 +75,18 @@ async function save(payload: {
       )
     : await api.post<Spread>(endpoints.admin.spreads.list, payload, 'Spread created.')
 
-  if (result) returnTo(LIST)
-  else editorRef.value?.setError('Failed to save the spread. Please try again.')
+  if (result) {
+    returnTo(LIST)
+  } else {
+    editorRef.value?.setError('Failed to save the spread. Please try again.')
+  }
 }
 
 onMounted(() => {
   void loadCategories()
-  if (id !== null) void loadSpread(id)
+  if (id !== null) {
+    void loadSpread(id)
+  }
 })
 </script>
 

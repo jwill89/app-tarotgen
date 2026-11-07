@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, useTemplateRef } from 'vue'
+import { useRouter, type RouteLocationRaw } from 'vue-router'
+import type { IconName } from '@fortawesome/fontawesome-svg-core'
 import { useUser } from '@/composables/useUser'
 import {
   DropdownMenuRoot,
@@ -49,8 +50,15 @@ const navLinks = [
   { label: 'FFXIV Plugin', to: { name: 'ffxiv-plugin' } },
 ]
 
+/** A menu link with its icon, which fontawesome.ts must register. */
+interface MenuItem {
+  label: string
+  icon: IconName
+  to: RouteLocationRaw
+}
+
 // Account dropdown items (shared by the Reka menu + the mobile menu).
-const accountItems = [
+const accountItems: MenuItem[] = [
   { label: 'Dashboard', icon: 'gauge-high', to: { name: 'dashboard' } },
   { label: 'My Readings', icon: 'scroll', to: { name: 'account-readings' } },
   { label: 'Daily Card', icon: 'calendar-day', to: { name: 'daily-card' } },
@@ -58,7 +66,7 @@ const accountItems = [
   { label: 'Account Settings', icon: 'gear', to: { name: 'account-settings' } },
 ]
 
-const adminItems = [
+const adminItems: MenuItem[] = [
   { label: 'Dashboard', icon: 'gauge-high', to: { name: 'admin-dashboard' } },
   { label: 'Decks', icon: 'cards-blank', to: { name: 'admin-decks' } },
   { label: 'Special Cards', icon: 'sparkles', to: { name: 'admin-special-cards' } },
@@ -100,7 +108,7 @@ async function doUserLogout() {
 
 // The skip link moves focus itself rather than following its #main-content href,
 // which would put a hash in the URL for the router to act on.
-const mainContent = ref<HTMLElement | null>(null)
+const mainContent = useTemplateRef<HTMLElement>('mainContent')
 function skipToContent() {
   mainContent.value?.focus()
 }
@@ -359,6 +367,7 @@ function skipToContent() {
   text-decoration: none;
   transform: translateY(calc(-100% - 24px));
 }
+
 .skip-link:focus-visible {
   transform: none;
   outline: none;
@@ -375,6 +384,7 @@ function skipToContent() {
   background: var(--chrome);
   border-bottom: 1px solid var(--hair-gold);
 }
+
 .nav-inner {
   max-width: 1140px;
   margin: 0 auto;
@@ -384,6 +394,7 @@ function skipToContent() {
   align-items: center;
   gap: 20px;
 }
+
 .brand {
   display: flex;
   align-items: center;
@@ -391,15 +402,18 @@ function skipToContent() {
   flex: none;
   text-decoration: none;
 }
+
 .brand .glyph {
   display: inline-flex;
   align-items: center;
 }
+
 .brand-logo {
   height: 1.6rem;
   width: auto;
   display: block;
 }
+
 .word {
   font-family: var(--font-display);
   font-weight: 600;
@@ -407,9 +421,11 @@ function skipToContent() {
   letter-spacing: 0.05em;
   color: var(--text);
 }
+
 .word .gen {
   color: var(--gold);
 }
+
 .word .tld {
   font-size: 0.7em;
   letter-spacing: 0.04em;
@@ -422,6 +438,7 @@ function skipToContent() {
   gap: 2px;
   margin-left: 8px;
 }
+
 .nav-links a {
   color: var(--text-muted);
   font-size: 14px;
@@ -433,6 +450,7 @@ function skipToContent() {
     color 0.25s ease,
     background 0.25s ease;
 }
+
 /* resting affordance: a persistent low-opacity underline under every nav item */
 .nav-links a::after {
   content: '';
@@ -442,30 +460,36 @@ function skipToContent() {
   bottom: -1px;
   height: 2px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgb(255 255 255 / 16%);
   transition:
     background 0.25s ease,
     box-shadow 0.25s ease;
 }
+
 .nav-links a:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgb(255 255 255 / 5%);
 }
+
 .nav-links a:hover::after {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgb(255 255 255 / 40%);
 }
+
 .nav-links a.active {
   color: var(--aqua);
 }
+
 .nav-links a.active::after {
   background: var(--aqua);
   box-shadow: 0 0 10px var(--aqua-glow);
 }
+
 .nav-sep {
   color: var(--text-soft);
   font-size: 13px;
   user-select: none;
 }
+
 .nav-right {
   margin-left: auto;
   display: flex;
@@ -487,14 +511,17 @@ function skipToContent() {
     box-shadow 0.25s ease,
     background 0.25s ease;
 }
+
 .code-dialog-input::placeholder {
   color: var(--text-soft);
 }
+
 .code-dialog-input:focus {
   outline: none;
   border-color: var(--hair-gold);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 12%, transparent);
 }
+
 .nav-code-label {
   white-space: nowrap;
 }
@@ -518,34 +545,41 @@ function skipToContent() {
     background 0.25s ease,
     box-shadow 0.25s ease;
 }
+
 .btn:hover {
   border-color: var(--gold);
   color: var(--gold-bright);
   background: color-mix(in srgb, var(--myst-gold) 6%, transparent);
 }
+
 .btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 20%, transparent);
 }
+
 .btn-quiet {
   border-color: var(--hair);
   color: var(--text-muted);
 }
+
 .btn-quiet:hover {
   border-color: var(--hair-gold);
   color: var(--text);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgb(255 255 255 / 3%);
 }
+
 .account-trigger .acct-name {
   max-width: 12ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .account-trigger .chev {
   font-size: 0.7em;
   transition: transform 0.25s ease;
 }
+
 .account-trigger[data-state='open'] .chev {
   transform: rotate(180deg);
 }
@@ -567,6 +601,7 @@ function skipToContent() {
     border-color 0.25s ease,
     background 0.25s ease;
 }
+
 .hamburger span {
   display: block;
   width: 18px;
@@ -577,20 +612,25 @@ function skipToContent() {
     transform 0.3s ease,
     opacity 0.25s ease;
 }
+
 .hamburger:hover {
   border-color: var(--gold);
   background: color-mix(in srgb, var(--myst-gold) 6%, transparent);
 }
+
 .hamburger:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
 }
+
 .hamburger.is-open span:nth-child(1) {
   transform: translateY(6.6px) rotate(45deg);
 }
+
 .hamburger.is-open span:nth-child(2) {
   opacity: 0;
 }
+
 .hamburger.is-open span:nth-child(3) {
   transform: translateY(-6.6px) rotate(-45deg);
 }
@@ -605,11 +645,13 @@ function skipToContent() {
     max-height 0.38s ease,
     border-color 0.38s ease;
 }
+
 .mobile-menu.is-open {
   max-height: 620px;
   border-top-color: var(--hair);
   overflow-y: auto;
 }
+
 .mobile-menu-inner {
   max-width: 1140px;
   margin: 0 auto;
@@ -618,6 +660,7 @@ function skipToContent() {
   flex-direction: column;
   gap: 2px;
 }
+
 .mobile-menu a {
   color: var(--text-muted);
   font-size: 15px;
@@ -628,26 +671,32 @@ function skipToContent() {
     color 0.2s ease,
     background 0.2s ease;
 }
+
 .mobile-menu a:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgb(255 255 255 / 3%);
 }
+
 .mobile-menu a.active {
   color: var(--aqua);
 }
+
 .mm-code-btn {
   margin-top: 10px;
   justify-content: center;
 }
+
 .mm-login {
   margin-top: 10px;
   justify-content: center;
 }
+
 .mm-divider {
   height: 1px;
   background: var(--hair);
   margin: 10px 0 6px;
 }
+
 .mm-logout {
   color: var(--gold-bright) !important;
   cursor: pointer;
@@ -655,26 +704,29 @@ function skipToContent() {
 }
 
 /* Show the burger + hide the inline links/code on narrow screens. */
-@media (max-width: 860px) {
+@media (width <= 860px) {
   .nav-links,
   .nav-code-btn,
   .btn-login {
     display: none;
   }
+
   .account-trigger {
     display: none;
   }
+
   .hamburger {
     display: flex;
   }
 }
 
-@media (max-width: 400px) {
+@media (width <= 400px) {
   .nav-inner,
   .mobile-menu-inner {
     padding-left: 16px;
     padding-right: 16px;
   }
+
   .word {
     font-size: 17px;
   }

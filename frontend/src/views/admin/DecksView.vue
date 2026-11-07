@@ -69,17 +69,23 @@ function emptyDeck(): Partial<Deck> {
 
 async function fetchDecks() {
   const data = await api.get<Deck[]>(endpoints.admin.decks.list)
-  if (data) decks.value = data
+  if (data) {
+    decks.value = data
+  }
 }
 
 async function fetchPendingDecks() {
   const data = await api.get<Deck[]>(endpoints.admin.decks.pending)
-  if (data) pendingDecks.value = data
+  if (data) {
+    pendingDecks.value = data
+  }
 }
 
 async function fetchDeckSystems() {
   const data = await api.get<DeckSystem[]>(endpoints.admin.deckSystems.list)
-  if (data) deckSystems.value = data
+  if (data) {
+    deckSystems.value = data
+  }
 }
 
 function openAdd() {
@@ -97,7 +103,9 @@ function closeEdit() {
 }
 
 async function saveDeck() {
-  if (!editingDeck.value) return
+  if (!editingDeck.value) {
+    return
+  }
   saving.value = true
   try {
     const id = editingDeck.value.deck_id
@@ -107,7 +115,9 @@ async function saveDeck() {
     } else if (id !== undefined) {
       result = await api.patch(endpoints.admin.decks.byId(id), editingDeck.value, 'Deck updated.')
     }
-    if (!result) return
+    if (!result) {
+      return
+    }
     await Promise.all([fetchDecks(), fetchPendingDecks()])
     closeEdit()
   } finally {
@@ -122,7 +132,9 @@ async function deleteDeck(deck: Deck) {
     confirmLabel: 'Delete',
     danger: true,
   })
-  if (!ok) return
+  if (!ok) {
+    return
+  }
   const result = await api.del(endpoints.admin.decks.byId(deck.deck_id), 'Deck deleted.')
   if (result) {
     await Promise.all([fetchDecks(), fetchPendingDecks()])
@@ -171,14 +183,18 @@ async function generateImages(deck: Deck) {
   imagesBusyId.value = deck.deck_id
   const res = await api.post<ImageResult>(endpoints.admin.decks.images(deck.deck_id), {})
   imagesBusyId.value = null
-  if (res) reportImages(`"${deck.name}"`, res)
+  if (res) {
+    reportImages(`"${deck.name}"`, res)
+  }
 }
 
 async function generateAllImages() {
   generatingAll.value = true
   const res = await api.post<ImageResult>(endpoints.admin.decks.allImages, {})
   generatingAll.value = false
-  if (res) reportImages(`${res.decks ?? 0} deck(s)`, res)
+  if (res) {
+    reportImages(`${res.decks ?? 0} deck(s)`, res)
+  }
 }
 
 function systemName(id: number): string {
@@ -202,6 +218,7 @@ onMounted(() => {
   <AdminListPage title="Manage Decks" subtitle="Add, edit, or remove tarot decks.">
     <template #actions>
       <button
+        type="button"
         class="button is-link"
         :class="{ 'is-loading': generatingAll }"
         @click="generateAllImages"
@@ -209,7 +226,7 @@ onMounted(() => {
         <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['images']" /></span>
         <span>Generate All Web Images</span>
       </button>
-      <button class="button is-primary" @click="openAdd">
+      <button type="button" class="button is-primary" @click="openAdd">
         <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
         <span>Add Deck</span>
       </button>
@@ -418,8 +435,7 @@ onMounted(() => {
           ></span
         >
         <div
-          class="is-flex is-align-items-center"
-          style="gap: 0.5rem"
+          class="is-flex is-align-items-center aspect-fields"
           role="group"
           aria-labelledby="admin-deck-aspect"
         >
@@ -442,11 +458,22 @@ onMounted(() => {
     </template>
 
     <template #footer>
-      <button class="button" @click="closeEdit">Cancel</button>
-      <button class="button is-success" :class="{ 'is-loading': saving }" @click="saveDeck">
+      <button type="button" class="button" @click="closeEdit">Cancel</button>
+      <button
+        type="button"
+        class="button is-success"
+        :class="{ 'is-loading': saving }"
+        @click="saveDeck"
+      >
         <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['floppy-disk']" /></span>
         <span>{{ isNew ? 'Create' : 'Save' }}</span>
       </button>
     </template>
   </BaseModal>
 </template>
+
+<style scoped>
+.aspect-fields {
+  gap: 0.5rem;
+}
+</style>

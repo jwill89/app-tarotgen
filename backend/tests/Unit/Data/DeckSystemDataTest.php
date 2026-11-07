@@ -246,6 +246,6 @@ final class DeckSystemDataTest extends TestCase
         // FK ON DELETE CASCADE should have removed the card rows too.
         $count = $this->pdo->prepare('SELECT COUNT(*) FROM deck_system_cards');
         $count->execute();
-        $this->assertSame(0, (int)$count->fetchColumn());
+        $this->assertSame(0, (int) $count->fetchColumn());
     }
 }

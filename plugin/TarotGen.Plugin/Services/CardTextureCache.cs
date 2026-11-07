@@ -1,10 +1,4 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
 
@@ -44,12 +38,12 @@ public sealed class CardTextureCache : IDisposable
     private static string SiteBase => Configuration.SiteUrl;
 
     /// <summary>The full-res face texture for a card, or null while it loads.</summary>
-    public IDalamudTextureWrap? GetCard(int deckId, int cardId) => Get(
+    public IDalamudTextureWrap? GetCard(int deckId, int cardId) => this.Get(
         key: $"{deckId}_{cardId:0000}",
         url: $"{SiteBase}/assets/decks/{deckId}/Card_{cardId:0000}.png");
 
     /// <summary>The card-back texture for a deck, or null while it loads.</summary>
-    public IDalamudTextureWrap? GetCardBack(int deckId) => Get(
+    public IDalamudTextureWrap? GetCardBack(int deckId) => this.Get(
         key: $"{deckId}_back",
         url: $"{SiteBase}/assets/decks/{deckId}/Card_Back.png");
 
@@ -65,7 +59,7 @@ public sealed class CardTextureCache : IDisposable
             this.inflight.Add(key);
         }
 
-        _ = Task.Run(() => LoadAsync(key, url));
+        _ = Task.Run(() => this.LoadAsync(key, url));
         return null;
     }
 
@@ -82,7 +76,7 @@ public sealed class CardTextureCache : IDisposable
             else
             {
                 bytes = await this.http.GetByteArrayAsync(url, this.cts.Token).ConfigureAwait(false);
-                TryWriteFile(file, bytes);
+                this.TryWriteFile(file, bytes);
             }
 
             // ITextureProvider.CreateFromImageAsync(ReadOnlyMemory<byte>, string? debugName, CancellationToken)

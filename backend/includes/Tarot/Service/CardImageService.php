@@ -193,7 +193,7 @@ class CardImageService
         $w = imagesx($src);
         $h = imagesy($src);
         $tw = min($width, $w);
-        $th = max(1, (int)round($h * ($tw / $w)));
+        $th = max(1, (int) round($h * ($tw / $w)));
 
         $dst = imagecreatetruecolor($tw, $th);
         imagealphablending($dst, false);

@@ -23,7 +23,7 @@ class CardFrequencyData extends AbstractData
         $stmt = $this->db->prepare("{$mine} SELECT COUNT(*) FROM mine");
         $stmt->execute($params);
 
-        return (int)$stmt->fetchColumn();
+        return (int) $stmt->fetchColumn();
     }
 
     /**
