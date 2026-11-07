@@ -22,7 +22,7 @@ jobs:
   # fails if the generated API types differ from the committed OpenAPI spec;
   # test:coverage fails below the floor in vite.config.ts. web.yml runs the audit itself.
   frontend:
-    uses: jwill89/shared-tooling/.github/workflows/web.yml@v2.1.4
+    uses: jwill89/shared-tooling/.github/workflows/web.yml@v2.1.5
     with:
       dir: frontend
       fontawesome: true
@@ -34,7 +34,7 @@ jobs:
   # normalize, the declared dependencies, PHP CS Fixer, Rector, the tests (unit and
   # HTTP, against Phinx's schema) with their coverage floor, and PHPStan level 8.
   backend:
-    uses: jwill89/shared-tooling/.github/workflows/php.yml@v2.1.4
+    uses: jwill89/shared-tooling/.github/workflows/php.yml@v2.1.5
     with:
       dir: backend
       php-version: '8.5'
@@ -50,7 +50,7 @@ jobs:
   # axe at WCAG 2.2 AA, and a guest's reading and card report must reach an admin.
   e2e:
     needs: [frontend, backend]
-    uses: jwill89/shared-tooling/.github/workflows/e2e.yml@v2.1.4
+    uses: jwill89/shared-tooling/.github/workflows/e2e.yml@v2.1.5
     with:
       dir: frontend
       fontawesome: true
@@ -63,18 +63,18 @@ jobs:
   # The FFXIV plugin, built against Dalamud in Release with warnings as errors (the
   # shared analyzers, imported by plugin/Directory.Build.props), and dotnet format.
   plugin:
-    uses: jwill89/shared-tooling/.github/workflows/dotnet.yml@v2.1.4
+    uses: jwill89/shared-tooling/.github/workflows/dotnet.yml@v2.1.5
     with:
       projects: plugin/TarotGen.Plugin/TarotGen.Plugin.csproj
       warnings-as-errors: true
 
   # PSScriptAnalyzer, with the shared settings, on every tracked script.
   scripts:
-    uses: jwill89/shared-tooling/.github/workflows/pwsh.yml@v2.1.4
+    uses: jwill89/shared-tooling/.github/workflows/pwsh.yml@v2.1.5
 
   # markdownlint, the shared .editorconfig/.gitattributes, and the workflow refs.
   docs:
-    uses: jwill89/shared-tooling/.github/workflows/docs.yml@v2.1.4
+    uses: jwill89/shared-tooling/.github/workflows/docs.yml@v2.1.5
 
   # On a push to main, AFTER the gate passes, tag + release the project version
   # if it has no release yet. Tag = v<version> (frontend/package.json); release
