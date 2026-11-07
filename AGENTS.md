@@ -4,6 +4,8 @@ Operational guide for AI agents and developers working in this repository. Read
 this first to understand how the project is laid out, how the pieces fit
 together, and the conventions to follow when making changes.
 
+This file holds only what is specific to TarotGen.io. The rules every project follows are in [`shared/standards/README.md`](shared/standards/README.md) and the topic files it lists; where this file says nothing, or says something older, those rules win. Where the code still departs from them, [§13](#13-where-this-project-departs-from-the-standards) says so.
+
 ---
 
 ## 1. What this project is
@@ -30,12 +32,12 @@ It is a **single-page app (SPA) frontend + REST API backend**:
 
 | Area        | Tooling |
 |-------------|---------|
-| Frontend    | Vue `^3.5`, vue-router `^5.1`, TypeScript `~6.0` (`vue-tsc ^3.3`), Vite `^8`, Bulma `^1.0`, Reka UI `^2.10` |
+| Frontend    | Vue `^3.5`, vue-router `^5.1`, TypeScript `~6.0` (`vue-tsc 3.3.13`, held: §10), Vite `^8`, Bulma `^1.0`, Reka UI `^2.10` |
 | Editor/MD   | TipTap `^3.25` (`@tiptap/*`), `marked`, `dompurify`, `turndown` |
-| Shared      | **shared-tooling v1.3.0**, the git submodule at `shared/` (`shared/README.md`): the lint configs, test settings, CI workflows, repo files and the deploy module (`SharedDeploy`) every jwill89 project shares. A clone needs `git submodule update --init` first. |
-| Icons       | FontAwesome **Pro v7**, self-hosted via the per-style packages (`@fortawesome/pro-{solid,regular,duotone}-svg-icons` + free `@fortawesome/free-brands-svg-icons`) + `@fortawesome/fontawesome-svg-core`. Needs the Font Awesome token in `~/.npmrc` to install — see §6. |
+| Shared      | **shared-tooling v2.1.0**, the git submodule at `shared/` (`shared/README.md`): the lint configs, test settings, CI workflows, repo files, the deploy module (`SharedDeploy`) and the standards (`shared/standards/`) every jwill89 project shares. |
+| Icons       | FontAwesome **Pro v7**, self-hosted via the per-style packages (`@fortawesome/pro-{solid,regular,duotone}-svg-icons` + free `@fortawesome/free-brands-svg-icons`) + `@fortawesome/fontawesome-svg-core` (the kit package is a follow-up, §13). Needs the Font Awesome token in `~/.npmrc` to install — see §6. |
 | FE testing  | Vitest `^5` on `jsdom` with shared-tooling's settings (`vitestDefaults`) + `@vue/test-utils` (components/views), coverage via `@vitest/coverage-v8` (floor in `vite.config.ts`); Playwright `^1` end-to-end suite (`e2e/`) on shared-tooling's settings, with axe (`@jwill89/test-a11y`) |
-| FE linting  | ESLint `^10`, Prettier, Stylelint `^17` and the tsconfigs all extend shared-tooling's `@jwill89/lint-web` (`shared/lint/web`: ESLint with `eslint-plugin-vue`, typescript-eslint's strict type-checked set, `eslint-plugin-vuejs-accessibility` and `curly`; Stylelint's standard + Vue configs; tsconfigs with `noUncheckedIndexedAccess`), plus this app's own rules (SCSS, the palette rule); Knip (unused code/deps) |
+| FE linting  | ESLint `^10`, Prettier, Stylelint `^18` and the tsconfigs all extend shared-tooling's `@jwill89/lint-web` (`shared/lint/web`: ESLint with `eslint-plugin-vue`, typescript-eslint's strict type-checked set, `eslint-plugin-vuejs-accessibility` and `curly`; Stylelint's standard + Vue configs; tsconfigs with `noUncheckedIndexedAccess`), plus this app's own rules (SCSS, the palette rule); Knip (unused code/deps) |
 | Backend     | PHP `>=8.5`, Slim 4 (`slim/slim`, `slim/http`, `slim/psr7`), `php-di/slim-bridge` |
 | Auth/email  | `lbuchs/webauthn` (passkeys), `phpmailer/phpmailer` (SMTP) |
 | BE testing  | PHPUnit `^13` |
@@ -115,7 +117,7 @@ flattens both into the live server's single flat web root.
 │   ├── Directory.Build.props #  Imports the shared analyzers and C# code style (shared/lint/dotnet).
 │   └── TarotGen.Plugin/    #   C# project (net10.0-windows, Dalamud.NET.Sdk); packaged by DalamudPackager.
 │
-├── shared/                 # Git submodule: shared-tooling v1.3.0 (`git submodule update --init`).
+├── shared/                 # Git submodule: shared-tooling v2.1.0 (`git submodule update --init`).
 ├── scripts/deploy.ps1      # Build & deploy orchestration (frontend + backend + plugin), on shared/deploy/pwsh.
 ├── scripts/server/tarotgen.cron # /etc/cron.d/tarotgen (retention); the backend deploy installs it.
 ├── Taskfile.yml            # `task` commands; includes shared/repo/Taskfile.yml as shared:*.
@@ -123,6 +125,7 @@ flattens both into the live server's single flat web root.
 ├── .markdownlint-cli2.jsonc # markdownlint: the shared config (shared/lint/markdown) + this repo's ignores.
 ├── .github/                # CI, plugin, CodeQL workflows; dependabot.yml.
 ├── README.md               # Human-facing quick orientation.
+├── CLAUDE.md               # Imports this file and shared/standards/README.md for Claude Code.
 ├── .gitignore
 └── (frontend/dist, */node_modules — generated)
 ```
@@ -147,11 +150,11 @@ HTTP Request
 - **Controllers** extend `AbstractController`. Dependencies are **constructor-
   injected** (PHP-DI autowiring resolves concrete classes from type-hints).
   Return Slim responses via `$response->withJson([...], $status)`. Error bodies
-  use the shape `['error' => '...']`.
+  use the shape `['error' => '...']` (RFC 9457 is a follow-up, §13).
 - **Data classes** extend `AbstractData`, which provides `fetchOne()`,
   `fetchAllAs()`, and `applyUpdate()` (dynamic, allow-listed UPDATE). The `PDO`
   handle is **injected**, never fetched from a global, so tests can pass an
-  in-memory SQLite PDO. Always use **prepared statements / bound params**.
+  in-memory SQLite PDO.
 - **Every row read fetches straight into a class** with `fetchOne()`/`fetchAllAs()`
   — there is no `FETCH_ASSOC` + hand-written `hydrate()`. The SELECT lists exactly
   the class's properties (never `*`). A derived value is computed in the SELECT
@@ -173,12 +176,9 @@ resource. Admin routes are under `/admin` and guarded by `AdminAuth`; account
 self-service routes under `/account` are guarded by `UserAuth`. Trailing-slash
 variants are allowed via `[/]`.
 
-The API is **hybrid REST** (see [`API.md`](API.md) for the full rulebook):
-collections are plural nouns (`/decks`, `/readings`); `GET` reads, `POST` creates
-(→`201`) or runs a command, `PUT` replaces, `PATCH` does a partial update / flag
-toggle, `DELETE` removes (→`204`). Non-CRUD state transitions are
-`POST /<resource>/{id}/<verb>` (`…/finalize`, `…/approve`, …); credential/session
-endpoints stay action-oriented under `/auth/*`.
+The API's paths and methods follow the guide's [api-and-realtime.md](shared/standards/api-and-realtime.md); [`API.md`](API.md) has this API's own conventions, such as its commands (`…/finalize`, `…/unlock`, `…/draw`) and `DELETE /<resource>/all`.
+
+Public catalog reads (decks, deck systems, spreads) send `Cache-Control: public, max-age=300`, since the catalog changes slowly; viewer-specific reads, such as a single reading, send `private, no-store`.
 
 ### API docs (OpenAPI + Scalar)
 
@@ -209,28 +209,14 @@ upgrade, change the version and recompute the sha384 of that exact file.
 
 ### Auth & security
 
-- Sessions use PHP sessions hardened in `index.php` (HttpOnly, SameSite=Lax,
-  Secure in production). Admin access requires a **user account with the
-  `is_admin` flag** — there is no shared admin password. Grant it with
-  `php scripts/make_admin.php you@example.com`. No admin can remove their own
-  flag or delete themselves, and the accounts in `PROTECTED_ADMIN_EMAILS` can't
-  be demoted or deleted by anyone (`AccountProtection`).
+- Sessions are PHP sessions, with the cookie's flags set in `index.php`. Admin is the `is_admin` flag on a user account, granted with `php scripts/make_admin.php you@example.com`. `AccountProtection` stops an admin demoting or deleting themselves, and guards the owner accounts named in `PROTECTED_ADMIN_EMAILS`.
 - Each `sessions` row records its `user_id` (`DbSessionHandler`), so a password
   change ends the user's other sessions, a reset ends all of them, and deleting
   an account ends its sessions (`DbSessionHandler::destroyForUser`).
 - **Always one way to sign in** (`SignInMethods`): password (set and not
   switched off), passkeys, Google. Switching password login off, deleting the
   last passkey or unlinking Google is refused (409) when it would leave none.
-- No account enumeration: registration answers the same for a taken email
-  (the owner is emailed), login runs a dummy hash check for an unknown email,
-  and passkey login options give an unknown email stand-in credential ids
-  (`PasskeyDecoys`, keyed by `<TAROT_DATA_DIR>/db/passkey-decoy.key`, created on
-  first use). The sign-up and password-reset emails go out **after the
-  response** under PHP-FPM (`Tarot\Utility\AfterResponse`, run by
-  `api/index.php`), so neither answer waits on SMTP only when an address has an
-  account; where a response can't be finished early (CLI, the dev server) they
-  are sent inline, as before. An admin's resend stays inline (it reports
-  whether the email went).
+- No account enumeration: the stand-in passkey credential ids come from `PasskeyDecoys`, keyed by `<TAROT_DATA_DIR>/db/passkey-decoy.key` (created on first use). The sign-up and password-reset emails go out **after the response** under PHP-FPM (`Tarot\Utility\AfterResponse`, run by `api/index.php`), so neither answer waits on SMTP only when an address has an account; where a response can't be finished early (CLI, the dev server) they are sent inline. An admin's resend stays inline (it reports whether the email went).
 - **Who may make a reading** (`POST /readings/generate`, `POST /readings`;
   `ReadingController::refuseDraw()`): with Turnstile configured, a request with
   no signed-in user (session, or a linked plugin's `tg_pat_` token) needs a
@@ -243,7 +229,7 @@ upgrade, change the version and recompute the sha384 of that exact file.
   the tests, the end-to-end suite) nothing more is needed.
 - `OriginGuard` middleware is CSRF defense-in-depth (rejects cross-origin
   state-changing requests). Added last so it runs outermost.
-- CORS is **opt-in** via `APP_ORIGIN` (never `*` with credentialed cookies).
+- CORS is **opt-in** via `APP_ORIGIN`.
 - Passkeys/WebAuthn via `lbuchs/webauthn`; optional Google OAuth.
 - In production the DI container is compiled to disk and error detail is hidden.
 
@@ -270,12 +256,6 @@ little PHP per navigation):
 
 ## 5. Frontend architecture
 
-- **Components/views** use Vue 3 `<script setup lang="ts">`. Views are **lazy-
-  loaded** in the router so each page (and heavy deps like TipTap) is a separate
-  chunk.
-- **Composables** (`src/composables/use*.ts`) hold state and API logic. They are
-  the primary unit of reusable logic — prefer extending an existing composable
-  over scattering `fetch` calls in components.
 - **API access:** the framework-free client lives in `composables/apiClient.ts`
   (re-exported from `useApi.ts`, so import either). Pick by how much you need to
   know about failures:
@@ -289,7 +269,7 @@ little PHP per navigation):
   All paths are relative to `/api`; build bodies with `sendJson(method, body)` (or
   `sendForm(params)` for the two form-encoded reading calls). The backend returns
   `{ error: '...' }` on failure and `ApiResult.error` carries it, with your fallback
-  when there is none — prefer showing it as is to re-wording statuses. Note
+  when there is none. Note
   `apiClient.ts` imports nothing local (so `useUser` can use it without an import
   cycle); the Vue-aware `useAdminApi` stays in `useApi.ts`.
 
@@ -300,8 +280,7 @@ little PHP per navigation):
   other devices and the journal export links), `usePasskeys`, `useUserSpreads`,
   `useDecks`, `useContact`, `useUser`, `useCardFrequency`, `useDailyCards`.
 - **Types:** `src/types/api.generated.ts` is **generated** from `backend/openapi.json`
-  via `npm run gen:types` (openapi-typescript) — never edit it by hand; regenerate
-  it after the backend spec changes (CI fails if it's stale). `src/types/index.ts`
+  via `npm run gen:types` (openapi-typescript). `src/types/index.ts`
   re-exports every entity the API sends as a backend `Structure` from it (`User`,
   `Deck`, `Spread`, `CardReport`, …), so a PHP property change reaches the frontend
   types with no hand copy. So do the payloads a controller assembles itself once
@@ -314,7 +293,7 @@ little PHP per navigation):
 - **Session bootstrap:** `main.ts` calls `fetchMe()` before mounting so guards
   have user state immediately; the router periodically revalidates.
 - **Constants/storage:** keys live in `src/constants.ts` under the `tarot.`
-  namespace — don't hardcode storage keys.
+  namespace.
 - **Icons:** FontAwesome is self-hosted and registered in `src/fontawesome.ts`.
   Only the icons actually used are imported (tree-shakeable) and collected into a
   `byPrefixAndName` lookup; templates render them with the `<FontAwesomeIcon>`
@@ -322,41 +301,16 @@ little PHP per navigation):
   new icon in a template without adding its import + `index(...)` entry here, the
   lookup is `undefined` and it won't render — always register it. Icons come from
   the per-style Pro packages, so there are no CDN requests.
-- **Styling:** Bulma utility classes + CSS custom properties (`--myst-*`) in
-  `src/assets/tokens.css` (the palette source of truth, mapped onto Bulma's own
-  variables). Theme is dark (`data-theme="dark"` on `<html>`). A translucent
-  palette colour is `color-mix(in srgb, var(--myst-gold) 12%, transparent)` —
-  never an `rgba()` copy of the token's channels; Stylelint enforces it (no hex,
-  and outside `tokens.css` only pure white/black may be written as `rgb()`).
-  Text on a gold fill (an `is-link` button) is dark ink, as on the aqua primary
-  (`--bulma-link-invert-l` in `tokens.css`): Bulma's white read at 2.4:1. The
-  quietest text, Bulma's `.has-text-grey` (hints, empty states), reads
-  `--myst-text-grey` (`tokens.css` overrides the class): Bulma's fixed `#69748c`
-  read 2.7–4.2:1 here, and the token reaches 4.5:1 on every surface, a hovered
-  `--myst-surface-3` included; print has its own, darker value. The end-to-end
-  suite holds the main pages to WCAG 2.2 AA (§8).
-  Bulma is a modular build
-  (`src/assets/bulma.scss`): only the modules in use, and only the dark theme's
-  variables; a Bulma class that does nothing is probably a module that isn't
-  imported (see that file's header).
+- **Styling:** Bulma utility classes + CSS custom properties (`--myst-*`) in `src/assets/tokens.css` (the palette source of truth, mapped onto Bulma's own variables). Layout and spacing come from Bulma's helpers (§13). The theme is dark only (`data-theme="dark"` on `<html>`). Stylelint's palette rule takes `tokens.css` as the token file, and this app's own rule also refuses any `rgb()` but pure white or black, so a tint is always `color-mix()` over a token. Text on a gold fill (an `is-link` button) is dark ink, as on the aqua primary (`--bulma-link-invert-l` in `tokens.css`): Bulma's white read at 2.4:1. The quietest text, Bulma's `.has-text-grey` (hints, empty states), reads `--myst-text-grey` (`tokens.css` overrides the class): Bulma's fixed `#69748c` read 2.7–4.2:1 here, and the token reaches 4.5:1 on every surface, a hovered `--myst-surface-3` included; print has its own, darker value. The end-to-end suite holds the main pages to WCAG 2.2 AA (§8; the AAA target is a follow-up, §13). Bulma is a modular build (`src/assets/bulma.scss`): only the modules in use, and only the dark theme's variables; a Bulma class that does nothing is probably a module that isn't imported (see that file's header).
 - **Admin list pages** sit in `components/admin/AdminListPage.vue` (column width,
   back-to-dashboard link, `PageHeader` with an `#actions` slot) and use
   `AdminSearchField` for the search box; the view keeps its own tables.
-- **Form labels:** every control has a name. Pair `<label for="x">` with the
-  control's `id` (views: a `view-field` prefix, as `login-email`; components:
-  ids from `useId()`, plus the row index inside a `v-for`). The custom controls
-  take an `id` and put it on their focusable element (`BaseSelect`, `NumberField`,
-  `ToggleSwitch`, `DeckComboBox`, `SpreadComboBox`); a caption over a group
-  (`SegmentedControl`, several inputs) or over `MarkdownEditor` is a
-  `<span class="label" :id>` the group or editor names with `aria-labelledby`.
-  `eslint-plugin-vuejs-accessibility` checks the templates; a label that points
-  into a component can only be checked in the browser.
+- **Form labels:** the custom controls that take an `id` and put it on their focusable element are `BaseSelect`, `NumberField`, `ToggleSwitch`, `DeckComboBox` and `SpreadComboBox`. A caption over a group (`SegmentedControl`, several inputs) or over `MarkdownEditor` is a `<span class="label" :id>` that the group or editor names with `aria-labelledby`.
 - **Interactive UI (Reka UI):** dialogs, menus, popovers, tooltips, comboboxes,
   selects, switches, segmented controls, number fields, disclosures, pagination,
   and toasts are Reka UI headless primitives wrapped in shared components
   (`BaseModal`, `ConfirmDialog`, `DeckComboBox`/`SpreadComboBox`,
-  `SegmentedControl`, `ToggleSwitch`, `Tooltip`, …) — prefer these over
-  hand-rolling a Bulma/native widget so behavior + accessibility stay consistent.
+  `SegmentedControl`, `ToggleSwitch`, `Tooltip`, …); use these.
 - **Heading font:** headings read the `--myst-heading-font` CSS var, set once in
   `tokens.css` to the self-hosted **Crucial** (`src/assets/fonts.css`,
   `public/fonts/`). (The old multi-font audition switcher was retired.)
@@ -367,14 +321,7 @@ little PHP per navigation):
 
 Run from the project root. Shell is **PowerShell** on Windows; chain with `;`.
 
-A fresh clone needs the shared-tooling submodule before anything builds:
-`git submodule update --init` (or clone with `--recurse-submodules`).
-
-`Taskfile.yml` runs the same commands from the repo root: `task` alone lists them;
-`task setup`, `task dev` (both servers), `task lint`, `task test`, `task check` (lint,
-audit and every test), `task deploy:*`. It includes the shared tasks as `shared:*`
-(`task shared:lint:scripts`, `shared:lint:md`, `shared:repo:check`,
-`shared:version:check`, `shared:update`).
+`Taskfile.yml` runs the same commands from the repo root: `task setup`, `task dev` (both servers), `task gen` (the spec, then the frontend's types), `task lint`, `task test`, `task check`, `task vuln`, and `task deploy` (the frontend; `deploy:backend`, `deploy:both` and `deploy:plugin` for the rest). `task lint:scripts` runs the shared `shared:lint:scripts`; the other shared tasks are `shared:lint:md`, `shared:repo:check`, `shared:version:check` and `shared:update`.
 
 ### Frontend (npm) — run from `frontend/`
 
@@ -389,6 +336,7 @@ npm run lint           # eslint . (flat config; TS + Vue SFCs, incl. template ac
 npm run lint:fix       # eslint . --fix
 npm run lint:css       # stylelint (styles in .css/.scss/.vue; incl. the palette rule, §5)
 npm run knip           # unused files, exports and dependencies (knip.ts)
+npm run format         # prettier --write . (format:check is CI's check)
 npm test               # vitest run (single pass)
 npm run test:watch     # vitest watch mode
 npm run test:coverage  # vitest + coverage; fails below the floor in vite.config.ts
@@ -397,23 +345,9 @@ npm run gen:types      # regenerate src/types/api.generated.ts from backend/open
 npm run gen:check      # gen:types, then fail if the committed api.generated.ts differs (CI)
 ```
 
-> **The Font Awesome token goes in `~/.npmrc`.** The icon packages come from a
-> private FontAwesome registry. `frontend/.npmrc` is tracked and holds no secret:
-> it maps the `@fortawesome` and `@awesome.me` scopes to that registry and sets
-> `install-links=true`. The token itself goes in your user `~/.npmrc`
-> (`//npm.fontawesome.com/:_authToken=…`); without it, the `@fortawesome/*`
-> packages won't resolve. CI writes it from the `FONTAWESOME_NPM_TOKEN` secret.
+> **The Font Awesome token goes in `~/.npmrc`** (`//npm.fontawesome.com/:_authToken=…`). `frontend/.npmrc` maps the `@fortawesome` and `@awesome.me` scopes to that registry and sets `install-links=true`. CI writes the token from the `FONTAWESOME_NPM_TOKEN` secret.
 >
-> **`@jwill89/lint-web` and `@jwill89/test-a11y` install from the submodule**
-> (`file:../shared/lint/web`, `file:../shared/test/a11y`), as copies
-> (`install-links`), so their own plugins come with them. Moving `shared/` to
-> another release is `task shared:update -- v1.4.0`: it checks the tag out,
-> points every shared workflow's `@v…` at it, re-syncs `.editorconfig` and
-> `.gitattributes`, and re-installs both packages. Review the diff and commit it
-> as one change, `package-lock.json` included, or CI's `npm ci` refuses the
-> stale lock. CI's docs job fails when the submodule and the workflow refs name
-> different releases. Keep `frontend/package.json`'s own
-> `eslint`/`prettier`/`stylelint`/`typescript` ranges within lint-web's peers.
+> **`@jwill89/lint-web` and `@jwill89/test-a11y` install from the submodule** (`file:../shared/lint/web`, `file:../shared/test/a11y`).
 
 ### Backend (composer / php) — run from `backend/`
 
@@ -438,23 +372,13 @@ php scripts/dump_schema.php # regenerate db/schema.sql from the migrations (§7)
 vendor\bin\phpunit     # run PHPUnit directly
 ```
 
-> PHPStan runs at **level 8** (from `shared/lint/php/phpstan.neon`, which
-> `phpstan.neon` includes; a project may raise it, never lower it) plus
-> `phpstan-strict-rules` (no `empty()`, no short
-> ternary, boolean-only conditions, no useless casts), `phpstan-deprecation-rules`
-> and `phpstan-phpunit`, loaded by `phpstan/extension-installer`. A baseline
-> (`phpstan-baseline.neon`, one entry) holds a pre-existing finding, so
-> `composer stan` fails only on *new* issues.
+> PHPStan runs the shared level 8 (`shared/lint/php/phpstan.neon`, which `phpstan.neon` includes) with `phpstan-phpunit` beside the shared rule sets, loaded by `phpstan/extension-installer`. The baseline (`phpstan-baseline.neon`) holds one pre-existing finding; regenerate it with `composer stan -- --generate-baseline`.
 >
 > **`composer.json`'s `conflict` holds `phpstan/phpstan` at 2.3.3** (2026-10-28):
 > PHPStan 2.3.4's phar bundles a newer phpdoc-parser (with `FullyQualifiedNameNode`)
 > than Rector 2.8.2 bundles (2.3.11), and Rector then crashes on every file with
 > a `callable` docblock type. Drop the conflict once a Rector release supports
 > PHPStan 2.3.4 (`composer rector:check` passes with it).
-> The Data/Repository/Structure layers and controller route `$args` are fully
-> annotated (`array<string,mixed>`, `list<Structure>`, `array<string,string>`,
-> etc.), so keep new array params/returns typed. Regenerate the baseline with
-> `composer stan -- --generate-baseline`; raise toward `max` incrementally.
 
 To serve the full app locally, run **two processes in two terminals**: from
 `backend/` run `composer dev` (the PHP backend on port 80) and from `frontend/` run
@@ -486,18 +410,10 @@ disk) for PHP's built-in server, which has no `.htaccess`. Any PHP host serving
 - After editing **backend** PHP: run `composer test`, `composer stan`,
   `composer lint`, and `composer rector:check`; after touching `composer.json` or
   adding a dependency, `composer deps:check` and `composer normalize`.
-- After editing **`scripts/*.ps1`**: `task lint:scripts`, which runs
-  `shared/lint/pwsh/Invoke-ScriptLint.ps1`: PSScriptAnalyzer with the shared
-  settings on every tracked PowerShell file (CI's `scripts` job runs the same
-  script). Install PSScriptAnalyzer once with `Install-PSResource
-  PSScriptAnalyzer -Version 1.25.0 -Scope CurrentUser`. The deploy script needs
-  PowerShell 7.4 (`pwsh`).
+- After editing **`scripts/*.ps1`**: `task lint:scripts`, which runs `shared:lint:scripts` (`shared/lint/pwsh/Invoke-ScriptLint.ps1`: PSScriptAnalyzer with the shared settings on every tracked PowerShell file; CI's `scripts` job runs the same script). Install PSScriptAnalyzer once with `Install-PSResource PSScriptAnalyzer -Version 1.25.0 -Scope CurrentUser -TrustRepository`. The deploy script needs PowerShell 7.4 (`pwsh`).
 - After editing **Markdown**: `task shared:lint:md` (`npx --yes
   markdownlint-cli2@0.24.0` from the repo root, CI's `docs` job).
-- `task lint` runs every lint and static check above (not the tests), plus the
-  plugin's `dotnet format` and the checks that `.editorconfig`, `.gitattributes`
-  and the workflow refs match `shared/`; `task check` adds the audits and every
-  test.
+- `task lint` also runs the plugin's `dotnet format`.
 
 ### Deployment
 
@@ -512,7 +428,7 @@ PHP errors land in `/var/log/apache2/error.log` (`AH01071 … PHP message:`) and
 shared-tooling's **SharedDeploy** module (`shared/deploy/pwsh`, whose README
 describes each function) and needs PowerShell 7.4 and PuTTY's `plink` 0.85 or
 later (`pscp` is no longer used), with the DigitalOcean `.ppk` key, loaded into
-Pageant first if it has a passphrase. The SSH user must be root.
+Pageant first if it has a passphrase. The deploy config names its SSH user (`VpsUser`, with no default); the backend steps run `runuser` and install cron and systemd files, so that user needs root's rights.
 
 ```powershell
 .\scripts\deploy.ps1                    # frontend (default): npm build + dist swapped in by renames
@@ -541,15 +457,7 @@ root, so `backend/.htaccess` must keep refusing `db/`, `includes/`, `vendor/`,
 served verbatim); the deploy swaps the `.htaccess` in first, so its rules are in
 place before the files they guard.
 
-**One archive, one connection, one remote run.** Everything a run ships goes into
-one archive (Windows `tar.exe`, ustar), packed before anything connects, so a
-broken build changes nothing. The run holds **one SSH connection** (`plink
--share`) from the upload to the database pull, plus one more only if it drops and
-reconnects, which keeps it under `ufw limit ssh` (6 connections in 30 s). The
-archive streams to the SSH user's home; one remote run checks its SHA-256 and
-file count before anything changes, then runs each target's step, API first (a
-new backend is additive to the old SPA; a new SPA may call endpoints an old
-backend lacks):
+**One archive, one connection, one remote run**, as the shared module does it (Windows `tar.exe`, ustar; `plink -share`). The one held connection, plus one more only if it drops and reconnects, keeps the run under the droplet's `ufw limit ssh` (6 connections in 30 s). The archive streams to the SSH user's home, and the remote run takes each target's step, API first:
 
 - **backend:** the database and the host's tools (`composer`, `php`, `sqlite3`,
   `gzip`, `runuser`) are checked first. The new code is built whole in
@@ -597,7 +505,7 @@ connection:
    opens locally, keeping the three previous local copies (`-NoDbPull` skips it).
 
 **Automation.** `.github/workflows/ci.yml` calls shared-tooling's reusable
-workflows at `@v1.3.0`, the release the submodule holds:
+workflows at `@v2.1.0`, the release the submodule holds:
 
 - `frontend` (`web.yml`): an `npm audit` of what ships, then `gen:check`,
   `type-check`, `lint`, `lint:css`, `knip`, `format:check`, `test:coverage` and
@@ -611,19 +519,7 @@ workflows at `@v1.3.0`, the release the submodule holds:
 - `docs` (`docs.yml`): markdownlint, `.editorconfig` and `.gitattributes` against
   `shared/repo`, and every workflow ref against the submodule's release.
 
-TarotGen's own `release` job waits for all six. `plugin.yml` only packages the
-plugin (`latest.zip` + manifest, kept a week) when `plugin/`, `shared`,
-`.editorconfig` or the workflow itself changes, and `codeql.yml` is unchanged
-(frontend, plugin and workflows; CodeQL has no PHP). shared-tooling is public, so
-the workflows check the submodule out with the default token.
-`.github/dependabot.yml` opens weekly grouped updates for npm, Composer, NuGet
-and Actions; TypeScript's major is held (see §2). Dependabot can't read Actions
-secrets: `FONTAWESOME_NPM_TOKEN` also exists as a **Dependabot** secret, for its
-npm job and for CI on its pull requests, and the Font Awesome registry is
-declared there with its `scope` (`@fortawesome`), since the tracked `.npmrc`
-holds no token. CI no longer uses `ESLINT_CONFIG_TOKEN`; `dependabot.yml` still
-lists a `github` git registry on it for every ecosystem, from when the
-`eslint-config` submodule was private.
+TarotGen's own `release` job waits for all six. `plugin.yml` only packages the plugin (`latest.zip` + manifest, kept a week) when `plugin/`, `shared`, `.editorconfig` or the workflow itself changes, and `codeql.yml` covers the frontend, the plugin and the workflows (CodeQL has no PHP). `.github/dependabot.yml` opens weekly grouped updates for npm, Composer, NuGet and Actions; it skips TypeScript's major, vue-tsc 3.3.14 and the majors of the tools `lint/web` owns, and Composer's `conflict` holds PHPStan (§10). `FONTAWESOME_NPM_TOKEN` is also a **Dependabot** secret, for its npm job and for CI on its pull requests. The Font Awesome registry is declared there with no `scope:`, because with one Dependabot writes its own `.npmrc`, which loses `install-links=true`.
 
 **A release with a migration** needs nothing by hand: the backend deploy
 snapshots the database and runs `phinx migrate` as above (§7, §10 "Schema
@@ -669,12 +565,7 @@ scripts/retention.php --dry-run`.
 
 ## 7. Database
 
-- Single SQLite file at `Tarot\Config\Paths::database()`: `<TAROT_DATA_DIR>/db/tarotdb.db`
-  in production, `backend/db/tarotdb.db` locally. Accessed via `Tarot\Database\Connection`
-  (PDO singleton). Foreign keys are enforced (`PRAGMA foreign_keys = ON`), WAL
-  journaling is enabled, and `busy_timeout` is set. `Connection` opens the file
-  read-write but **never creates it**: a missing DB (e.g. a mis-set
-  `TAROT_DATA_DIR`) is an error, not a new empty database.
+- Single SQLite file at `Tarot\Config\Paths::database()`: `<TAROT_DATA_DIR>/db/tarotdb.db` in production, `backend/db/tarotdb.db` locally. `Tarot\Database\Connection` (a PDO singleton) opens it with the shared pragmas and never creates it, so a mis-set `TAROT_DATA_DIR` is an error.
 - **Schema changes are Phinx migrations** (`robmorgan/phinx`, since 2026-11-06), in
   `db/migrations/` (committed), run in order and recorded in the DB's `phinxlog`
   table. `phinx.php` points Phinx at `Paths::database()`, so `TAROT_DATA_DIR`
@@ -698,9 +589,7 @@ scripts/retention.php --dry-run`.
   `db/migrations/<UTC timestamp>_add_thing_to_readings.php` with an empty
   `change()`. For SQL, replace it with `up()` (`$this->execute(...)`) and a
   `down()` where the change can be undone, else have `down()` throw
-  `IrreversibleMigrationException` (rolling back on production means restoring
-  the backup). **Never edit a migration that has run on production** — add
-  another. Each runs in one transaction, so one that throws leaves nothing
+  `IrreversibleMigrationException`. Each runs in one transaction, so one that throws leaves nothing
   behind. Phinx's connection has foreign keys **off**, and `PRAGMA foreign_keys`
   can't change inside the transaction: a table rebuild (create, copy, drop,
   rename) must end with `PRAGMA foreign_key_check` and throw if it returns rows.
@@ -718,10 +607,7 @@ scripts/retention.php --dry-run`.
   By hand, run the same line after a backup (`sudo systemctl start
   tarotgen-backup`); `TAROT_DATA_DIR` also comes from `/etc/environment` in SSH
   sessions, but pass it explicitly anywhere else.
-  **Run anything that writes in the live DB's directory as `www-data`** (Phinx,
-  `sqlite3`, a script), so every file created there (a `.backup` copy, the
-  `-wal`/`-shm` files) stays owned by the web-server user that has to read and
-  write it.
+  The database's own user, which anything that writes in its folder runs as, is `www-data`.
 - The old one-off scripts (`db/migrate_*.php`, `add_*`, `drop_*`, plus
   `check_state.php` and friends) stay where they are, gitignored, locally and in
   `<WebRoot>/db/` on the droplet. They are retired: the baseline is their end
@@ -732,33 +618,14 @@ scripts/retention.php --dry-run`.
 
 ## 8. Testing conventions
 
-- **Frontend (Vitest):** specs live flat in `src/__tests__/*.spec.ts`, named after
-  the unit. Config in `vite.config.ts`: shared-tooling's `vitestDefaults`
-  (`shared/test/web/vitest.js`: `jsdom`, `restoreMocks`, `unstubGlobals`, v8
-  coverage over all of `src`) with this app's floor and setup file,
-  `vitest.setup.ts`, which also stands in for what browsers have and jsdom
-  lacks (`scrollIntoView`, pointer capture, `ResizeObserver`, `scrollTo`, the
-  Clipboard and Credential Management APIs). Composables and utils are tested
-  as units; components and views with `@vue/test-utils` through
-  `src/__tests__/helpers/app.ts`: `mountWithApp` (as `main.ts` mounts: the global
-  FontAwesome components and a router on the real route table,
-  `src/router/routes.ts`, without the guards; attached to `document.body`, where
-  Reka portals dialogs, tooltips and combobox lists, so query `document.body` for
-  those), `afterEach(cleanup)`, `stubApi({ 'GET /decks': { body: [...] } })` (an
-  unexpected call fails the test, so a spec states every call its view makes),
-  `testUser` and `signIn`. Module-level state (the signed-in user, toasts,
-  favourites) lasts a whole spec file: reset it in `beforeEach`.
-  `npm run test:coverage` fails below the floor in `vite.config.ts`.
+- **Frontend (Vitest):** specs are named after the unit. The setup file, `vitest.setup.ts`, stands in for `scrollIntoView`, pointer capture, `ResizeObserver`, `scrollTo`, and the Clipboard and Credential Management APIs. Composables and utils are tested as units; components and views with `@vue/test-utils` through `src/__tests__/helpers/app.ts`: `mountWithApp` (as `main.ts` mounts: the global FontAwesome components and a router on the real route table, `src/router/routes.ts`, without the guards; attached to `document.body`, where Reka portals dialogs, tooltips and combobox lists, so query `document.body` for those), `afterEach(cleanup)`, `stubApi({ 'GET /decks': { body: [...] } })` (an unexpected call fails the test, so a spec states every call its view makes), `testUser` and `signIn`. The module-level state to reset in `beforeEach` is the signed-in user, toasts and favourites. `npm run test:coverage` fails below the floor in `vite.config.ts`.
 - **End-to-end suite (Playwright, `npm run test:e2e`, CI job `e2e`):** 18 tests on
   the built app and the real API. `e2e/pages.spec.ts` opens each of the main
   pages by its address, checks its heading and what the server sent for it, and
   requires it to pass axe at WCAG 2.2 AA (`@jwill89/test-a11y`) with no page error
   or CSP refusal (`e2e/breakage.ts`). `e2e/smoke.spec.ts` draws a reading as a
   guest, reports a card and finds the report as admin. `playwright.config.ts`
-  spreads shared-tooling's `playwrightDefaults` (`shared/test/e2e/playwright.js`:
-  tests in `e2e/`, one worker in order, one retry in CI, a trace kept when a test
-  fails, and the browser already installed: Edge locally on Windows, the runner's
-  Chrome in CI, so none is downloaded). Its web server builds the SPA (`vite
+  spreads shared-tooling's `playwrightDefaults`. Its web server builds the SPA (`vite
   build`, so no `npm run build` first), runs `e2e/server/prepare.php`, then
   starts PHP's built-in server on `127.0.0.1:8123` with `e2e/server/router.php`
   (`backend/.htaccess`'s routing: the SPA through `og.php` and its CSP, `/api`
@@ -769,11 +636,7 @@ scripts/retention.php --dry-run`.
   `backend/dist/` (gitignored), where `og.php` reads the shell. The server runs
   with `sys_temp_dir` inside that data dir, so the file-backed rate limiters
   start empty each run (earlier local runs can't trip them).
-  `--repeat-each=5` is a good flakiness check; a step must tolerate a retry's
-  extra data.
-- **Backend (PHPUnit):** namespace `Tarot\Tests\`, two suites. Config
-  (`phpunit.xml`) treats warnings/deprecations/notices as failures
-  (`failOnWarning/Deprecation/Notice`) — keep tests clean.
+- **Backend (PHPUnit):** namespace `Tarot\Tests\`, two suites (`phpunit.xml`).
   - `tests/Unit/` — one class at a time. Service-layer tests pass an **in-memory
     SQLite PDO** to Data classes for isolation.
   - `tests/Http/` — whole requests through the real app: extend `HttpTestCase`,
@@ -787,25 +650,17 @@ scripts/retention.php --dry-run`.
     committed `openapi.json` (no missing or undocumented fields, nested schemas
     included). Env is blanked per
     test (no SMTP, Turnstile or OAuth; not production) and each test gets its own
-    client IP so the file-backed rate limiters don't collide. Use these for
-    status codes, error bodies, auth and anything that crosses layers.
+    client IP for the file-backed rate limiters.
     `replaceService()` swaps in a stand-in for something that talks to the outside
     world (Google, SMTP) before the first request.
   - `tests/Unit/Database/` runs the real migrations (`Tarot\Database\Schema::migrate()`,
     phinx.php's settings) on scratch files: `SchemaTest` holds `db/schema.sql` to
     what they build, `BaselineMigrationTest` holds the baseline to leaving a DB
     built from `schema.sql` exactly as it was, and to refusing a partial one.
-  - PHPStan analyses `tests/` too, at the same level as the app, and
-    `phpunit.xml` fails the run on PHPUnit's own deprecations, notices and
-    warnings, so a deprecated PHPUnit API is caught as soon as it's used and a
-    PHPUnit major is a bump and a run.
-    `composer test:coverage` (CI) fails when line or method coverage drops below
+  - `composer test:coverage` (CI) fails when line or method coverage drops below
     the floors its last command passes to shared-tooling's
     `shared/test/php/coverage-check.php` (`--lines=95 --methods=88`, in
     `composer.json`); locally it needs Xdebug or pcov.
-- **Every change ships with its tests** — routes, services, composables,
-  components and views alike, and a bug fix with the test that would have caught
-  it. What each needs is in §10; the coverage floors never go down.
 
 ---
 
@@ -817,10 +672,7 @@ scripts/retention.php --dry-run`.
   directory holding `.env` and `db/tarotdb.db`. Production: `/var/lib/tarotgen`,
   set by `SetEnv` in the Apache vhost (web), `/etc/environment` (SSH sessions) and
   `/etc/cron.d/tarotgen` (cron). Unset locally, where it falls back to `backend/`.
-  Nothing private may live in the web root (AUDIT.md §1.0).
-- Separately, your user **`~/.npmrc`** must hold the FontAwesome Pro registry
-  auth token for `npm install` to resolve the icon packages; the tracked
-  `frontend/.npmrc` holds only the registry scopes (see §6).
+- Read a setting through `Tarot\Config\Env`, never `getenv()` directly; only `Paths` reads `TAROT_DATA_DIR` from the process environment.
 - Key vars: `APP_ENV` (`development`/`production`, case-insensitive),
   `APP_ORIGIN` (CORS), `APP_URL` (links in emails), `SMTP_*` / `MAIL_*`
   (transactional email), `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI` (optional
@@ -828,7 +680,7 @@ scripts/retention.php --dry-run`.
   `PROTECTED_ADMIN_EMAILS` (comma-separated accounts no one can demote or
   delete; set it on production).
 - When `APP_ENV=production`: detailed errors are hidden, session cookies get the
-  Secure flag, and the DI container is compiled. Never leak stack traces in prod.
+  Secure flag, and the DI container is compiled.
 - When SMTP is unconfigured outside production, the activation link is returned
   in the API response so sign-up still works in dev.
 
@@ -836,105 +688,25 @@ scripts/retention.php --dry-run`.
 
 ## 10. Conventions & expectations for changes
 
-- **Every change ships with its tests — no exceptions for small features.**
-  Coverage is held high on purpose (AUDIT §8: ~96% of backend lines, ~97% of
-  frontend lines), and the floors in `vite.config.ts` and
-  `backend/composer.json` (`test:coverage`) **never go down**; raise them when
-  coverage rises. For each change:
-  - **Backend:** an HTTP test (`tests/Http`) for every new or changed route —
-    the success path with `assertDocumented()`, its 400s, 401/403, 404, and
-    what lands in the database — plus unit tests for new service or Data logic.
-    List in `#[CoversClass]` every class a test really checks: PHPUnit credits
-    coverage only to the classes listed.
-  - **Frontend:** a spec for every new composable, component and view
-    (`src/__tests__/helpers/`), covering the states and error paths a user can
-    reach, not just the happy path.
-  - A change on the core path (draw → reading → lightbox → report → admin)
-    updates `e2e/smoke.spec.ts`.
-  - **A bug fix comes with the test that would have caught it.** A finding that
-    is really a product decision gets asked, not suppressed or skipped.
-- **Versioning starts again from 5.0.0** (2026-10-28). The version lives in
-  `frontend/package.json`; bump it together with its `CHANGELOG.md` section in
-  the same commit (minor for a feature, patch for fixes, major for a breaking
-  API or plugin change), and CI tags and releases it. Changes between releases
-  collect under `## [Unreleased]`. `CHANGELOG.md` is the **only** changelog:
-  the admin dashboard's version tag shows it, read in at build time
-  (`virtual:changelog`, `utils/changelog.ts`); there is no changelog table, page
-  or API (retired in 5.4.0).
-- **Refusals** follow API.md: 400 validation, 401 not signed in, 403 not
-  allowed (e.g. a protected admin), **404 for anything the requester may not
-  see** as well as unknown ids (another user's reading or personal spread, a
-  pending deck), so ids can't be probed; 409 conflicts (a taken name, a change
-  that would leave no way to sign in); 429 rate limits. Always `{ error }` with a
-  message a user can read, and the frontend shows that message (`ApiResult.error`
-  from action composables) rather than a fixed one.
-- **Decided security rules** (2026-10-28; AUDIT "Open from §8"), to keep when
-  adding features: personal data (readings, personal spreads, tokens, passkeys)
-  is reachable only by its owner; unapproved submissions only by admins
-  (`AdminAuth::sessionIsAdmin()`), and only responses that are the same for
-  everyone get public cache headers; nothing answers differently for an
-  existing and an unknown account; a new public form or auth endpoint gets a
-  `RateLimiter` and, when configured, Turnstile (as login and contact do; the
-  privacy page names every page using it, `PrivacyPolicyView.spec.ts` checks), and
-  making a reading without a signed-in user needs Turnstile or a plugin draw
-  key (§4, "Who may make a reading"; no bypass for anything else); a
-  password change or reset ends sessions; admins can't demote or delete
-  themselves, and `PROTECTED_ADMIN_EMAILS` accounts can't be demoted or deleted;
-  an account always keeps one way to sign in (`SignInMethods`). A reading's
-  journal fields (`question`, `querent`, tags) reach only its owner — never a
-  shared or locked payload, an export of anyone else, or og.php's share meta
-  (`ReadingShareMeta`); a **private** reading (`readings.is_private`; "password"
-  is still just `password_hash`, and `visibility` is worked out in the SELECT)
-  and an **expired** guest reading (`expires_at`) are a 404 to everyone but the
-  owner, with generic share meta.
-- **Schema changes are additive Phinx migrations** (§7): a new file in
-  `db/migrations/`, committed with the `db/schema.sql` that `php
-  scripts/dump_schema.php` regenerates from it (`schema.sql` is never edited by
-  hand, and a migration that has run on production is never changed: add
-  another), and a test against a DB built from the previous schema. The backend
-  deploy runs it on production as `www-data`, after a snapshot (§6
-  "Deployment"). Design it so the old
-  code keeps working on the new schema, and drop something only in a release
-  after the code stopped using it. Seed rows a fresh database needs (the starting
-  `spread_categories`) belong in a migration too.
+- **Tests:** coverage is held high on purpose (AUDIT §8: ~96% of backend lines, ~97% of frontend lines), with the floors in `vite.config.ts` and `backend/composer.json` (`test:coverage`). A route's HTTP test (`tests/Http`) checks its success path with `assertDocumented()`; a frontend spec mounts through the helpers in `src/__tests__/helpers/`. A change on the core path (draw → reading → lightbox → report → admin) updates `e2e/smoke.spec.ts`.
+- **Versioning starts again from 5.0.0** (2026-10-28). The version lives in `frontend/package.json`, and the bump follows the guide's [docs-and-agents.md](shared/standards/docs-and-agents.md) ("Choosing the bump"): here the Dalamud plugin is the client outside the site that relies on the API, so a change installed plugins must follow is a major. The admin dashboard's version tag shows `CHANGELOG.md`, read in at build time (`virtual:changelog`, `utils/changelog.ts`); the changelog table, page and API were retired in 5.4.0.
+- **Refusals** use the guide's statuses. The cases here: a 404 for another user's reading or personal spread and for a pending deck, a 403 for a protected admin, and a 409 for a taken name or a change that would leave no way to sign in. Today a failed validation answers 400 and every error is `{ error }` (§13); the frontend shows that message (`ApiResult.error` from action composables).
+- **Decided security rules** (2026-10-28; AUDIT "Open from §8"), to keep when adding features: personal data (readings, personal spreads, tokens, passkeys) is reachable only by its owner, and unapproved submissions only by admins (`AdminAuth::sessionIsAdmin()`). A new public form or auth endpoint gets a `RateLimiter` and, when configured, Turnstile, as login and contact do; the privacy page names every page using Turnstile (`PrivacyPolicyView.spec.ts` checks). Making a reading without a signed-in user needs Turnstile or a plugin draw key (§4, "Who may make a reading"; no bypass for anything else). A reading's journal fields (`question`, `querent`, tags) reach only its owner — never a shared or locked payload, an export of anyone else, or og.php's share meta (`ReadingShareMeta`). A **private** reading (`readings.is_private`; "password" is still just `password_hash`, and `visibility` is worked out in the SELECT) and an **expired** guest reading (`expires_at`) are a 404 to everyone but the owner, with generic share meta.
+- **Schema changes** are Phinx migrations, made as §7 says and run by the backend deploy (§6 "Deployment"). Seed rows a fresh database needs, such as the starting `spread_categories`, go in a migration too.
 - **Product boundaries (the owner's, after talking with practitioners):** the
   site is a tool for readers — no card interpretations and no AI readings.
   Reversals are an **on/off toggle**, never a rate or percentage setting:
   choosing a rate takes the spirit out of the draw, and the draw already models
   a physical "cut and turn" (`ReadingService::cutAndTurn()`), so reversals come
   in realistic runs (AUDIT §9 "Declined").
-- **Held or deferred on purpose — leave them unless the reason is gone:**
-  TypeScript stays on 6 until `vue-tsc` supports TypeScript 7.1; PHPStan is
-  held at 2.3.3 (`conflict` in `composer.json`) until Rector works with 2.3.4;
-  `scrollBehavior` stays until vue-router's `ScrollRestoration` leaves
-  `vue-router/experimental` (and Back should then restore position — the
-  owner's call); favouriting from the keyboard inside the deck/spread combobox
-  lists is an open design question (AUDIT §6.1).
+- **Held or deferred on purpose — leave them unless the reason is gone:** TypeScript stays on 6 until `vue-tsc` supports TypeScript 7.1; vue-tsc stays at 3.3.13, since 3.3.14 misreads a `//` in a static attribute and stops checking that template (Dependabot skips only 3.3.14, 2026-11-07); PHPStan is held at 2.3.3 (`conflict` in `composer.json`) until Rector works with 2.3.4; `scrollBehavior` stays until vue-router's `ScrollRestoration` leaves `vue-router/experimental` (and Back should then restore position — the owner's call); favouriting from the keyboard inside the deck/spread combobox lists is an open design question (AUDIT §6.1).
 - **Match existing patterns.** New backend resource? Add a `Structure`, `Data`,
   `Repository`, optional `Service`, a `Controller` extending
   `AbstractController`, a route group in `api/app.php`, and a `tests/Http` test
   for its status codes and auth. New frontend feature?
   Add a `use*` composable + view/component and a route with appropriate `meta`.
 - **Layer discipline:** controllers don't touch SQL; SQL lives only in `Data`.
-- **Security first:** always use prepared statements; never trust client input;
-  keep error responses as `{ error }`; preserve auth guards on protected routes.
-- **Keep types in sync** between PHP responses and `src/types/index.ts`.
-- **Timestamps are UTC.** Write them with `Tarot\Utility\Clock` (`now()`, `in($seconds)`
-  for expiries, `today()`), never `date()` — it follows PHP's zone, while SQLite's
-  `CURRENT_TIMESTAMP` and the frontend (`utils/datetime.ts`) are UTC. Check with
-  `vendor\bin\phpunit -d date.timezone=Pacific/Kiritimati` (UTC+14).
-- **Comments** in this codebase explain *why*, not *what* — follow that style.
-- **PSR-4 / PER-CS 3.0** for PHP (`composer lint:fix`). **Strict TypeScript**
-  (`strict: true`, plus the shared `noUncheckedIndexedAccess`: an index into an
-  array or record may find nothing, and its type says so) — keep `npm run
-  type-check` clean. The shared ESLint config sets `curly: all`, so every `if`,
-  `else` and loop body takes braces. Augment a module's types
-  (`declare module 'vue' { … }`) only in a file that is itself a module (has a
-  top-level import/export, like `src/global-components.d.ts`): in a script file
-  such as `vite-env.d.ts` the block *replaces* the module, which once silently
-  emptied Vue's types.
-- Don't commit generated artifacts (`dist/`, `vendor/`, `node_modules/`,
-  `.phpunit.cache`) or the local `.env`.
+- **Time** comes from `Tarot\Utility\Clock` (`now()`, `in($seconds)` for expiries, `today()`), which writes UTC, never from `date()`; the frontend reads timestamps as UTC (`utils/datetime.ts`). The form they are stored in is a departure (§13). Check the zone with `vendor\bin\phpunit -d date.timezone=Pacific/Kiritimati` (UTC+14).
 - Deck card images live at `assets/decks/{deck_id}/Card_XXXX.png` with a
   `Card_Back.png` — the master scans, never modified (the plugin loads them).
   `CardImageService` derives a full-size display `Card_XXXX.webp` (lightbox,
@@ -960,8 +732,8 @@ scripts/retention.php --dry-run`.
 | Add an entity shape (PHP)           | `includes/Tarot/Structure/*.php` |
 | Add a frontend page                 | `src/views/*.vue` + route in `src/router/index.ts` |
 | Add reusable frontend logic         | `src/composables/use*.ts` |
-| Change shared API types             | `src/types/index.ts` |
-| Use a new icon                      | register it in `src/fontawesome.ts` (import + `library.add`) |
+| Change shared API types             | the PHP attributes, then `task gen` (§4); client-only shapes in `src/types/index.ts` |
+| Use a new icon                      | register it in `src/fontawesome.ts` (import + its `index(...)` entry) |
 | Change/add a heading font           | `public/fonts/` + `src/assets/fonts.css` + `--myst-heading-font` in `src/assets/tokens.css` |
 | Change a DB schema                  | new migration in `db/migrations/` (`vendor\bin\phinx create`), then `php scripts/dump_schema.php` (§7) |
 | Grant admin                         | `php scripts/make_admin.php <email>` |
@@ -1023,3 +795,27 @@ and it has its own version, package, and release channel.
   read in `Draw`); read local-player identity from `IPlayerState` (v15 removed
   `IClientState.LocalPlayer`). See [`plugin/README.md`](plugin/README.md) for the
   build/install walkthrough and the in/out-of-scope feature list.
+
+---
+
+## 13. Where this project departs from the standards
+
+Each item is a place where the code still does what [`shared/standards/`](shared/standards/README.md) now rules out. Each says what the code does today, and each moves to the standard in a follow-up of its own. The first eight come from shared-tooling's `PLAN.md` (step 3's follow-ups for TarotGen.io, and its accessibility and timestamp decisions); the rest were found in this repo's docs and code on 2026-11-07.
+
+- **Error bodies (RFC 9457):** every error is a JSON `{ "error": "…" }` body (registration's validation sends `{ "errors": [...] }`), never an `application/problem+json` problem details body.
+- **Validation status (422):** most failed validations answer 400 (`withJson(['error' => …], 400)` in the controllers); a few already answer 422 (registration, the display name, a weak password). A wrong current password on a password change answers 422, where the guide says 403.
+- **camelCase JSON:** JSON fields and query parameters are snake_case, like the columns (`password_protected`, `turnstile_token`, `?older_than_days=`). The plugin reads them with `JsonNamingPolicy.SnakeCaseLower`, so it must handle the new names before the API stops sending the old ones.
+- **`style-src`:** the shell's CSP (`ContentSecurityPolicy::forShell()`) allows `'unsafe-inline'` in `style-src`, for the styles Vue, Reka UI, Font Awesome and Turnstile set; the policy `/api/docs` sends allows it too, for Scalar.
+- **A password change and plugin tokens:** a password change or reset ends the account's sessions but leaves its plugin tokens (`plugin_tokens`), which are revoked one by one under Connected Apps (`AuthService::changePassword()`, `resetPassword()`).
+- **Font Awesome:** the icons come from the per-style Pro packages (`@fortawesome/pro-solid-svg-icons`, `pro-regular-svg-icons`, `pro-duotone-svg-icons`) and `@fortawesome/free-brands-svg-icons`, not from the owner's `@awesome.me/kit-…` package.
+- **Contrast (AAA):** the target is WCAG 2.2 AAA, with AA as the floor only where AAA can't be met and each such place recorded: body text at 7:1 and large text at 4.5:1. axe enforces the AA floor, and a contrast test holds AAA. (The copy of `accessibility.md` in `shared/` v2.1.0 still names AA.) Today the docs and tests set AA: `tokens.css` holds text to 4.5:1 (§5), `e2e/pages.spec.ts` runs axe at AA, and no test computes the contrast of the token pairs (Home Library's `contrast.test.ts` is the model).
+- **Timestamps:** every timestamp column is `TEXT` in SQLite's space form (`2026-11-07 09:18:09`, in UTC), written by `Clock::now()` (`Y-m-d H:i:s`) or `DEFAULT CURRENT_TIMESTAMP`, with no CHECK, and the API sends that form. The guide's form is a `DATETIME` column holding `2026-11-07T09:18:09Z`, with a `strftime` default and a CHECK; each table moves in one migration (`database.md`, "Timestamps").
+- **The session cookie** keeps PHP's default name, `PHPSESSID`, not a `__Host-` name.
+- **The document root** is the flat web root, which holds the code, `vendor/` and `scripts/` beside `dist/`, with `backend/.htaccess` refusing them (§6). The guide puts a PHP site's document root at its `public/` folder. `.env` and the database already sit outside it, in `TAROT_DATA_DIR`.
+- **Layout** comes from Bulma's helpers (columns, spacing), which the guide counts as neither of its two ways (Tailwind or object classes). They go when the app adopts the component kit.
+- **State class:** the navigation marks the current page with a bare `active` class (`exact-active-class="active"` in `App.vue`), not `is-active`.
+- **`Referrer-Policy`:** `backend/.htaccess` sends `strict-origin-when-cross-origin`, not `same-origin`.
+- **The deploy's tag:** `scripts/deploy.ps1` ships the working tree as it is. It doesn't take the tag on HEAD (`Get-ReleaseTag`) or require a clean tree (`Assert-CleanWorkingTree`), and it has no `-Preview` switch.
+- **Plugin tests:** the plugin has no test project, no game-free `Core/`, and no picture preview of its windows.
+- **The PHP suite's time zone:** the suite runs in the machine's zone; the far-off-zone run (`-d date.timezone=Pacific/Kiritimati`) is done by hand (§10).
+- **Markdown:** this file, API.md, CONTRIBUTING.md, README.md, plugin/README.md and AUDIT.md are hard-wrapped near 80 columns. MD013 is off, so markdownlint passes. A paragraph rewritten from now on is one line.

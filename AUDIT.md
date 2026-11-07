@@ -1,5 +1,7 @@
 # TarotGen.io — Codebase Audit (2026-10-27)
 
+> This is a historical record. The standards in [`shared/standards/`](shared/standards/README.md) supersede its rules where they differ.
+
 An antagonistic pass over the whole repo (frontend, backend, plugin, DB, tooling,
 tests, product gaps). Written as a work list for an agent or a person to burn
 down. Every finding was verified against the tree on the date above unless

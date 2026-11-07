@@ -49,7 +49,7 @@ shared/     shared-tooling — git submodule: the lint, test, CI and deploy piec
 | `backend/assets/decks/` | Per-deck card images — server-side data, gitignored, **never** in a deploy payload. |
 | `plugin/TarotGen.Plugin/` | FFXIV Dalamud plugin (C#, .NET 10, Dalamud API 15). Built by DalamudPackager; published to a custom Dalamud repo via `deploy.ps1 -Target plugin`. See [`plugin/README.md`](plugin/README.md). |
 | `scripts/deploy.ps1` | Build & deploy orchestration (frontend + backend + plugin), on shared-tooling's SharedDeploy module. |
-| `shared/` | [shared-tooling](https://github.com/jwill89/shared-tooling) v1.3.0, a git submodule: ESLint/Prettier/Stylelint/tsconfig, the PHP and C# lint bases, the Vitest and Playwright settings, the CI workflows, `.editorconfig`/`.gitattributes` and the deploy module. |
+| `shared/` | [shared-tooling](https://github.com/jwill89/shared-tooling) v2.1.0, a git submodule: ESLint/Prettier/Stylelint/tsconfig, the PHP and C# lint bases, the Vitest and Playwright settings, the CI workflows, `.editorconfig`/`.gitattributes`, the deploy module and the standards every project follows (`shared/standards/`). |
 | `Taskfile.yml` | [Task](https://taskfile.dev) commands (`task` lists them), including the shared ones. |
 | `*/{node_modules,vendor,dist}/` | Generated dependency / build output. |
 

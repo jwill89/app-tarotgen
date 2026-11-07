@@ -60,12 +60,7 @@ A signed-in **browser** user is identified by the `PHPSESSID` **session cookie**
 (HttpOnly, SameSite=Lax, Secure in production) — the `sessionCookie` OpenAPI
 scheme. The first-party SPA uses only this; there are no API keys.
 
-The **Dalamud plugin** is the one non-browser client. Drawing and viewing readings
-needs no auth; a linked account adds a per-account **plugin token** (`pluginToken`
-scheme, Bearer over HTTPS — a native `HttpClient` sends no `Origin`, which
-`OriginGuard` already permits) for the read-only account routes it may reach. It is
-minted via a browser loopback + PKCE consent flow and is individually revocable.
-(The per-install client token and share relay were removed — AUDIT.md §2.1.)
+The **Dalamud plugin** is the one non-browser client. Viewing readings needs no auth. Drawing one needs, when Turnstile is configured, a linked account or the plugin's **draw key** (`Authorization: Bearer tg_dk_…`), which opens nothing but draws (AGENTS.md §4, "Who may make a reading"). A linked account adds a per-account **plugin token** (`pluginToken` scheme, Bearer over HTTPS — a native `HttpClient` sends no `Origin`, which `OriginGuard` already permits) for the read-only account routes it may reach. The token and the draw key both come through a browser loopback + PKCE flow, and the token is individually revocable. (The per-install client token and share relay were removed — AUDIT.md §2.1.)
 
 | Audience | How a request authenticates | Guard |
 |----------|-----------------------------|-------|
