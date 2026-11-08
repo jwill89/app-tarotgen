@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest'
 import { stubApi, testUser } from './helpers/app'
 import type { User } from '@/types'
 
@@ -20,6 +20,13 @@ const meta = (name: string) =>
 const canonical = () => document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')
 
 const ME = 'GET /auth/me'
+
+// The first import of the router transforms the whole app. With `task check` running lint
+// and the scans beside the tests, that alone can outlast a test's 5 s, so it happens once
+// here, with time to spare; each freshApp() after it re-runs modules already transformed.
+beforeAll(async () => {
+  await import('@/router')
+}, 60_000)
 
 describe('router guards', () => {
   beforeEach(() => {
