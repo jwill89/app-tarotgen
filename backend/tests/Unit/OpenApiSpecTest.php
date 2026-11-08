@@ -30,7 +30,7 @@ final class OpenApiSpecTest extends TestCase
 
         // The same build `composer docs` runs (bin/openapi.php).
         $log = new CollectingLogger();
-        $result = OpenApiSpec::builder($backend)->setLogger($log)->build();
+        $result = OpenApiSpec::builder($backend, $log)->build();
         self::assertTrue($result->isValid(), implode("\n", array_column($log->entries(), 'message')));
 
         $generated = json_decode($result->toJson(), true);

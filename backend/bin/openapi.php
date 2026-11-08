@@ -10,7 +10,7 @@ use Routes\OpenApiSpec;
 
 $backend = dirname(__DIR__);
 $log = new CollectingLogger();
-$result = OpenApiSpec::builder($backend)->setLogger($log)->build();
+$result = OpenApiSpec::builder($backend, $log)->build();
 
 foreach ($log->entries() as ['level' => $level, 'message' => $message]) {
     if ($level !== 'debug' && $level !== 'info') {

@@ -22,6 +22,8 @@ update its section here in the same commit — no manual tagging.
 
 ## [Unreleased]
 
+## [5.5.1] - 2026-11-07
+
 ### Changed
 
 - shared-tooling 2.0.0: the frontend's Stylelint moves to 18. `bulma.scss` is
@@ -33,6 +35,12 @@ update its section here in the same commit — no manual tagging.
   (`tarotdb.db.pre-<UTC time>.gz`, as www-data, three kept). The database pull
   now makes its copy on the host as www-data, beside the database, instead of
   as the SSH user in its home.
+- Dependencies, within their ranges: every Tiptap package moves to 3.33.0 together, with
+  Vite 8.3.6, Vue 3.5.45, Playwright 1.65 and Sass 1.108 on the frontend; PHPMailer 7.2,
+  swagger-php 7.3, symfony/console 8.1.11 and PHPUnit 13.4.6 on the backend, and every
+  Composer requirement's floor raised to the version installed.
+- The API document's build hands its logger to swagger-php's constructor, as swagger-php
+  7.3 asks (`setLogger()` is deprecated); `composer docs` and its test do the same.
 
 ## [5.5.0] - 2026-11-06
 

@@ -124,6 +124,13 @@
     Don't refresh the local database (backend/db/tarotdb.db) from the live one after a
     deploy that includes the backend.
 
+.PARAMETER Preview
+    Deploy the working tree as it is, uncommitted changes included, stamped
+    preview-<date-time>. Without it the backend and frontend ship only a release: a clean
+    tree at the tag CI made for frontend/package.json's version (standards/deploy-and-ops.md),
+    with the tags fetched first. The plugin keeps its own version and needs only the clean
+    tree.
+
 .EXAMPLE
     .\scripts\deploy.ps1                 # backend then frontend (default)
 
@@ -153,7 +160,8 @@ param(
     [switch]$SkipBuild,
     [switch]$NoBackup,
     [switch]$NoDbPull,
-    [switch]$IfNewer
+    [switch]$IfNewer,
+    [switch]$Preview
 )
 
 $ErrorActionPreference = 'Stop'
@@ -224,7 +232,26 @@ $codeBackup = '.deploy/backend-prev'
 # Every check after the deploy asks with this, so no edge-cached answer can stand in for the origin's.
 $token = [guid]::NewGuid().ToString('N').Substring(0, 12)
 
-Write-Host "Deploy target: $Target ($($targets -join ', ')) -> $($settings.VpsUser)@$($settings.VpsHost):$web" -ForegroundColor Yellow
+# Only a release ships: a clean tree at the tag CI made for frontend/package.json's version
+# (standards/deploy-and-ops.md); the plugin, which keeps its own version, needs only the clean
+# tree. -Preview ships the tree as it is, stamped preview-<date-time>.
+$release = $null
+if ($Preview) {
+    $release = 'preview-' + (Get-Date -Format 'yyyyMMdd-HHmm')
+    Write-Warning "Preview: deploying the working tree untagged, as $release."
+} else {
+    Assert-CleanWorkingTree -Path $repoRoot
+    if ($withBackend -or $withFrontend) {
+        git -C $repoRoot fetch --tags --quiet
+        if ($LASTEXITCODE -ne 0) { Write-Warning 'Could not fetch tags; checking against the local ones.' }
+        $release = Get-ReleaseTag -Path $repoRoot
+        $expected = 'v' + (Get-Content -LiteralPath (Join-Path $frontendDir 'package.json') -Raw | ConvertFrom-Json).version
+        if ($release -ne $expected) { throw "HEAD is tagged $release, but frontend/package.json says $expected." }
+    }
+}
+$label = if ($release) { " $release" } else { '' }
+
+Write-Host "Deploy target: $Target ($($targets -join ', '))$label -> $($settings.VpsUser)@$($settings.VpsHost):$web" -ForegroundColor Yellow
 
 function ConvertTo-PluginVersion {
     # Four parts, so the csproj's 0.8.1 compares with a manifest's 0.8.0.0 as Dalamud compares them.

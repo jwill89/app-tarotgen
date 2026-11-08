@@ -24,6 +24,7 @@
     "OpenApi\\Spec\\Tag",
     "OpenApi\\Specification",
     "OpenApi\\Utils\\PipeInterface",
+    "Psr\\Log\\LoggerInterface",
     "fastcgi_finish_request"
   ],
   "php-core-extensions": ["Core", "date", "json", "hash", "pcre", "Phar", "Reflection", "SPL", "random", "standard"],

@@ -6,6 +6,7 @@ use OpenApi\Augmenter\Properties;
 use OpenApi\Builder;
 use OpenApi\Spec as OAS;
 use OpenApi\Utils\Pipeline;
+use Psr\Log\LoggerInterface;
 
 /**
  * Root OpenAPI document metadata: API info, the same-origin server, the session
@@ -294,12 +295,13 @@ final class OpenApiSpec
     /**
      * The API document as `composer docs` writes it to openapi.json and
      * OpenApiSpecTest compares it: the attributes in api/ and includes/, as
-     * OpenAPI 3.1, with every Structure property required. The caller attaches
-     * its logger (setLogger) and runs build().
+     * OpenAPI 3.1, with every Structure property required. The caller passes the
+     * logger it wants the build's messages in (swagger-php 7.3 takes it in the
+     * constructor; setLogger() is deprecated) and runs build().
      */
-    public static function builder(string $backendDir): Builder
+    public static function builder(string $backendDir, ?LoggerInterface $logger = null): Builder
     {
-        return new Builder()
+        return new Builder($logger)
             ->setVersion('3.1.0')
             ->addSource([$backendDir . '/api', $backendDir . '/includes'])
             ->withAugmenters(static function (Pipeline $augmenters): void {

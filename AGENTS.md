@@ -436,6 +436,7 @@ Pageant first if it has a passphrase. The deploy config names its SSH user (`Vps
 .\scripts\deploy.ps1 -Target backend    # PHP code built whole on the droplet, DB snapshot, swap, then phinx migrate
 .\scripts\deploy.ps1 -Target plugin     # build the plugin (Release) + publish to its custom Dalamud repo (§12)
 .\scripts\deploy.ps1 -SkipBuild         # deploy existing dist/ without rebuilding
+.\scripts\deploy.ps1 -Preview           # try the working tree, untagged, stamped preview-<date-time>
 .\scripts\deploy.ps1 -Target backend -NoDbPull # don't copy the live DB into backend/db/tarotdb.db afterwards
 ```
 
@@ -815,7 +816,6 @@ Each item is a place where the code still does what [`shared/standards/`](shared
 - **Layout** comes from Bulma's helpers (columns, spacing), which the guide counts as neither of its two ways (Tailwind or object classes). They go when the app adopts the component kit.
 - **State class:** the navigation marks the current page with a bare `active` class (`exact-active-class="active"` in `App.vue`), not `is-active`.
 - **`Referrer-Policy`:** `backend/.htaccess` sends `strict-origin-when-cross-origin`, not `same-origin`.
-- **The deploy's tag:** `scripts/deploy.ps1` ships the working tree as it is. It doesn't take the tag on HEAD (`Get-ReleaseTag`) or require a clean tree (`Assert-CleanWorkingTree`), and it has no `-Preview` switch.
 - **Plugin tests:** the plugin has no test project, no game-free `Core/`, and no picture preview of its windows.
 - **The PHP suite's time zone:** the suite runs in the machine's zone; the far-off-zone run (`-d date.timezone=Pacific/Kiritimati`) is done by hand (§10).
 - **Markdown:** this file, API.md, CONTRIBUTING.md, README.md, plugin/README.md and AUDIT.md are hard-wrapped near 80 columns. MD013 is off, so markdownlint passes. A paragraph rewritten from now on is one line.
