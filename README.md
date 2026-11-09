@@ -105,7 +105,7 @@ cd frontend ; npm run build              # production SPA build → frontend/dis
 .\scripts\deploy.ps1 -Target backend     # PHP code: composer install --no-dev on the droplet, DB snapshot, swap, migrations
 .\scripts\deploy.ps1 -Target both        # backend, then frontend
 .\scripts\deploy.ps1 -Target plugin      # build the plugin (Release) + publish latest.zip/icon/repo.json
-.\scripts\deploy.ps1 -SkipBuild          # deploy the existing frontend/dist without rebuilding
+.\scripts\deploy.ps1 -Force              # the release again, though the droplet runs it
 .\scripts\deploy.ps1 -Target backend -NoDbPull  # skip pulling the live DB into backend/db/ afterwards
 ```
 

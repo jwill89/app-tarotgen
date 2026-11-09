@@ -435,7 +435,7 @@ Pageant first if it has a passphrase. The deploy config names its SSH user (`Vps
 .\scripts\deploy.ps1 -Target frontend   # npm build + dist swapped in by renames
 .\scripts\deploy.ps1 -Target backend    # PHP code built whole on the droplet, DB snapshot, swap, then phinx migrate
 .\scripts\deploy.ps1 -Target plugin     # build the plugin (Release) + publish to its custom Dalamud repo (§12)
-.\scripts\deploy.ps1 -SkipBuild         # deploy existing dist/ without rebuilding
+.\scripts\deploy.ps1 -Force             # the release again, though the droplet runs it
 .\scripts\deploy.ps1 -Preview           # try the working tree, untagged, stamped preview-<date-time>
 .\scripts\deploy.ps1 -Target backend -NoDbPull # don't copy the live DB into backend/db/tarotdb.db afterwards
 ```

@@ -15,8 +15,17 @@
     www-data. A deploy never ships the .env, the database, assets or the retired one-off
     scripts in db.
 
-    Locally, before anything connects:
-      frontend  builds frontend (vue-tsc + vite) into frontend/dist (skip with -SkipBuild);
+    What ships is the newest release: the newest tag CI made on main for
+    frontend/package.json's version (the tags are fetched first), checked out into a folder
+    of its own, with npm ci from its lockfile, and built and packed from there; the plugin,
+    which keeps its own version, is built from it too. Commits after it, a shared-tooling
+    update or work not yet released, are not part of it, and neither is anything
+    uncommitted. -Preview ships the working tree instead. The host records the release the
+    backend and the frontend each run; when every part a run deploys already runs this
+    release, nothing is done (-Force deploys it again).
+
+    Locally, from the release (or the working tree, with -Preview):
+      frontend  builds frontend (vue-tsc + vite) into frontend/dist;
       backend   packs the runtime PHP: api, includes, scripts, db/migrations, og.php,
                 openapi.json, phinx.php, composer.json, composer.lock and the .htaccess;
       plugin    refuses a csproj Version that is not higher than the published repo.json's,
@@ -112,7 +121,11 @@
     The untracked settings file; by default scripts/deploy.config.ps1. It need not exist.
 
 .PARAMETER SkipBuild
-    Frontend only: deploy the existing frontend/dist without rebuilding.
+    With -Preview, frontend only: deploy the existing frontend/dist without rebuilding. A
+    release is always built from its tag.
+
+.PARAMETER Force
+    Deploy the backend and the frontend even when the host already runs this release.
 
 .PARAMETER NoBackup
     Remove the rollback copies (dist.old, WebRoot/.deploy/backend-prev, plugin.old) once
@@ -126,10 +139,8 @@
 
 .PARAMETER Preview
     Deploy the working tree as it is, uncommitted changes included, stamped
-    preview-<date-time>. Without it the backend and frontend ship only a release: a clean
-    tree at the tag CI made for frontend/package.json's version (standards/deploy-and-ops.md),
-    with the tags fetched first. The plugin keeps its own version and needs only the clean
-    tree.
+    preview-<date-time>. Without it every part ships from the newest release
+    (standards/deploy-and-ops.md).
 
 .EXAMPLE
     .\scripts\deploy.ps1                 # backend then frontend (default)
@@ -161,7 +172,8 @@ param(
     [switch]$NoBackup,
     [switch]$NoDbPull,
     [switch]$IfNewer,
-    [switch]$Preview
+    [switch]$Preview,
+    [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
@@ -196,14 +208,14 @@ $targets = @(
 )
 
 $repoRoot = Split-Path -Path $PSScriptRoot -Parent
-$backendDir = Join-Path $repoRoot 'backend'
-$frontendDir = Join-Path $repoRoot 'frontend'
-$distDir = Join-Path $frontendDir 'dist'
-$pluginDir = Join-Path $repoRoot 'plugin\TarotGen.Plugin'
-$pluginProject = Join-Path $pluginDir 'TarotGen.Plugin.csproj'
-$cronFile = Join-Path $PSScriptRoot 'server\tarotgen.cron'
-# The database the app opens when run locally (TAROT_DATA_DIR unset, Paths::database()); gitignored.
-$devDb = Join-Path $backendDir 'db\tarotdb.db'
+# The database the app opens when run locally (TAROT_DATA_DIR unset, Paths::database());
+# gitignored, so this checkout's, never the release's.
+$devDb = Join-Path $repoRoot 'backend\db\tarotdb.db'
+# What the host records as running for each part, for the next deploy to compare with.
+$records = @(
+    if ($withBackend) { 'tarotgen-backend' }
+    if ($withFrontend) { 'tarotgen-frontend' }
+)
 
 # The host's data, fixed by the site rather than by this machine's settings: TAROT_DATA_DIR is
 # set in the vhost, /etc/environment and scripts/server/tarotgen.cron, and AGENTS.md documents it.
@@ -232,24 +244,19 @@ $codeBackup = '.deploy/backend-prev'
 # Every check after the deploy asks with this, so no edge-cached answer can stand in for the origin's.
 $token = [guid]::NewGuid().ToString('N').Substring(0, 12)
 
-# Only a release ships: a clean tree at the tag CI made for frontend/package.json's version
-# (standards/deploy-and-ops.md); the plugin, which keeps its own version, needs only the clean
-# tree. -Preview ships the tree as it is, stamped preview-<date-time>.
+# Only a release ships: the newest tag CI made for frontend/package.json's version
+# (standards/deploy-and-ops.md), the plugin with it. -Preview ships the tree as it is, stamped
+# preview-<date-time>.
 $release = $null
 if ($Preview) {
-    $release = 'preview-' + (Get-Date -Format 'yyyyMMdd-HHmm')
-    Write-Warning "Preview: deploying the working tree untagged, as $release."
+    $version = 'preview-' + (Get-Date -Format 'yyyyMMdd-HHmm')
+    Write-Warning "Preview: deploying the working tree untagged, as $version."
 } else {
-    Assert-CleanWorkingTree -Path $repoRoot
-    if ($withBackend -or $withFrontend) {
-        git -C $repoRoot fetch --tags --quiet
-        if ($LASTEXITCODE -ne 0) { Write-Warning 'Could not fetch tags; checking against the local ones.' }
-        $release = Get-ReleaseTag -Path $repoRoot
-        $expected = 'v' + (Get-Content -LiteralPath (Join-Path $frontendDir 'package.json') -Raw | ConvertFrom-Json).version
-        if ($release -ne $expected) { throw "HEAD is tagged $release, but frontend/package.json says $expected." }
-    }
+    if ($SkipBuild) { throw 'A release is always built from its tag; -SkipBuild goes with -Preview only.' }
+    $release = Get-DeployRelease -Path $repoRoot
+    $version = $release.Tag
 }
-$label = if ($release) { " $release" } else { '' }
+$label = " $version"
 
 Write-Host "Deploy target: $Target ($($targets -join ', '))$label -> $($settings.VpsUser)@$($settings.VpsHost):$web" -ForegroundColor Yellow
 
@@ -260,78 +267,6 @@ function ConvertTo-PluginVersion {
     param([Parameter(Mandatory)] [string]$Value)
     $version = [version]$Value
     [version]::new($version.Major, $version.Minor, [math]::Max($version.Build, 0), [math]::Max($version.Revision, 0))
-}
-
-# The plugin's version must be higher than the published one, since Dalamud updates to nothing
-# else. The host refuses a lower one too, but the published index is read here first, before the
-# plugin is built. If it can't be read, the host's check still stands.
-if ($withPlugin) {
-    $planned = @(([xml](Get-Content -LiteralPath $pluginProject -Raw)).Project.PropertyGroup.Version | Where-Object { $_ })[0]
-    $published = $null
-    try {
-        $published = @(Invoke-RestMethod -Uri "$site/plugin/repo.json?deploy=$token" -TimeoutSec 15)[0].AssemblyVersion
-        $higher = (ConvertTo-PluginVersion -Value $planned) -gt (ConvertTo-PluginVersion -Value $published)
-    } catch {
-        Write-Warning "The published plugin version could not be read or compared ($($_.Exception.Message)); the host will check it."
-        $higher = $true
-    }
-    if (-not $higher) {
-        if ($IfNewer -and $published -and (ConvertTo-PluginVersion -Value $planned) -eq (ConvertTo-PluginVersion -Value $published)) {
-            Write-Ok "Plugin $planned is already published; nothing to publish."
-            exit 0
-        }
-        throw "The plugin's version $planned is not higher than the published $published, and Dalamud updates to nothing else. Raise <Version> in plugin/TarotGen.Plugin/TarotGen.Plugin.csproj; nothing was built or changed."
-    }
-}
-
-# -- Build and pack, before anything connects -----------------------------------
-# One archive, laid out as the host's steps want it: the code under backend/, the SPA as dist,
-# the plugin repository as plugin.
-$content = [ordered]@{}
-$entryScript = $null
-$repo = $null
-$archive = $null
-$connection = $null
-
-if ($withBackend) {
-    foreach ($item in $backendShipped) {
-        $path = Join-Path $backendDir $item
-        if (-not (Test-Path -LiteralPath $path)) { throw "Backend payload item not found: $path. Nothing was changed." }
-        $content["backend/$item"] = $path
-    }
-    # The cron file names the web root and the daily backup's folder itself; a mismatch would stop
-    # retention without a word, so it stops the deploy instead, before anything changes.
-    $cron = (Get-Content -LiteralPath $cronFile -Raw) -replace "`r", ''
-    foreach ($needed in "$web/scripts/retention.php", "$dataDir/db/backups/tarotgen-") {
-        if (-not $cron.Contains($needed)) { throw "scripts/server/tarotgen.cron does not name $needed, which this deploy installs; fix one or the other. Nothing was changed." }
-    }
-    if (-not $cron.EndsWith("`n")) { $cron += "`n" }
-}
-
-if ($withFrontend) {
-    $shell = Join-Path $distDir 'index.html'
-    if ($SkipBuild) {
-        Write-Step 'Skipping the frontend build (-SkipBuild); using the existing frontend/dist'
-        if (-not (Test-Path -LiteralPath $shell)) { throw 'frontend/dist/index.html is missing - nothing to deploy.' }
-    } else {
-        Invoke-NpmBuild -Path $frontendDir -Output $shell
-    }
-    $content['dist'] = $distDir
-    # The build's entry script (Vite's assetsDir is _app): the page must name it, and serve it.
-    $entryScript = [regex]::Match((Get-Content -LiteralPath $shell -Raw), 'src="(/_app/[^"]+\.js)"').Groups[1].Value
-}
-
-if ($withPlugin) {
-    Invoke-PluginBuild -Project $pluginProject
-    $built = Join-Path $pluginDir 'bin\Release\TarotGen.Plugin'
-    # repo.json is written from the built manifest, with ?v=<version> on the download links so
-    # Cloudflare never serves an old latest.zip under a new index.
-    $repo = Export-PluginRepository -Manifest (Join-Path $built 'TarotGen.Plugin.json') -IndexPath 'repo.json' `
-        -BaseUrl "$site/plugin" -IconPath 'icon.png' -File ([ordered]@{
-            'latest.zip' = Join-Path $built 'latest.zip'
-            'icon.png'   = Join-Path $pluginDir 'images\icon.png'
-        })
-    $content['plugin'] = $repo.Path
 }
 
 # -- The host's steps -----------------------------------------------------------
@@ -405,9 +340,9 @@ rm -rf .deploy.new
 '@
 
 # After the daily backup is in place: the cron file runs retention alone, and the old nightly
-# backup goes. Its copies stay until they are removed by hand.
-$retire = if ($withBackend) {
-    Format-RemoteScript -Value @{ CRON = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($cron)) } -Template @'
+# backup goes. Its copies stay until they are removed by hand. __CRON__ is the build's
+# scripts/server/tarotgen.cron, filled in once it is read.
+$retireTemplate = @'
 set -e
 cron=/etc/cron.d/tarotgen
 next=/etc/cron.d/.tarotgen.next
@@ -432,14 +367,113 @@ if [ -d "$nightly" ]; then
   echo "The old nightly copies stay in $nightly ($(find "$nightly" -maxdepth 1 -type f -name 'tarotdb-*.db.gz' | wc -l) of them) until they are removed by hand."
 fi
 '@
-}
+
+# One archive, laid out as the host's steps want it: the code under backend/, the SPA as dist,
+# the plugin repository as plugin.
+$content = [ordered]@{}
+$entryScript = $null
+$repo = $null
+$archive = $null
+$connection = $null
+$tree = $null
+$retire = $null
 
 try {
+    # -- The release: what the host runs, then its own checkout -----------------------
+    $build = $repoRoot
+    if (-not $Preview) {
+        # The backend and the frontend are recorded on the host; a plugin-only run needs no
+        # connection before it knows the plugin is new (below).
+        if ($records) {
+            $connection = $settings | Open-DeployConnection
+            $live = @($records | ForEach-Object { Get-DeployedRelease -Name $_ })
+            if (-not $Force -and -not @($live | Where-Object { $_ -ne $version })) {
+                Write-Ok "$version is already running on the host ($($targets -join ', ')); nothing to deploy. (A version pushed since goes out once CI tags it; -Force deploys this one again.)"
+                return
+            }
+            Write-Step "Releasing $version (the host runs $(($live | ForEach-Object { if ($_) { $_ } else { 'a release not recorded' } }) -join ' and '))"
+        }
+        if ($release.Since) { Write-Step "The $($release.Since) commit(s) on main after $version are not part of it." }
+        $tree = New-ReleaseTree -Path $repoRoot -Tag $version -Npm @(if ($withFrontend) { 'frontend' })
+        $build = $tree
+    }
+    $backendDir = Join-Path $build 'backend'
+    $frontendDir = Join-Path $build 'frontend'
+    $distDir = Join-Path $frontendDir 'dist'
+    $pluginDir = Join-Path $build 'plugin\TarotGen.Plugin'
+    $pluginProject = Join-Path $pluginDir 'TarotGen.Plugin.csproj'
+    $cronFile = Join-Path $build 'scripts\server\tarotgen.cron'
+
+    # The plugin's version must be higher than the published one, since Dalamud updates to
+    # nothing else. The host refuses a lower one too, but the published index is read here
+    # first, before the plugin is built. If it can't be read, the host's check still stands.
+    if ($withPlugin) {
+        $planned = @(([xml](Get-Content -LiteralPath $pluginProject -Raw)).Project.PropertyGroup.Version | Where-Object { $_ })[0]
+        $published = $null
+        try {
+            $published = @(Invoke-RestMethod -Uri "$site/plugin/repo.json?deploy=$token" -TimeoutSec 15)[0].AssemblyVersion
+            $higher = (ConvertTo-PluginVersion -Value $planned) -gt (ConvertTo-PluginVersion -Value $published)
+        } catch {
+            Write-Warning "The published plugin version could not be read or compared ($($_.Exception.Message)); the host will check it."
+            $higher = $true
+        }
+        if (-not $higher) {
+            if ($IfNewer -and $published -and (ConvertTo-PluginVersion -Value $planned) -eq (ConvertTo-PluginVersion -Value $published)) {
+                Write-Ok "Plugin $planned is already published; nothing to publish."
+                return
+            }
+            throw "The plugin's version $planned is not higher than the published $published, and Dalamud updates to nothing else. Raise <Version> in plugin/TarotGen.Plugin/TarotGen.Plugin.csproj; nothing was built or changed."
+        }
+    }
+
+    # -- Build and pack ------------------------------------------------------------------
+    if ($withBackend) {
+        foreach ($item in $backendShipped) {
+            $path = Join-Path $backendDir $item
+            if (-not (Test-Path -LiteralPath $path)) { throw "Backend payload item not found: $path. Nothing was changed." }
+            $content["backend/$item"] = $path
+        }
+        # The cron file names the web root and the daily backup's folder itself; a mismatch would
+        # stop retention without a word, so it stops the deploy instead, before anything changes.
+        $cron = (Get-Content -LiteralPath $cronFile -Raw) -replace "`r", ''
+        foreach ($needed in "$web/scripts/retention.php", "$dataDir/db/backups/tarotgen-") {
+            if (-not $cron.Contains($needed)) { throw "scripts/server/tarotgen.cron does not name $needed, which this deploy installs; fix one or the other. Nothing was changed." }
+        }
+        if (-not $cron.EndsWith("`n")) { $cron += "`n" }
+        $retire = Format-RemoteScript -Template $retireTemplate -Value @{ CRON = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($cron)) }
+    }
+
+    if ($withFrontend) {
+        $shell = Join-Path $distDir 'index.html'
+        if ($SkipBuild) {
+            Write-Step 'Skipping the frontend build (-SkipBuild); using the existing frontend/dist'
+            if (-not (Test-Path -LiteralPath $shell)) { throw 'frontend/dist/index.html is missing - nothing to deploy.' }
+        } else {
+            Invoke-NpmBuild -Path $frontendDir -Output $shell
+        }
+        $content['dist'] = $distDir
+        # The build's entry script (Vite's assetsDir is _app): the page must name it, and serve it.
+        $entryScript = [regex]::Match((Get-Content -LiteralPath $shell -Raw), 'src="(/_app/[^"]+\.js)"').Groups[1].Value
+    }
+
+    if ($withPlugin) {
+        Invoke-PluginBuild -Project $pluginProject
+        $built = Join-Path $pluginDir 'bin\Release\TarotGen.Plugin'
+        # repo.json is written from the built manifest, with ?v=<version> on the download links so
+        # Cloudflare never serves an old latest.zip under a new index.
+        $repo = Export-PluginRepository -Manifest (Join-Path $built 'TarotGen.Plugin.json') -IndexPath 'repo.json' `
+            -BaseUrl "$site/plugin" -IconPath 'icon.png' -File ([ordered]@{
+                'latest.zip' = Join-Path $built 'latest.zip'
+                'icon.png'   = Join-Path $pluginDir 'images\icon.png'
+            })
+        $content['plugin'] = $repo.Path
+    }
+
     Write-Step 'Packing the deploy...'
     $archive = Compress-DeployArchive -Content $content -Exclude '__pycache__', '*.pyc', '.env', '.env.*', 'Desktop.ini', 'Thumbs.db', '.DS_Store'
     Write-Ok ('{0} files, {1:N1} MB, one archive' -f $archive.FileCount, ($archive.Size / 1MB))
 
-    $connection = $settings | Open-DeployConnection
+    if (-not $connection) { $connection = $settings | Open-DeployConnection }
 
     Write-Step 'Uploading...'
     $upload = Invoke-Upload -Path $archive.Path -Destination 'tarotgen-deploy.tgz' -Activity "Uploading TarotGen.io ($($targets -join ', '))" -FileCount $archive.FileCount
@@ -515,6 +549,8 @@ try {
         }
         throw
     }
+    # Only a deploy that stayed is recorded; a preview's stamp makes the next release go out.
+    foreach ($record in $records) { Set-DeployedRelease -Name $record -Release $version }
 
     # -- The data, once the release stays (backend) -----------------------------------
     if ($withBackend) {
@@ -544,6 +580,7 @@ try {
     Close-DeployConnection
     if ($archive) { Remove-Item -LiteralPath $archive.Path -ErrorAction SilentlyContinue }
     if ($repo) { Remove-Item -LiteralPath $repo.Path -Recurse -ErrorAction SilentlyContinue }
+    if ($tree) { Remove-ReleaseTree -Path $tree -Repository $repoRoot }
 }
 
 Write-Host "`n[OK] Deployed $($targets -join ', ') to $($connection.Target):$web" -ForegroundColor Green
