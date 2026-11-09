@@ -97,9 +97,14 @@ describe('CardFrequencyPanel', () => {
       // An unnamed card counted across decks says which deck it's from.
       { name: 'Card #79', deck: 'Thoth', count: '1', split: '1 upright · 0 reversed' },
     ])
-    // The bar is proportional to the card drawn most, split upright/reversed.
+    // The bar is proportional to the card drawn most, split upright/reversed. The widths are
+    // compared as numbers, since jsdom (31 on) rounds a percentage it writes back.
     const fills = [...document.body.querySelectorAll<HTMLElement>('.frequency__fill')]
-    expect(fills.map((f) => f.style.width)).toEqual(['100%', '33.33333333333333%'])
+    expect(fills.every((f) => f.style.width.endsWith('%'))).toBe(true)
+    const widths = fills.map((f) => parseFloat(f.style.width))
+    expect(widths).toHaveLength(2)
+    expect(widths[0]).toBe(100)
+    expect(widths[1]).toBeCloseTo(100 / 3, 3)
   })
 
   it('shows the top ten, and all of them on request', async () => {

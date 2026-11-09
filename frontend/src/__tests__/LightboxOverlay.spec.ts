@@ -86,10 +86,24 @@ async function swipe(from: Point, to: Point): Promise<void> {
   await nextTick()
 }
 
+/*
+ * The image's transform read back as numbers. jsdom (31 on) writes a transform the shortest way
+ * CSS allows, `translate(0px) scale(-1)` for `translate(0px, 0px) scale(-1, -1)`, so a second
+ * value left out is its default: 0 for a translate's y, the x scale for a scale's y.
+ */
+function transformed(): { pan: [number, number]; scale: [number, number] } {
+  const transform = image()?.style.transform ?? ''
+  const moved = /translate\((-?[\d.]+)px(?:,\s*(-?[\d.]+)px)?\)/.exec(transform)
+  const sized = /scale\((-?[\d.]+)(?:,\s*(-?[\d.]+))?\)/.exec(transform)
+  return {
+    pan: moved ? [Number(moved[1]), Number(moved[2] ?? 0)] : [NaN, NaN],
+    scale: sized ? [Number(sized[1]), Number(sized[2] ?? sized[1])] : [NaN, NaN],
+  }
+}
+
 /** The image's on-screen offset, read from its transform. */
 function pan(): [number, number] {
-  const match = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(image()?.style.transform ?? '')
-  return match ? [Number(match[1]), Number(match[2])] : [NaN, NaN]
+  return transformed().pan
 }
 
 describe('LightboxOverlay', () => {
@@ -144,7 +158,7 @@ describe('LightboxOverlay', () => {
     expect(caption()).toBe('Face-down card 2')
     expect(image()?.getAttribute('src')).toBe(cardBackImageUrls(DECK).display)
     expect(image()?.getAttribute('alt')).toBe('Face-down card 2')
-    expect(image()?.style.transform).toContain('scale(1, 1)')
+    expect(transformed().scale).toEqual([1, 1])
     expect(document.body.textContent).toContain('Image 2 of 3')
     // Nothing in the dialog names it, and there is nothing to report or turn upright.
     expect(dialog()?.textContent).not.toContain('Magician')
@@ -218,11 +232,11 @@ describe('LightboxOverlay', () => {
   it('shows a reversed card upside down, with a button to view it upright', async () => {
     await openLightbox(1)
 
-    expect(image()?.style.transform).toContain('scale(-1, -1)')
+    expect(transformed().scale).toEqual([-1, -1])
     button('View Upright')?.click()
     await nextTick()
 
-    expect(image()?.style.transform).toContain('scale(1, 1)')
+    expect(transformed().scale).toEqual([1, 1])
     expect(button('View Reversed')).toBeDefined()
   })
 
