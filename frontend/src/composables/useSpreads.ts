@@ -32,8 +32,8 @@ export function useSpreads() {
   async function fetchSpreads(): Promise<void> {
     // Fire the public list, personal spreads, and favorites concurrently. The
     // favorites/user-spreads calls don't depend on the public list (favorites are
-    // reconciled by id in spreadOptions), so awaiting the public list first only
-    // added a serial round trip to every spread-selector page load.
+    // reconciled by id in spreadOptions), so awaiting the public list first would
+    // add a serial round trip to every spread-selector page load.
     await Promise.all([
       fetchPublicSpreads(),
       isLoggedIn.value ? fetchUserSpreads() : Promise.resolve(),

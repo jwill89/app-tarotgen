@@ -64,12 +64,11 @@ export default defineConfig({
       },
     },
   },
-  // The shared test settings (shared-tooling's test/web): jsdom, mocks and stubbed
+  // The shared test settings (test/web): jsdom, mocks and stubbed
   // globals put back after each test, and v8 coverage over all of src, untested
   // files included, so the numbers say how much of the app the specs reach.
   // `npm run test:coverage` fails below the floor: a little under what the specs
-  // reach (5.4.0, 2026-10-30: 97.1 / 93.5 / 95.8 / 97.9%; 10.5% of lines before
-  // AUDIT §8). Raise it as specs land; never lower it.
+  // reach. Raise it as specs land; never lower it.
   test: vitestDefaults({
     environment: 'jsdom',
     include: ['src/**/*.spec.ts'],

@@ -9,14 +9,14 @@
  * /api/* to api/index.php; static files under /assets are served directly).
  * The built-in server has no .htaccess, so this script reproduces that routing.
  *
- * Run from the project root (document root = project root):
+ * Run from backend/ (document root = backend/):
  *     php -S localhost:80 dev-router.php
- * or via `npm run dev:api`.
+ * or via `composer dev`.
  */
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-// Static assets (deck images, favicon, etc.) live under /assets at the project
+// Static assets (deck images, favicon, etc.) live under /assets at the document
 // root. Returning false lets the built-in server serve the file from disk.
 if (str_starts_with($uri, '/assets/')) {
     return is_file(__DIR__ . $uri) ? false : http_not_found();

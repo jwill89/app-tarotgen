@@ -12,8 +12,8 @@ use GdImage;
  * Thumbnail (grids, pickers): assets/decks/<deck_id>/thumbs/Card_XXXX.webp  400 px wide, WebP q80
  *
  * A master scan is ~2-5 MB of PNG; its full-size WebP is ~7-8% of that with no
- * visible difference at 1:1 (AUDIT.md §3.2), so the lightbox no longer pulls
- * megabytes per card. The PNGs stay the source of truth (and the plugin's).
+ * visible difference at 1:1, so the lightbox doesn't pull megabytes per card.
+ * The PNGs stay the source of truth (and the plugin's).
  *
  * Generation is incremental: a card is (re)processed when either derived file
  * is missing or older than its PNG — so replacing a scan after a card report

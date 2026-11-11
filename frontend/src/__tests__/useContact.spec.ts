@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest'
 import { useContact } from '@/composables/useContact'
 import { NETWORK_ERROR_MESSAGE } from '@/composables/apiClient'
 
-// Replaces contactForm.spec.ts, which tested its own copy of the submit logic
-// and so could never fail when the real code changed (AUDIT §5.5/§8.5).
+// Runs the composable's own submit logic, not a copy of it, so the spec fails
+// when the real code changes.
 
 function fakeResponse(body: unknown, { ok = true, status = 200 } = {}): Response {
   return { ok, status, json: async () => body } as unknown as Response

@@ -2,9 +2,9 @@
 
 /**
  * The backend's one code-style tool: `composer lint` checks, `composer lint:fix`
- * fixes, and CI runs the check (AUDIT §5.2).
+ * fixes, and CI runs the check.
  *
- * The shared rules (shared-tooling's lint/php: PER Coding Style 3.0, PSR-12's
+ * The shared rules (lint/php: PER Coding Style 3.0, PSR-12's
  * successor, pinned so a fixer upgrade can't move the standard) and the migration
  * set for the PHP composer.json requires, so the fixer never writes syntax the
  * server can't run.

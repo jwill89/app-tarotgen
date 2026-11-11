@@ -11,9 +11,9 @@ use Tarot\Data\UserData;
 use Tarot\Utility\Clock;
 
 /**
- * Timestamps PHP writes must match SQLite's UTC clock whatever the host's zone
- * (AUDIT §1.4). Each test runs PHP in UTC+14 so a zone-dependent write would be
- * off by fourteen hours, not a few seconds.
+ * Timestamps PHP writes must match SQLite's UTC clock whatever the host's zone.
+ * Each test runs PHP in UTC+14 so a zone-dependent write would be off by
+ * fourteen hours, not a few seconds.
  */
 #[CoversClass(Clock::class)]
 #[CoversClass(UserData::class)]

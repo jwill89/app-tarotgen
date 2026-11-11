@@ -46,9 +46,9 @@ watch(
 )
 
 // Reka's internal close handler and a button's @click both fire during the same
-// click event, in an order we don't control — settling immediately here let the
-// close-driven `false` beat the Action button's `true` (so confirm() always
-// resolved false). Deferring to a microtask reads `choice` after BOTH have run.
+// click event, in an order we don't control — settling immediately here would let
+// the close-driven `false` beat the Action button's `true` (so confirm() would
+// always resolve false). Deferring to a microtask reads `choice` after BOTH have run.
 function onOpenChange(open: boolean): void {
   if (!open) {
     queueMicrotask(() => settle(choice))

@@ -74,14 +74,14 @@ final readonly class JournalExport
 
     /**
      * The journal as CSV, one row per drawn card: a reading's name, question,
-     * querent, tags (comma-separated) and notes repeat on each of its cards' rows. A reading with no cards still gets one
-     * row, so its notes aren't lost.
+     * querent, tags (comma-separated) and notes repeat on each of its cards' rows.
+     * A reading with no cards still gets one row, so its notes aren't lost.
      *
      * It starts with a UTF-8 byte-order mark. Excel, where most of these files
      * will be opened, reads a CSV without one in the PC's legacy code page, so an
-     * accented card name ("L'Étoile"), a dash or notes in a non-Latin script came
-     * out garbled. Google Sheets, Numbers and LibreOffice skip the mark; a script
-     * reads the file as utf-8-sig.
+     * accented card name ("L'Étoile"), a dash or notes in a non-Latin script would
+     * come out garbled. Google Sheets, Numbers and LibreOffice skip the mark; a
+     * script reads the file as utf-8-sig.
      *
      * @return Generator<int,string>
      */

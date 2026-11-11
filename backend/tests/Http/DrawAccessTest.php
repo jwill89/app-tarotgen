@@ -21,7 +21,7 @@ use Tarot\Utility\Pkce;
 use Tarot\Utility\RateLimiter;
 
 /**
- * Who may make a reading (AUDIT §9.14), on both routes that make one — New Draw
+ * Who may make a reading, on both routes that make one — New Draw
  * (POST /readings/generate) and Recreate Draw (POST /readings). With Turnstile
  * configured: a signed-in user or a linked plugin needs nothing more, a
  * signed-out visitor a passed challenge, an unlinked plugin its draw key. With

@@ -213,7 +213,7 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/views/AccountSpreadsView.vue'),
     meta: { title: 'My Spreads', userOnly: true, noindex: true },
   },
-  // Legacy admin-login URL now points at the unified account login.
+  // The admin-login URL redirects to the account login, which every user shares.
   { path: '/admin/login', redirect: { name: 'login' } },
   {
     path: '/admin',

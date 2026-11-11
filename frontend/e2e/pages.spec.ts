@@ -7,8 +7,8 @@ import { seededReading } from './env.ts'
  * The main public pages, each opened by its own address: it shows its heading and
  * what the server sent for it (the seeded deck, spread and reading) or its own
  * words, then passes axe at WCAG 2.2 AA with its best practices. Everything is found
- * by role and name, never by a Bulma class, so the suite still holds when the
- * component kit replaces Bulma.
+ * by role and name, never by a Bulma class, so the suite doesn't depend on the
+ * CSS framework.
  */
 const text = (words: string) => (page: Page) => expect(page.getByText(words)).toBeVisible()
 const section = (name: string) => (page: Page) =>

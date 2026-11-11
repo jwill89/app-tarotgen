@@ -1,15 +1,15 @@
 <?php
 
 /**
- * Nightly data retention (AUDIT.md §1.7, §9.9). Deletes guest readings — saved
- * without an account — past the expiry their maker chose (1, 7 or 30 days), and
- * any a year after they were created, as the privacy policy's "Data Retention"
- * section states. Also deletes plugin draw-key codes (§9.14) that expired without
- * being redeemed. Then refreshes SQLite's query-planner statistics. (Reads treat
- * an expired reading or code as gone the moment it expires; this frees the rows.)
+ * Nightly data retention. Deletes guest readings — saved without an account —
+ * past the expiry their maker chose (1, 7 or 30 days), and any a year after they
+ * were created, as the privacy policy's "Data Retention" section states. Also
+ * deletes plugin draw-key codes that expired without being redeemed. Then
+ * refreshes SQLite's query-planner statistics. (Reads treat an expired reading or
+ * code as gone the moment it expires; this frees the rows.)
  *
  * Run by /etc/cron.d/tarotgen straight after a successful nightly backup, as the
- * web-server user (AGENTS.md §7):
+ * web-server user, who owns the database files:
  *   runuser -u www-data -- php scripts/retention.php
  *   runuser -u www-data -- php scripts/retention.php --dry-run   # report only
  *
@@ -48,9 +48,9 @@ if ($dryRun) {
 
 echo "deleted {$report}\n";
 
-// Nothing had ever run ANALYZE (AUDIT §2.7). Plain ANALYZE, not PRAGMA optimize:
+// Keep the planner statistics fresh. Plain ANALYZE, not PRAGMA optimize:
 // production's SQLite (3.45) ignores optimize's check-every-table bit (3.46+) and
-// only analysed the one table this connection had touched. The database is small
+// only analyses the one table this connection has touched. The database is small
 // and analysis_limit caps each index scan, so a full pass costs nothing nightly.
 $db->exec('PRAGMA analysis_limit = 400');
 $db->exec('ANALYZE');

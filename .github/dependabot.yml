@@ -1,17 +1,17 @@
 # Weekly dependency updates, grouped so a quiet week is one pull request per
 # ecosystem: minors and patches together, majors one by one (they can need code
-# changes). The same shape as the Kindred Nights repo.
+# changes).
 #
 # Dependabot can't read Actions secrets. Its jobs, and CI on its pull requests,
 # need FONTAWESOME_NPM_TOKEN (the Pro icon registry) added again as a Dependabot
-# secret (Settings > Secrets and variables > Dependabot). The shared-tooling
-# submodule is public, so cloning the repo with it needs no token.
+# secret (Settings > Secrets and variables > Dependabot). The shared submodule is
+# public, so cloning the repo with it needs no token.
 version: 2
 registries:
   # frontend/.npmrc names this registry for the @fortawesome and @awesome.me scopes;
   # Dependabot adds the token. No `scope:` here: with one, Dependabot writes its own
   # .npmrc instead of the committed one, which loses install-links=true and records
-  # the shared-tooling packages as links (pull request #12's failed npm ci).
+  # the shared packages as links, so `npm ci` fails.
   fontawesome:
     type: npm-registry
     url: https://npm.fontawesome.com
@@ -35,12 +35,11 @@ updates:
         update-types: ['version-update:semver-major']
       # vue-tsc 3.3.14 turns a `//` in a static attribute (placeholder="https://") into
       # broken virtual code, which stops it checking the rest of that template
-      # (vuejs/language-tools#6322; held at 3.3.13 on 2026-11-07). Only that version:
-      # the fix comes through.
+      # (held at 3.3.13). Only that version: the fix comes through.
       - dependency-name: vue-tsc
         versions: ['3.3.14']
-      # The tools shared-tooling's lint/web owns move to a new major once, in
-      # shared-tooling, with the plugins and configs that must match, and reach here with
+      # The tools the shared lint/web config owns move to a new major together with
+      # the plugins and configs that must match, and reach here with
       # `task shared:update`; a plugin of our own for one moves with it. Minors and
       # patches still come here.
       - dependency-name: eslint

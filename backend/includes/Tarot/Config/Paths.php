@@ -7,12 +7,12 @@ namespace Tarot\Config;
  *
  * In production these sit OUTSIDE the web root. The deploy flattens backend/
  * into the document root, so anything kept there is one missing .htaccess rule
- * away from being downloadable (it was — see AUDIT.md §1.0). The server sets
- * TAROT_DATA_DIR (Apache `SetEnv` for web requests, /etc/environment and the
- * cron file for CLI) to a directory holding `.env` and `db/tarotdb.db`.
+ * away from being downloadable. The server sets TAROT_DATA_DIR (Apache
+ * `SetEnv` for web requests, /etc/environment and the cron file for CLI) to a
+ * directory holding `.env` and `db/tarotdb.db`.
  *
  * When TAROT_DATA_DIR is unset — local development — the project root is used,
- * i.e. backend/.env and backend/db/tarotdb.db, exactly as before.
+ * i.e. backend/.env and backend/db/tarotdb.db.
  */
 final class Paths
 {

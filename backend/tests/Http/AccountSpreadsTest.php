@@ -90,7 +90,8 @@ final class AccountSpreadsTest extends HttpTestCase
         $this->signInAs($this->userId);
         $invalid = ['error' => 'Invalid position data.'];
 
-        // Each used to be dropped on save, leaving a spread of no (or fewer) cards.
+        // A position that isn't an object is refused, not dropped on save,
+        // which would leave a spread of no (or fewer) cards.
         $this->assertSame($invalid, $this->assertJsonResponse(400, $this->post('/account/spreads', ['name' => 'Numbers', 'positions' => [1, 2]])));
         $this->assertSame($invalid, $this->assertJsonResponse(400, $this->post('/account/spreads', [
             'name' => 'Mixed', 'positions' => [['order' => 1, 'title' => 'Real'], 'not a position'],

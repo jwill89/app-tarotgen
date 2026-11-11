@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Who can open a reading (AUDIT §9.9): anyone with the link, anyone with its
+ * Who can open a reading: anyone with the link, anyone with its
  * password, or only its owner. Choosing Password asks for one; when the reading
  * already has one (`hasPassword`, editing), leaving the field blank keeps it.
  * Used when drawing (ReadingOwnerOptions) and editing (ReadingEditDialog).

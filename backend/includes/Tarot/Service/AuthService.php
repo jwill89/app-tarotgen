@@ -437,10 +437,11 @@ class AuthService
     /**
      * Send a public account email (sign-up, password reset) after the response,
      * where the server can (PHP-FPM, {@see AfterResponse}). Waiting on SMTP only
-     * when an address has an account made those answers slower for it, which
-     * told anyone timing them who has one. Returns whether the email was sent;
-     * one handed on counts as sent, and its failure is logged as any is. Unset
-     * SMTP is answered now: false, so outside production the link is shown.
+     * when an address has an account would make those answers slower for it,
+     * which would tell anyone timing them who has one. Returns whether the email
+     * was sent; one handed on counts as sent, and its failure is logged as any
+     * is. Unset SMTP is answered at once: false, so outside production the link
+     * is shown.
      *
      * @param callable(): bool $send
      */

@@ -3,8 +3,8 @@ import { flushPromises } from '@vue/test-utils'
 import CookieBanner from '@/components/CookieBanner.vue'
 import { mountWithApp, cleanup } from './helpers/app'
 
-// The key predates the `tarot.` storage namespace; renaming it would show the
-// banner again to everyone who already dismissed it.
+// The key sits outside the `tarot.` storage namespace on purpose: renaming it
+// would show the banner again to everyone who already dismissed it.
 const KEY = 'cookie_notice_dismissed'
 
 describe('CookieBanner', () => {

@@ -116,8 +116,8 @@ public sealed class MainWindow : Window, IDisposable
             ImGui.OpenPopup("Welcome to TarotGen###onboarding");
         }
 
-        // Upgraded from before draw keys: tell the player once why drawing stopped
-        // and how to get a key. A linked install draws as before, so it never asks.
+        // Set up before draw keys existed: tell the player once why drawing stopped
+        // and how to get a key. A linked install can still draw, so it never asks.
         if (this.config.OnboardingComplete && !this.config.DrawKeyNoticeSeen && !this.drawKeyNoticeShown)
         {
             this.drawKeyNoticeShown = true;
@@ -646,7 +646,7 @@ public sealed class MainWindow : Window, IDisposable
                 this.DrawConnectionSection();
         }
 
-        // ── Links (never collapsed, per request) ────────────────────────────
+        // ── Links (never collapsed) ────────────────────────────
         DrawLinksSection();
     }
 
@@ -891,7 +891,7 @@ public sealed class MainWindow : Window, IDisposable
     /// <summary>
     /// Public spreads under their library category, in the admins' order, as New
     /// Draw groups them on the site. An API before 5.2.0 sends no categories: one
-    /// group with no heading, the picker as it always was.
+    /// group with no heading, a flat picker.
     /// </summary>
     private static List<SpreadGroup> BuildSpreadGroups(List<Spread> spreads)
     {

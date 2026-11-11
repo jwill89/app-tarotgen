@@ -11,8 +11,8 @@ use Tarot\Data\DeckData;
 use Tarot\Structure\Deck;
 
 /**
- * Focuses on the card-aspect handling (the recently-fixed clamp) and the
- * update() allow-list, against an in-memory SQLite database.
+ * Focuses on the card-aspect handling (its clamp) and the update() allow-list,
+ * against an in-memory SQLite database.
  */
 #[CoversClass(DeckData::class)]
 #[CoversClass(Deck::class)]
@@ -26,7 +26,7 @@ final class DeckDataTest extends TestCase
         $this->pdo = new PDO('sqlite::memory:');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        // Mirror the columns DeckData reads/writes (incl. migrate_deck_aspect).
+        // Mirror the columns DeckData reads/writes, the card-aspect ones included.
         $this->pdo->exec(
             'CREATE TABLE deck_systems (
                 deck_system_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,8 +72,8 @@ final class DeckDataTest extends TestCase
 
     public function testStorePreservesRealMillimetreAspectWithoutTruncating(): void
     {
-        // Regression: the old clamp ceiling of 100 truncated a real card's mm
-        // height (151.5 → 100), corrupting the ratio. It must round-trip intact.
+        // A real card's mm height (151.5) must round-trip intact: a clamp ceiling
+        // of 100 would truncate it and corrupt the ratio.
         $deck = $this->data->store(['name' => 'Tall Deck', 'card_aspect_w' => 70.5, 'card_aspect_h' => 151.5]);
 
         $this->assertInstanceOf(Deck::class, $deck);
@@ -140,9 +140,9 @@ final class DeckDataTest extends TestCase
 
     public function testColumnsDeckDoesNotDeclareAreNotHydrated(): void
     {
-        // A column the Structure doesn't know (e.g. the legacy is_thoth a stale
-        // DB still had) must not become a dynamic property — a deprecation now,
-        // which phpunit.xml fails on, and a fatal error in PHP 9.
+        // A column the Structure doesn't know (e.g. a stray is_thoth in an older
+        // database) must not become a dynamic property: PHP deprecates those (which
+        // phpunit.xml fails on), and PHP 9 makes them a fatal error.
         $this->pdo->exec('ALTER TABLE decks ADD COLUMN is_thoth INTEGER NOT NULL DEFAULT 0');
         $this->data->store(['name' => 'Deck']);
 

@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test'
 import { playwrightDefaults } from '../shared/test/e2e/playwright.js'
 import { BASE_URL, DATA_DIR, PORT } from './e2e/env.ts'
 
-// The end-to-end run (`npm run test:e2e`, AUDIT §8.6), on shared-tooling's Playwright
+// The end-to-end run (`npm run test:e2e`), on the shared Playwright
 // settings: the SPA built, then served with the real API by PHP's built-in server,
 // routed as production's .htaccess routes them (e2e/server/router.php), on a throwaway
 // database the backend's migrations build and e2e/server/prepare.php seeds. Locally on

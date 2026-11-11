@@ -48,8 +48,8 @@ class AdminContactController extends AbstractController
     }
 
     /**
-     * Partial update of a contact message. Currently the only editable field is
-     * the `is_read` flag (previously the dedicated POST …/read action).
+     * Partial update of a contact message. The `is_read` flag is the only
+     * editable field.
      *
      * @param array<string,string> $args
      */

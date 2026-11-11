@@ -1,13 +1,12 @@
-// Modular Bulma build — only the modules this app still uses.
+// Modular Bulma build — only the modules this app uses.
 //
-// The reskin replaced most Bulma components with bespoke ones (.site-nav,
-// .myst-modal, .myst-menu, .myst-select, SpreadCanvasEditor, …), so importing
-// bulma/css/bulma.min.css meant shipping ~660 KB of stylesheet to use maybe a
-// fifth of it. Pulling the modules individually roughly halves the app's
-// render-blocking CSS.
+// Most Bulma components are bespoke here (.site-nav, .myst-modal, .myst-menu,
+// .myst-select, SpreadCanvasEditor, …), so importing bulma/css/bulma.min.css
+// would ship ~660 KB of stylesheet to use maybe a fifth of it. Importing the
+// modules individually roughly halves the app's render-blocking CSS.
 //
-// Dropped deliberately — each verified to have zero exact-class usage in any
-// template AND no override in our own CSS:
+// Left out deliberately — each has zero exact-class usage in any template AND
+// no override in our own CSS:
 //   elements/image, elements/loader, elements/progress
 //   components/breadcrumb, card, dropdown, menu, message, modal, navbar, tabs
 //   form/file
@@ -18,7 +17,7 @@
 //                    (HomeView's own .hero/.panel are scoped classes that
 //                     only collided with Bulma's names; 38 KB together)
 //   helpers          (1,716 classes for the few dozen we use — see bulma-helpers.css)
-//   themes           (replaced by the dark-only block at the end of this file)
+//   themes           (the dark-only block at the end of this file stands in)
 //
 // Adding a Bulma class that isn't styled? Its module probably isn't imported.
 // Add the @use line here rather than reaching back for the full stylesheet.

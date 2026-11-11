@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Rector\Config\RectorConfig;
 use Rector\Php81\Rector\Array_\ArrayToFirstClassCallableRector;
 
-// The shared Rector set (shared-tooling's lint/php: no dead code) and current PHP
+// The shared Rector set (lint/php: no dead code) and current PHP
 // idioms for the PHP composer.json requires (`composer rector` to apply,
 // `composer rector:check` — the CI step — to list).
 return RectorConfig::configure()

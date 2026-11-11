@@ -10,7 +10,7 @@ use Tarot\Structure\User;
  *
  * - No admin removes their own admin flag or deletes their own account from the
  *   user-management page (DELETE /account is the way to leave). One wrong click
- *   there locked an admin out, and with the last admin gone only
+ *   there would lock an admin out, and with the last admin gone only
  *   scripts/make_admin.php on the server could undo it.
  * - An account whose email is in PROTECTED_ADMIN_EMAILS (comma-separated, any
  *   case) can't be demoted or deleted through the API by anyone, itself

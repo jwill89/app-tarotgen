@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    shared-tooling's base (shared/test/php/phpunit.xml.dist), with TarotGen's suites
+    The shared base (shared/test/php/phpunit.xml.dist), with this app's suites
     and <source>: a warning, notice or deprecation fails the run, PHPUnit's own
     included. PHPUnit can't extend another config, so a change to the base is copied
     here. `composer test:coverage` writes the clover report and checks the floor.

@@ -12,9 +12,9 @@ use ReflectionClass;
  * swagger-php augmenter, run when OpenApiSpec::builder() assembles the document
  * (`composer docs`, OpenApiSpecTest): marks every property of a
  * `Tarot\Structure` schema as required. AbstractStructure's jsonSerialize()
- * always sends all of them, but swagger-php leaves `required` unset, which made
- * every field of the generated frontend types optional (AUDIT §4.4). A schema
- * that lists its own `required` is left alone, and so is a property marked
+ * always sends all of them, but swagger-php leaves `required` unset, which makes
+ * every field of the generated frontend types optional. A schema that lists
+ * its own `required` is left alone, and so is a property marked
  * `x: ['admin-only' => true]`: the public endpoints strip it.
  *
  * @implements PipeInterface<Specification>

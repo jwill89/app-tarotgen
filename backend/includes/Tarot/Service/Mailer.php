@@ -8,7 +8,7 @@ use Tarot\Config\Env;
 
 /**
  * Thin wrapper around PHPMailer for transactional email (account activation,
- * and later password resets).
+ * password resets, a notice of a sign-up attempt on an existing address).
  *
  * Configuration comes from the environment (SMTP_HOST, SMTP_PORT, SMTP_USER,
  * SMTP_PASS, SMTP_SECURE, MAIL_FROM, MAIL_FROM_NAME). When SMTP isn't

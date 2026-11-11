@@ -7,10 +7,10 @@ namespace Tarot\Tests\Http;
 use PHPUnit\Framework\Attributes\CoversNothing;
 
 /**
- * The hand-entered changelog is retired (AUDIT §9.13): the release notes are
- * CHANGELOG.md, built into the admin dashboard's version dialog. Its routes are
- * gone, for an admin too, so a stale SPA or a bookmark gets the API's 404 rather
- * than a table the new schema no longer has.
+ * There is no hand-entered changelog: the release notes are CHANGELOG.md, built
+ * into the admin dashboard's version dialog. The changelog routes answer 404, for
+ * an admin too, so a stale SPA or a bookmark gets the API's 404 rather than an
+ * error from a table the schema doesn't have.
  */
 #[CoversNothing]
 final class RetiredChangelogTest extends HttpTestCase

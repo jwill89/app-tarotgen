@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /**
- * Quiet, tooltip-labelled icon button for data-table row actions. Replaces the
- * clusters of saturated per-intent text buttons that made the admin tables
- * read as a rainbow. Calm at rest; the intent colour only appears on hover
- * (styling lives in the global .myst-iconbtn rules).
+ * Quiet, tooltip-labelled icon button for data-table row actions, in place of
+ * clusters of saturated per-intent text buttons that would make the admin
+ * tables read as a rainbow. Calm at rest; the intent colour only appears on
+ * hover (styling lives in the global .myst-iconbtn rules).
  *
  *   <IconButton :icon="byPrefixAndName.fas['pen-to-square']" label="Edit" @click="edit(row)" />
  *   <IconButton :icon="byPrefixAndName.fas['trash']" label="Delete" intent="danger" @click="del(row)" />

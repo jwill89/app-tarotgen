@@ -15,8 +15,8 @@ use Tarot\Structure\CardReportReason;
 
 /**
  * Deleting a deck from the admin pages takes everything that hangs off it with
- * it, through the schema's ON DELETE CASCADE (special_cards gained it in AUDIT
- * §2.7) — and nothing that belongs to another deck.
+ * it, through the schema's ON DELETE CASCADE — and nothing that belongs to
+ * another deck.
  */
 #[CoversClass(AdminDeckController::class)]
 final class AdminDecksTest extends HttpTestCase

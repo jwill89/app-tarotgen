@@ -53,7 +53,7 @@ const ariaSort = computed(() =>
   color: var(--myst-gold);
 }
 
-/* Looks like the header text it replaced. */
+/* Reads as plain header text: it inherits the cell's font, colour and case. */
 .sortable-th__button {
   display: inline-flex;
   align-items: center;

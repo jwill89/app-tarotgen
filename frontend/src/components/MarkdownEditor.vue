@@ -83,8 +83,8 @@ watch(
     }
     const currentMd = htmlToMd(editor.value.getHTML())
     if (newVal !== currentMd) {
-      // TipTap 3 takes an options object here; a bare `false` (the v2 form) was
-      // ignored, so syncing the prop echoed an update back out.
+      // TipTap 3 takes an options object here; a bare `false` (the v2 form) is
+      // ignored, so syncing the prop would echo an update back out.
       editor.value.commands.setContent(mdToHtml(newVal), { emitUpdate: false })
     }
   },

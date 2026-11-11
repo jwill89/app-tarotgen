@@ -8,7 +8,7 @@ use Tarot\Structure\SpecialCard;
 class SpecialCardData extends AbstractData
 {
     // Listed, not *: FETCH_CLASS turns any column the Structure doesn't declare
-    // into a dynamic property (deprecated, fatal in PHP 9) — AUDIT §1.2/§2.4.
+    // into a dynamic property (deprecated, fatal in PHP 9).
     private const string SELECT_COLS = 'deck_id, card_id, name, keywords, meaning, advice, '
         . 'keywords_reversed, meaning_reversed, advice_reversed';
 

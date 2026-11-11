@@ -1,7 +1,9 @@
 /**
  * Where a card's images live. One place for the `Card_XXXX` naming and the
- * /assets/decks layout (served by the PHP host, not bundled — see AGENTS.md
- * "don't import files under /assets").
+ * /assets/decks layout. The files are served by the PHP host, not bundled:
+ * the dev server proxies /assets there, so a Vue `import` of one would compile
+ * into a module that returns raw image bytes, which is why the URLs are built
+ * as plain strings.
  *
  * Per card the backend's CardImageService derives, from the master PNG scan:
  *   display — full-size WebP for the lightbox and image export (~8% of the PNG)

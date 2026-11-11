@@ -4,7 +4,7 @@ name: Plugin
 # publish it), kept as a download for a week. The plugin ships through its own Dalamud
 # repo, not the site deploy, so this runs only when something it is built from changes.
 # Its checks (the Release build with warnings as errors, and dotnet format) are CI's
-# plugin job, on shared-tooling's dotnet.yml.
+# plugin job, on the shared dotnet.yml.
 on:
   push:
     branches: [main]
@@ -22,8 +22,8 @@ permissions:
 jobs:
   package:
     name: Package (Release)
-    # Linux, as Kindred Nights' plugin job does: the .csproj enables Windows
-    # targeting off Windows, and DALAMUD_HOME says where Dalamud is.
+    # Linux: the .csproj enables Windows targeting off Windows, and DALAMUD_HOME
+    # says where Dalamud is.
     runs-on: ubuntu-24.04
     steps:
       # The analyzers and code style come from the shared/ submodule

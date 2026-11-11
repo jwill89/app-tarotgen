@@ -31,7 +31,8 @@ class ReadingService
      * Probability that any single packet is turned (180°) during the
      * cut-and-turn pass. In a single pass this is also the approximate
      * per-card reversal rate (0.27 ≈ 27%). A model parameter, not a user
-     * setting: readers asked that reversals stay on/off (AUDIT §9 "Declined").
+     * setting: reversals are only on or off, as a chosen rate would take the
+     * spirit out of the draw.
      */
     private const float REVERSAL_TURN_PROBABILITY = 0.27;
 
@@ -483,9 +484,9 @@ class ReadingService
         }
         $reading->setExpiresAt($owner['expires_at'] ?? null);
 
-        // Ids are 40 random bits: a collision is rare, but it used to surface as
-        // a 500. Draw a fresh id and retry; any other database error, or a
-        // collision on the last attempt, propagates as before (AUDIT §1.6).
+        // Ids are 40 random bits: a collision is rare, but unretried it would
+        // surface as a 500. Draw a fresh id and retry; any other database error,
+        // or a collision on the last attempt, propagates.
         $saved = null;
         for ($attempt = 1;; $attempt++) {
             $reading->setReadingId(bin2hex(random_bytes(5)));

@@ -412,7 +412,7 @@ onUnmounted(() => {
         scrolling) while leaving the backdrop genuinely outside the content, so
         Reka's outside-interaction close still works. Reka keys that off
         pointer-DOWN, so a pan-drag that starts on the image and releases over
-        the backdrop no longer closes the lightbox.
+        the backdrop doesn't close the lightbox.
       -->
       <DialogOverlay class="lightbox-overlay">
         <DialogContent

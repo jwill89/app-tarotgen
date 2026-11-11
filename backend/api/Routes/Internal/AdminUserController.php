@@ -99,8 +99,8 @@ class AdminUserController extends AbstractController
     }
 
     /**
-     * Partial update of an account. Currently the only editable field is the
-     * `is_admin` flag (previously the dedicated POST …/admin action).
+     * Partial update of an account. The `is_admin` flag is the only editable
+     * field.
      *
      * @param array<string,string> $args
      */

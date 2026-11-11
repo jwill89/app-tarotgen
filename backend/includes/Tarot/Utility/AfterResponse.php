@@ -13,9 +13,9 @@ use Throwable;
  *
  * Where a response can't be finished early (the CLI the tests run in, PHP's
  * built-in dev server), {@see isAvailable()} is false and callers do the work
- * inline, as before. api/index.php calls {@see run()} once the app has sent
- * its response; the container shares one instance, so whatever a service
- * queued during the request is there.
+ * inline. api/index.php calls {@see run()} once the app has sent its response;
+ * the container shares one instance, so whatever a service queued during the
+ * request is there.
  */
 final class AfterResponse
 {

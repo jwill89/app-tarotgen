@@ -271,9 +271,7 @@ class AdminDeckController extends AbstractController
             return $response->withJson(['error' => 'Deck not found or no valid fields'], 404);
         }
 
-        // Enabling a deck creates its on-disk image folders. This was previously
-        // the dedicated POST …/usable action; it is now a PATCH field carrying the
-        // same side effect.
+        // Enabling a deck (the `usable` field) creates its on-disk image folders.
         if (array_key_exists('usable', $params) && (bool) $params['usable']) {
             $this->cardImages->ensureDeckFolders($deck->deck_id);
         }

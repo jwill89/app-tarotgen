@@ -138,7 +138,7 @@ class AdminCardReportController extends AbstractController
             return $response->withJson(['error' => 'Report not found'], 404);
         }
 
-        // Reports from before decks were foreign-keyed can outlive their deck.
+        // A report row can name a deck that is gone (rows written without the foreign key).
         if (!$this->decks->get($report->deck_id) instanceof Deck) {
             return $response->withJson(['error' => 'Deck not found'], 404);
         }

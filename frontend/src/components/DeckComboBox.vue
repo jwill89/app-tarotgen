@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /**
- * Deck picker built on Reka UI's Combobox. Keeps the same public API
- * (`decks` + `modelValue` as a deck_id, `update:modelValue`), the favourites-first
- * + by-system grouping, and the in-item favourite star. Reka provides the
- * keyboard nav, ARIA wiring, and open/close animation that used to be hand-rolled.
+ * Deck picker built on Reka UI's Combobox. Its API is `decks` + `modelValue`
+ * as a deck_id and `update:modelValue`; the list is favourites-first, then
+ * grouped by system, each item with its favourite star. Reka provides the
+ * keyboard nav, ARIA wiring, and open/close animation.
  */
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed } from 'vue'
@@ -162,7 +162,7 @@ function onToggleFavorite(deck: Deck): void {
                 v-if="isLoggedIn"
                 :text="isFavorite(deck.deck_id) ? 'Remove from favorites' : 'Add to favorites'"
               >
-                <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/interactive-supports-focus -- a focusable control can't sit inside a listbox option, so keyboard users can't favourite yet (AUDIT §6.1, open) -->
+                <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/interactive-supports-focus -- a focusable control can't sit inside a listbox option, so keyboard users can't favourite from the list -->
                 <span
                   class="myst-combobox__star ml-auto"
                   :class="{ 'is-active': isFavorite(deck.deck_id) }"

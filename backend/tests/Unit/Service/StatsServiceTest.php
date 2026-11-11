@@ -92,7 +92,7 @@ final class StatsServiceTest extends TestCase
         $this->assertSame(0, $counts['specialCards']);
         $this->assertSame(1, $counts['spreads']);
         $this->assertSame(0, $counts['readings']);
-        // The hand-entered changelog is retired (AUDIT §9.13): no table to count.
+        // There is no changelog table to count.
         $this->assertArrayNotHasKey('changelog', $counts);
         $this->assertSame(2, $counts['users']);
         $this->assertSame(0, $counts['unreadContacts']);

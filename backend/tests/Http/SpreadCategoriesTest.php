@@ -126,7 +126,7 @@ final class SpreadCategoriesTest extends HttpTestCase
         $this->assertSame(['Decisions', 'General', 'Love & relationships', 'Career', 'Self-reflection', 'Seasonal'], array_column($reordered, 'name'));
         $this->assertSame([1, 2, 3, 4, 5, 6], array_column($reordered, 'sort_order'));
 
-        // A spread named into no category now goes into Decisions, now first.
+        // A spread named into no category goes into the first, which after the reorder is Decisions.
         $spread = $this->assertJsonResponse(201, $this->post('/admin/spreads', ['name' => 'Fork in the road']));
         $this->assertSame(['category_id' => 4, 'category_name' => 'Decisions', 'category_sort_order' => 1], array_intersect_key($spread, array_flip(['category_id', 'category_name', 'category_sort_order'])));
     }

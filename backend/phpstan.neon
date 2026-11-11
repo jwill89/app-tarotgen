@@ -1,12 +1,11 @@
 includes:
-    # The shared PHPStan bar (shared-tooling's lint/php): level 8, full null-safety
+    # The shared PHPStan bar (lint/php): level 8, full null-safety
     # on top of the level-6 array value-type rules. Every nullable access must be
     # guarded, and request/PDO/env values are narrowed to concrete types before use.
     - ../shared/lint/php/phpstan.neon
-    # Pre-existing findings are baselined so `composer stan` stays green and only
-    # *new* issues fail: today one interface-mandated `string|false` signature.
-    # Burn it down over time; the bar for all new code is a clean run. Regenerate
-    # with:
+    # Existing findings are baselined so `composer stan` stays green and only
+    # *new* issues fail: one interface-mandated `string|false` signature. The bar
+    # for all new code is a clean run. Regenerate with:
     #   composer stan -- --generate-baseline
     - phpstan-baseline.neon
 
@@ -19,7 +18,7 @@ parameters:
         - db/migrations
         - phinx.php
     # phpstan-strict-rules, phpstan-deprecation-rules and phpstan-phpunit load
-    # through phpstan/extension-installer (AUDIT §6.2).
+    # through phpstan/extension-installer.
     ignoreErrors:
         # PHPUnit's assertions are static methods that its own docs call as
         # $this->assertSame(); strict-rules' "static via instance" check stays on

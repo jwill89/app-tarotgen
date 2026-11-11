@@ -6,8 +6,8 @@ import { adminAccount } from './env.ts'
  * The path a visitor takes, end to end on the built app: draw a reading, open a
  * card, report its image; then an admin finds the report. Each step depends on
  * the last, so they run in order on one seeded database. Everything is found by
- * role and name, never by a Bulma class, so the suite still holds when the
- * component kit replaces Bulma.
+ * role and name, never by a Bulma class, so the suite doesn't depend on the
+ * CSS framework.
  */
 test.describe.serial('smoke', () => {
   test('a visitor draws a reading and reports a card', async ({ page }) => {

@@ -34,7 +34,7 @@ final class ReadingServiceTest extends TestCase
     {
         // These collaborators are used purely as stubs (we assert on the
         // returned Reading, not on how they are called), so createStub() is the
-        // right tool under PHPUnit 12.
+        // right tool.
         $this->readings    = $this->createStub(ReadingRepository::class);
         $this->decks       = $this->createStub(DeckRepository::class);
         $this->spreads     = $this->createStub(SpreadRepository::class);
@@ -113,7 +113,7 @@ final class ReadingServiceTest extends TestCase
         return $this->service()->generate(['deck_id' => 1, 'number_of_cards' => 1]);
     }
 
-    // ── persist(): reading-id collisions (AUDIT §1.6) ───────────
+    // ── persist(): reading-id collisions ────────────────────────
 
     public function testAnIdCollisionIsRetriedWithAFreshId(): void
     {

@@ -15,8 +15,8 @@ use Tarot\Utility\LoopbackUri;
 use Tarot\Utility\Pkce;
 
 /**
- * Getting a draw key for an unlinked plugin install (AUDIT §9.14), PKCE as the
- * account link does it: the key page, its Turnstile challenge passed, gets a
+ * Getting a draw key for an unlinked plugin install, PKCE as the account link
+ * does it: the key page, its Turnstile challenge passed, gets a
  * one-time code for the plugin's loopback listener; the plugin swaps code and
  * verifier for the key.
  */

@@ -4,7 +4,7 @@
  * pan/zoom, drag-to-move, snap, multi-select, align/distribute/center, undo/redo,
  * the toolbar, the per-card context menu + floating controls, and the unplaced
  * tray — so the three editors (admin SpreadEditor, Recreate Draw, Arrange Draw)
- * don't each re-implement ~485 lines of identical machinery.
+ * don't each re-implement identical machinery.
  *
  * Callers own their surrounding form + save flow and inject only what differs
  * via a generic `v-model` (the slots array, mutated in place) plus slots:
@@ -158,7 +158,7 @@ const {
   emit('restore', slots.value.length)
 })
 // Baseline on the slots as loaded (callers fill them before mounting): with an
-// empty history the first change became its first entry and could not be undone.
+// empty history the first change would become its first entry and couldn't be undone.
 resetHistory()
 
 // Keep the selection valid whenever the array shrinks (caller resize or restore).

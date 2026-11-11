@@ -40,10 +40,9 @@ final class AuthServiceTest extends TestCase
         $this->pdo = new PDO('sqlite::memory:');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        // Mirror db/migrate_users.php + migrate_google_oauth.php +
-        // migrate_passkeys.php. UserData::hydrate() always probes user_passkeys
-        // and authenticate() reads users.password_login_disabled, so the test
-        // schema must include the OAuth/passkey columns and table.
+        // UserData's SELECT always probes user_passkeys and authenticate() reads
+        // users.password_login_disabled, so the test schema must include the
+        // OAuth/passkey columns and table.
         $this->pdo->exec(
             'CREATE TABLE users (
                 user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,7 +84,7 @@ final class AuthServiceTest extends TestCase
                 FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
             )"
         );
-        // Mirror db/migrate_sessions.php + migrate_sessions_user_id.php.
+        // The sessions table, with the user_id that ties a session to its account.
         $this->pdo->exec(
             "CREATE TABLE sessions (
                 id      TEXT    PRIMARY KEY,
@@ -240,7 +239,7 @@ final class AuthServiceTest extends TestCase
         // Activate via the emailed token.
         $this->assertTrue($this->auth->activate($this->tokenFromLink($reg['activation_link'])));
 
-        // Now login works (case-insensitive email), wrong password fails.
+        // Once activated, login works (case-insensitive email), wrong password fails.
         $ok = $this->auth->authenticate('FLOW@example.com', $password);
         $this->assertSame('ok', $ok['status']);
         $this->assertArrayHasKey('user', $ok);

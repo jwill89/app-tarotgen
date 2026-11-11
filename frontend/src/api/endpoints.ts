@@ -101,7 +101,7 @@ export const endpoints = {
     unlink: '/auth/google/unlink',
   },
 
-  /** Passkeys / WebAuthn (renamed group: `/auth/passkeys`). */
+  /** Passkeys / WebAuthn (the `/auth/passkeys` group). */
   passkeys: {
     /** `GET` — list the current user's passkeys. */
     list: '/auth/passkeys',
@@ -144,7 +144,7 @@ export const endpoints = {
     spreadSubmit: (id: string | number) => `/account/spreads/${id}/submit`,
 
     favorites: '/account/favorites',
-    /** `DELETE` — remove a favorite spread (ids now in the URL). */
+    /** `DELETE` — remove a favorite spread (both ids are in the URL). */
     favoriteById: (spreadType: string, spreadId: string | number) =>
       `/account/favorites/${spreadType}/${spreadId}`,
 
@@ -154,7 +154,7 @@ export const endpoints = {
     dailyCards: '/account/daily-cards',
 
     favoriteDecks: '/account/favorite-decks',
-    /** `DELETE` — remove a favorite deck (id now in the URL). */
+    /** `DELETE` — remove a favorite deck (the id is in the URL). */
     favoriteDeckById: (deckId: string | number) => `/account/favorite-decks/${deckId}`,
 
     /** `GET` list linked plugin tokens (Connected Apps). */
@@ -182,7 +182,7 @@ export const endpoints = {
   // -----------------------------------------------------------------------
 
   admin: {
-    /** Dashboard reads (unchanged by the REST normalization). */
+    /** Dashboard reads. */
     dashboard: {
       authCheck: '/auth-check',
       stats: '/stats',

@@ -11,9 +11,9 @@ use Tarot\Data\DeckSystemData;
 
 /**
  * The reading endpoints answer with exactly what the committed API spec documents
- * for them. The spec once pointed all of them at the stored-row schema while they
- * sent something else; this reads each endpoint's documented response from
- * openapi.json and compares the real one with it, nested objects included.
+ * for them, not the stored-row schema; this reads each endpoint's documented
+ * response from openapi.json and compares the real one with it, nested objects
+ * included.
  */
 #[CoversClass(ReadingController::class)]
 final class ReadingPayloadsTest extends HttpTestCase

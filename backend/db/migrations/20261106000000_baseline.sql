@@ -1,6 +1,6 @@
--- The baseline's schema (20261106000000_baseline.php): db/schema.sql as it was
--- on 2026-11-06 (release 5.4.0), when Phinx took over from the one-off scripts.
--- Frozen: never edit it. A schema change is a new migration.
+-- The baseline's schema (20261106000000_baseline.php): the tables, indexes and
+-- seed rows production already has. Frozen: never edit it. A schema change is a
+-- new migration.
 --
 -- Each CREATE is the live database's own text (SQLite keeps it as written, with
 -- every ALTER TABLE ... ADD COLUMN spliced in), hence the uneven layout. The

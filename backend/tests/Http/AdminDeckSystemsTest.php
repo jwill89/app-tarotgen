@@ -119,7 +119,7 @@ final class AdminDeckSystemsTest extends HttpTestCase
             'name' => 'Rider-Waite-Smith', 'short_name' => 'X', 'cards' => [['card_id' => 1, 'name' => 'Renamed']],
         ]);
 
-        // It used to fail on the UNIQUE constraint as a 500.
+        // A duplicate name is refused with a 409, not a 500 from the UNIQUE constraint.
         $this->assertSame(['error' => 'A deck system with that name already exists'], $this->assertJsonResponse(409, $response));
         $this->assertSame(
             [['name' => 'Rider-Waite-Smith', 'short_name' => 'RID'], ['name' => 'Lenormand', 'short_name' => 'LEN']],
@@ -188,8 +188,8 @@ final class AdminDeckSystemsTest extends HttpTestCase
 
         $this->assertSame(204, $this->request('DELETE', "/admin/deck-systems/{$system->deck_system_id}")->getStatusCode());
 
-        // The deck keeps pointing at the missing system; reading it used to fail
-        // on the NULLs the empty join produced, taking every deck list down.
+        // The deck keeps pointing at the missing system, and reads back with an empty
+        // short name and no cards: the NULLs the empty join produces can't take every deck list down.
         $public = $this->assertJsonResponse(200, $this->get('/decks'));
         $this->assertDocumented('get', '/decks', 200, $public);
         $this->assertSame([['Petit', '', 0]], array_map(

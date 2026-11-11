@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * Toast stack, built on Reka UI's Toast primitives. `useToasts` remains the
- * queue owner; Reka handles the animation, swipe-to-dismiss, and pause-on-hover
+ * Toast stack, built on Reka UI's Toast primitives. `useToasts` owns the
+ * queue; Reka handles the animation, swipe-to-dismiss, and pause-on-hover
  * timing. When a toast closes (timer, swipe, or the close button) we drop it
  * from the queue after a short beat so its close animation can play. Styles are
  * global (in style.css) so they apply regardless of where Reka mounts the nodes.
@@ -13,8 +13,8 @@ import { useToasts, type ToastType } from '@/composables/useToasts'
 
 const { toasts, dismiss } = useToasts()
 
-// Object form (byPrefixAndName), matching the rest of the app — the old string
-// form ('fa-circle-check') never resolved with this self-hosted kit setup.
+// Object form (byPrefixAndName), matching the rest of the app — the string
+// form ('fa-circle-check') doesn't resolve with this self-hosted setup.
 const ICONS: Record<ToastType, IconDefinition> = {
   success: byPrefixAndName.fas['circle-check'],
   error: byPrefixAndName.fas['circle-exclamation'],

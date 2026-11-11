@@ -4,10 +4,10 @@
  * (the parent sets it gold); `aria-hidden` because it is ornamental only.
  *
  * The moon (top of the dial) is drawn as a disc + an elliptical *terminator* arc
- * — a clean "moon-phase" glyph rather than the fat lune the first mockup used, so
- * it reads unambiguously as a moon. The terminator path is marked `data-moon`: it
- * is the single element a future dynamic-phase feature would rewrite (the arc's
- * horizontal radius maps to the phase) to match the real lunar phase from the date.
+ * — a clean "moon-phase" glyph rather than a fat lune, so it reads
+ * unambiguously as a moon. The terminator path is marked `data-moon`: it is the
+ * single element a dynamic-phase feature would rewrite (the arc's horizontal
+ * radius maps to the phase) to match the real lunar phase from the date.
  */
 </script>
 

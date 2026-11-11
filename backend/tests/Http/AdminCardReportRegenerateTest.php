@@ -152,7 +152,8 @@ final class AdminCardReportRegenerateTest extends HttpTestCase
     {
         $id = $this->reportId(1, 'The Magician');
         $this->scan('Card_0001.png');
-        // A report from before decks were foreign-keyed, which outlived its deck.
+        // A report left behind by its deck, which the foreign key's cascade
+        // normally prevents (turned off here).
         $this->db->exec('PRAGMA foreign_keys = OFF');
         $this->db->exec("DELETE FROM decks WHERE deck_id = {$this->deckId}");
         $this->signInAs($this->createUser('admin@example.test', admin: true)->user_id);

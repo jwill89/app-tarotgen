@@ -7,7 +7,7 @@ namespace TarotGen.Plugin.Services;
 /// <summary>
 /// Drives the browser account-link flow: opens the site's /authorize page
 /// (<see cref="LoopbackCodeFlow"/>), then exchanges the code for an account token
-/// via POST /api/plugin/token. See plugin/README.md, "How it authenticates".
+/// via POST /api/plugin/token.
 /// </summary>
 public sealed class LinkService : IDisposable
 {

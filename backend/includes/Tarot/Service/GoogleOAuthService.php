@@ -116,7 +116,7 @@ class GoogleOAuthService
             'sub'            => $data['sub'],
             'email'          => $data['email'],
             // Only a real true (or "true", as some Google endpoints spell booleans):
-            // a (bool) cast read the string "false" as verified.
+            // a (bool) cast would read the string "false" as verified.
             'email_verified' => in_array($data['email_verified'] ?? false, [true, 'true'], true),
             'name'           => (string) ($data['name'] ?? ''),
             'picture'        => (string) ($data['picture'] ?? ''),

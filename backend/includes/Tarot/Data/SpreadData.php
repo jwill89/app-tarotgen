@@ -10,8 +10,8 @@ class SpreadData extends AbstractData
     use NormalizesPositions;
 
     /**
-     * Exactly the properties Spread declares (AUDIT §2.4), its category's name and
-     * place among them, so a rename or reorder reaches every spread at once. The
+     * Exactly the properties Spread declares, its category's name and place
+     * among them, so a rename or reorder reaches every spread at once. The
      * foreign key keeps every spread in a category, so the join drops none.
      */
     private const string SELECT = 'SELECT s.spread_id, s.name, s.description, s.card_count, s.category_id, s.positions,

@@ -3,8 +3,8 @@ import { useToasts } from './useToasts'
 import { useRouter } from 'vue-router'
 import { apiRequest, type ApiResult } from './apiClient'
 
-// Re-export the framework-free client so existing imports from '@/composables/useApi'
-// keep working (apiFetch, apiRequest, readApiError, types, …).
+// Re-export the framework-free client, so '@/composables/useApi' also serves
+// apiFetch, apiRequest, readApiError, types, …
 export * from './apiClient'
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' }

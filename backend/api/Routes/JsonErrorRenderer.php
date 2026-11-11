@@ -8,10 +8,9 @@ use Throwable;
 
 /**
  * Slim's own errors — an unknown route, a method a route doesn't take, an
- * uncaught exception — in the API's error shape, `{ "error": "…" }` (API.md),
- * rather than Slim's `{ "message": … }` or an HTML page (AUDIT §5.9). Outside
- * production the exception chain rides along under `exception`, as Slim's own
- * renderer sent it.
+ * uncaught exception — in the API's error shape, `{ "error": "…" }`, rather
+ * than Slim's `{ "message": … }` or an HTML page. Outside production the
+ * exception chain rides along under `exception`, as Slim's own renderer does.
  */
 final class JsonErrorRenderer implements ErrorRendererInterface
 {

@@ -19,8 +19,8 @@ interface Star {
 
 const COUNT = 140
 
-// Neutral tints for the charcoal reskin: white, warm pale-gold, cool pale-silver
-// (no blue — the old '#cfe0ff' read as a colour cast against the violet scheme).
+// Neutral tints for the charcoal scheme: white, warm pale-gold, cool pale-silver
+// (no blue: it reads as a colour cast against the neutral palette).
 const TINTS = ['#ffffff', '#ffffff', '#ffffff', '#ffe9c7', '#e2e6ef']
 
 const rand = (min: number, max: number) => Math.random() * (max - min) + min

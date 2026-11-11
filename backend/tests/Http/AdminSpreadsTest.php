@@ -181,7 +181,7 @@ final class AdminSpreadsTest extends HttpTestCase
         }
 
         $this->assertSame([['name' => 'Three Card', 'card_count' => 3]], $this->rows('SELECT name, card_count FROM spreads'));
-        // Leaving the name out changes the rest, as before.
+        // Leaving the name out is fine: the rest changes.
         $this->assertSame(1, $this->assertJsonResponse(200, $this->request('PUT', "/admin/spreads/{$spread->spread_id}", ['positions' => [self::POSITION]]))['card_count']);
     }
 

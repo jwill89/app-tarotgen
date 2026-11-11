@@ -14,9 +14,9 @@ use Tarot\Data\FavoriteSpreadData;
 use Tarot\Data\PasskeyData;
 
 /**
- * The lists whose rows became Structures in AUDIT §2.5 — documented only as
- * "object" until then — send what the spec now says. The admin readings list
- * also works out each row's owner, deck and spread in SQL, a page at a time.
+ * The lists whose rows are Structures send what the spec documents for them,
+ * not a bare "object". The admin readings list also works out each row's owner,
+ * deck and spread in SQL, a page at a time.
  */
 #[CoversClass(AdminReadingController::class)]
 #[CoversClass(PasskeyController::class)]

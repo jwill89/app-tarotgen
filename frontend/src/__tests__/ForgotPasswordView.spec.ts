@@ -61,8 +61,8 @@ describe('ForgotPasswordView', () => {
     expect(link?.getAttribute('href')).toBe('http://localhost/reset-password?token=t')
   })
 
-  // Both used to land on the green "sent" notice with the form gone, though
-  // nothing had been sent.
+  // A rate limit and a network failure (next test) are failures: the green "sent"
+  // notice would drop the form and claim an email went out when none did.
   it('reports a rate limit as a failure and keeps the form for later', async () => {
     stubApi({
       'POST /auth/forgot-password': {

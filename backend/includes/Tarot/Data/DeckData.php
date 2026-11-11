@@ -10,12 +10,12 @@ use Tarot\Structure\Deck;
 class DeckData extends AbstractData
 {
     // Columns are listed, not d.*: FETCH_CLASS turns any column Deck doesn't
-    // declare into a dynamic property (deprecated, fatal in PHP 9), which is how
-    // the dropped legacy columns broke dev DBs built from a stale schema (AUDIT §1.2).
+    // declare into a dynamic property (deprecated, fatal in PHP 9), so a column
+    // left over in a dev DB built from a stale schema would break every read.
     // artist and purchase_url are nullable columns (a PATCH can send null), and a
     // deck outlives a deleted system, leaving the join empty: a NULL into Deck's
-    // string/int properties is a TypeError that took down every deck list. A 0
-    // total is what getEffectiveTotalCards() reads as "no system".
+    // string/int properties is a TypeError that would take down every deck list. A
+    // 0 total is what getEffectiveTotalCards() reads as "no system".
     private const string SELECT_WITH_SYSTEM = "
         SELECT d.deck_id, d.deck_system_id, d.name,
                COALESCE(d.artist, '') AS artist, COALESCE(d.purchase_url, '') AS purchase_url, d.additional_cards,
@@ -160,8 +160,7 @@ class DeckData extends AbstractData
 
     /**
      * Delete a deck. Its special cards, card reports and favourites go with it:
-     * every table that references decks does so ON DELETE CASCADE (special_cards
-     * since db/migrate_special_cards_cascade.php, AUDIT §2.7).
+     * every table that references decks does so ON DELETE CASCADE.
      */
     public function delete(int $deck_id): bool
     {

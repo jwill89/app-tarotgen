@@ -191,8 +191,8 @@ function onDate(name: 'from' | 'to', event: Event): void {
 }
 
 // ── The list ─────────────────────────────────────────────────────────────────
-// One page at a time: the list used to fetch every reading with its full body
-// (AUDIT §2.6).
+// One page at a time: fetching every reading with its full body would grow with
+// the reader's whole history.
 const PER_PAGE = 25
 const page = computed(() => Math.max(1, Math.floor(Number(fromQuery('page'))) || 1))
 const total = ref(0)

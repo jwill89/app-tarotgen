@@ -184,8 +184,9 @@ class PasskeyController extends AbstractController
             : self::base64UrlEncode((string) $data->credentialId);
         $signCount = $data->signatureCounter ?? 0;
 
-        // A credential already on file (WebAuthn §7.1 step 22) would otherwise hit the
-        // unique index as a 500. Browsers skip the excluded ones, but a client needn't.
+        // A credential id must not be registered twice, so one already on file is
+        // refused; it would otherwise hit the unique index as a 500. Browsers skip
+        // the excluded ones, but a client needn't.
         if ($this->passkeys->findByCredentialId($credentialId) !== null) {
             return $response->withJson(['error' => 'This passkey is already registered.'], 400);
         }

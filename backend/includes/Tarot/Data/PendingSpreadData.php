@@ -15,7 +15,7 @@ class PendingSpreadData extends AbstractData
     public function retrieve(?int $pending_id = null): array
     {
         // Resolve the submitter label from the linked account's current display
-        // name; fall back to any legacy free-text name, then to "Guest".
+        // name; fall back to the free-text `submitter` column, then to "Guest".
         $query = "SELECT p.pending_id, p.name, p.description, p.card_count, p.positions,
                          p.submitted_at, p.user_id,
                          COALESCE(u.display_name, NULLIF(p.submitter, ''), 'Guest') AS submitter
@@ -46,8 +46,8 @@ class PendingSpreadData extends AbstractData
     {
         $positions = $this->normalizePositions($data['positions'] ?? []);
 
-        // The submitter is no longer a free-text field — it's the linked account
-        // (or "Guest"). The legacy `submitter` column is left at its default ''.
+        // The submitter is the linked account (or "Guest"), not free text, so the
+        // `submitter` column is left at its default ''.
         $sql = "INSERT INTO pending_spreads (name, description, card_count, positions, user_id)
                 VALUES (:name, :description, :card_count, :positions, :user_id)";
 

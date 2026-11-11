@@ -7,9 +7,9 @@ use Tarot\Utility\ClientIp;
 use Tarot\Utility\Session;
 
 /**
- * Base for HTTP controllers. Dependencies are now injected directly into each
- * concrete controller's constructor (see the container definitions), so this
- * base only carries shared request/session helpers.
+ * Base for HTTP controllers. Dependencies are injected directly into each
+ * concrete controller's constructor, so this base only carries shared
+ * request/session helpers.
  */
 abstract class AbstractController
 {

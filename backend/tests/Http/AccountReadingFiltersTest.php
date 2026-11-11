@@ -14,7 +14,7 @@ use Tarot\Service\ReadingInput;
 use Tarot\Structure\ReadingSpread;
 
 /**
- * Finding a reading in My Readings (AUDIT §9.8): GET /account/readings narrowed
+ * Finding a reading in My Readings: GET /account/readings narrowed
  * by text, deck, spread, tag, the reader's own dates and daily cards, each alone
  * and together, paged with the matching total — and a filter that can't be one
  * refused with a message, not ignored. GET /account/reading-spreads lists the
@@ -183,8 +183,8 @@ final class AccountReadingFiltersTest extends HttpTestCase
 
     /**
      * Beside setUp's readings: the same spreads named apart, a personal spread
-     * longer than the filter once kept (100 characters), readings with no spread
-     * name to find them by, and another reader's spread.
+     * with a name past 100 characters, readings with no spread name to find them
+     * by, and another reader's spread.
      */
     private function addSpreadVariety(): void
     {

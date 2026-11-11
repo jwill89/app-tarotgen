@@ -6,7 +6,7 @@ use Tarot\Structure\UserToken;
 use Tarot\Utility\Clock;
 
 /**
- * Single-use, hashed tokens for email activation and (future) password resets.
+ * Single-use, hashed tokens for email activation and password resets.
  * Only the SHA-256 hash of a token is stored; the raw token lives only in the
  * email link.
  */

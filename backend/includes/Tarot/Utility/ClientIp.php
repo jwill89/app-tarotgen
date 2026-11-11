@@ -17,12 +17,12 @@ use Psr\Http\Message\ServerRequestInterface;
  * ranges. This is safe in every deployment shape:
  *   - Behind Cloudflare (no mod_remoteip): REMOTE_ADDR is a CF edge → trust the header.
  *   - Behind Cloudflare *with* mod_remoteip already rewriting REMOTE_ADDR to the real
- *     client: REMOTE_ADDR is no longer a CF range → we return it (the real client) and
+ *     client: REMOTE_ADDR is outside the CF ranges → we return it (the real client) and
  *     ignore the header.
  *   - Direct hit to the origin (attacker bypassing CF): REMOTE_ADDR is the attacker's
  *     real address → a spoofed CF-Connecting-IP is ignored.
  *
- * Firewalling the origin's :443 to Cloudflare's ranges remains the belt to this
+ * Firewalling the origin's :443 to Cloudflare's ranges is the belt to this
  * suspenders, but the range check means a missing firewall can't be used to forge
  * an arbitrary client IP.
  */

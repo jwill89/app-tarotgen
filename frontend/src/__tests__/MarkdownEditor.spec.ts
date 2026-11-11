@@ -122,8 +122,8 @@ describe('MarkdownEditor', () => {
     expect(editor.updates.at(-1)).toBe('')
   })
 
-  // TipTap 3 takes `{ emitUpdate: false }`; the v2-style `false` it once got was
-  // ignored, so a parent resetting the form had its own value echoed back.
+  // TipTap 3 takes `{ emitUpdate: false }`; a bare `false` (the v2 form) is
+  // ignored, so a parent resetting the form would have its own value echoed back.
   it('takes a new value from its parent without echoing it back', async () => {
     const editor = await mountEditor('Hello')
 

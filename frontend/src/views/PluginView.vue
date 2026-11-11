@@ -4,7 +4,8 @@ import { useToasts } from '@/composables/useToasts'
 import PageHeader from '@/components/PageHeader.vue'
 
 // The self-hosted custom Dalamud repository users paste into XIVLauncher.
-// (Served by the backend at /plugin/, not by this SPA — see the router note.)
+// (Served by the backend at /plugin/, not by this SPA, so this page lives at
+// /ffxiv-plugin instead.)
 const REPO_URL = 'https://tarotgen.io/plugin/repo.json'
 
 const { success: toastSuccess, error: toastError } = useToasts()

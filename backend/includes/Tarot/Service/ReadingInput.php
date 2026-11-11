@@ -148,7 +148,7 @@ final class ReadingInput
      * hash. Private and Anyone-with-the-link both clear a password, so a reading
      * never holds one it doesn't use. Password keeps the reading's password when
      * no new one is sent ($hasPassword). Without `visibility`, a `password`
-     * still means Password and `remove_password` drops one, as before.
+     * means Password and `remove_password` drops one.
      *
      * @param array<string,mixed> $params
      * @param int $status The status a password problem is refused with (the edit endpoint answers 422).
@@ -165,7 +165,7 @@ final class ReadingInput
         }
 
         if ($visibility === null) {
-            // The older fields: removing wins over a password sent alongside.
+            // No visibility sent, so the password fields decide: removing wins over a password sent alongside.
             if (Input::bool($params['remove_password'] ?? null)) {
                 return ['password_hash' => null];
             }

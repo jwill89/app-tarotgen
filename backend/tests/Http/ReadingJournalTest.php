@@ -17,7 +17,7 @@ use Tarot\Service\ReadingService;
 use Tarot\Structure\ReadingTag;
 
 /**
- * A reading's journal fields (AUDIT §9.8): what was asked, who it was for, and
+ * A reading's journal fields: what was asked, who it was for, and
  * the owner's tags. Set when drawing or later; only the owner (and their linked
  * plugin) is ever sent them — never anyone the link is shared with, before or
  * after a password — and a guest's are ignored. GET /account/tags lists the

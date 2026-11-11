@@ -70,7 +70,7 @@ final class ContactFormTest extends HttpTestCase
         $this->signInAs($gone->user_id);
         $this->service(UserRepository::class)->delete($gone->user_id);
 
-        // Its id used to fail the foreign key, and the message was lost to a 500.
+        // The session's user is gone: the message is kept with no user, not lost to a 500 from the foreign key.
         $this->assertJsonResponse(201, $this->post('/contacts', ['name' => 'Morgan', 'email' => 'morgan@example.test', 'message' => 'Hello']));
 
         $this->assertSame([['user_id' => null, 'message' => 'Hello']], $this->rows('SELECT user_id, message FROM contacts'));

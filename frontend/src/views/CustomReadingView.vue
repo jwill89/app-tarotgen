@@ -65,7 +65,7 @@ const { record: recordReading } = useRecentReadings()
 const { isLoggedIn } = useUser()
 
 // A signed-out visitor passes a Turnstile challenge to save, where the site has
-// Turnstile on (AUDIT §9.14); a signed-in reader never sees one.
+// Turnstile on; a signed-in reader never sees one.
 const turnstileToken = ref('')
 const turnstileEnabled = ref(false)
 const turnstile = useTemplateRef('turnstile')

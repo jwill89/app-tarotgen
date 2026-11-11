@@ -1,7 +1,7 @@
 import shared, { tsStylistic, vueConventions } from '@jwill89/lint-web'
 
-// The shared front-end rules (shared-tooling's lint/web): Vue 3 + TypeScript
-// strictTypeChecked, template accessibility (AUDIT §5.6/§6.1), the Vue conventions
+// The shared front-end rules (lint/web): Vue 3 + TypeScript
+// strictTypeChecked, template accessibility, the Vue conventions
 // (<script setup lang="ts"> only, typed refs, no inline styles) and
 // typescript-eslint's stylistic set, with Prettier's conflict list. Below them, what
 // only this app needs. A rule is turned off here with its reason, or at the one line
@@ -32,8 +32,7 @@ export default [
     rules: {
       // A label works by wrapping its control or by `for`/`id`, and a label whose
       // control is a child component counts: BaseSelect, NumberField, ToggleSwitch
-      // and the comboboxes take the id and put it on their focusable element
-      // (AGENTS.md §5 "Form labels").
+      // and the comboboxes take the id and put it on their focusable element.
       'vuejs-accessibility/label-has-for': [
         'error',
         { required: { some: ['nesting', 'id'] }, allowChildren: true },
@@ -70,7 +69,7 @@ export default [
   {
     // Every API call goes through composables/apiClient.ts, so a failure always
     // arrives as the server's message, a status and a network flag — not as a
-    // raw Response each call site parses its own way (AUDIT §4.2).
+    // raw Response each call site parses its own way.
     name: 'tarot/api-client-only',
     files: ['src/**/*.{ts,vue}'],
     ignores: ['src/composables/apiClient.ts', 'src/__tests__/**'],

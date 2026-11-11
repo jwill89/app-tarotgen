@@ -1,10 +1,10 @@
 <Project>
   <!--
     The shared .NET analyzers at their recommended level, and the shared C# code style
-    checked in the build (shared-tooling's lint/dotnet). The documentation file is made only
+    checked in the build (the shared lint/dotnet). The documentation file is made only
     so the build can see unused usings (IDE0005); nothing reads it. The plugin needs no
     exceptions of its own; one would go below the project marker in the repo-root
-    .editorconfig, as Senpan's do.
+    .editorconfig.
   -->
   <Import Project="$(MSBuildThisFileDirectory)..\shared\lint\dotnet\analyzers.props" />
 </Project>

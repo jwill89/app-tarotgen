@@ -1,10 +1,10 @@
 <script setup lang="ts" generic="T extends string">
 /**
- * Segmented single-select control built on Reka UI's ToggleGroup. Same look as
- * the old hand-rolled .myst-segmented buttons, but with roving-tabindex arrow-key
- * navigation and proper aria (role=group + aria-pressed). Always keeps one option
- * selected — clicking the active option is a no-op (unlike a bare ToggleGroup,
- * which would deselect it). `T` (the value union) is inferred from the v-model.
+ * Segmented single-select control built on Reka UI's ToggleGroup, with
+ * roving-tabindex arrow-key navigation and proper aria (role=group +
+ * aria-pressed). Always keeps one option selected — clicking the active option
+ * is a no-op (unlike a bare ToggleGroup, which would deselect it). `T` (the
+ * value union) is inferred from the v-model.
  *
  *   <SegmentedControl v-model="mode" :options="[{ value: 'a', label: 'A', icon }]" />
  */

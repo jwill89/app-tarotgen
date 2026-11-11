@@ -10,10 +10,10 @@ use Throwable;
 /**
  * Database-backed PHP session storage.
  *
- * Replaces the host's filesystem session store so that an external GC cron or a
- * neighboring vhost (which read the global php.ini gc_maxlifetime, not our
- * per-request override) can no longer delete active sessions out from under us
- * after ~24 minutes. We own expiry and garbage collection here.
+ * Stands in for the host's filesystem session store so that an external GC cron
+ * or a neighboring vhost (which read the global php.ini gc_maxlifetime, not our
+ * per-request override) can't delete active sessions out from under us after
+ * ~24 minutes. We own expiry and garbage collection here.
  *
  * Implements SessionUpdateTimestampHandlerInterface so that, with lazy_write
  * enabled, an unchanged session still slides its expiry (updateTimestamp) every
@@ -22,8 +22,8 @@ use Throwable;
  *
  * GC needs no cron: Session::start() enables PHP's probabilistic GC so gc()
  * runs on a small fraction of requests and sweeps expired rows. A scheduled
- * `DELETE FROM sessions WHERE expires < strftime('%s','now')` remains an
- * optional belt-and-suspenders, but is not required.
+ * `DELETE FROM sessions WHERE expires < strftime('%s','now')` is an optional
+ * belt-and-suspenders, but is not required.
  *
  * Each row also records whose session it is (`user_id`, null when signed out),
  * so a password change or reset, or deleting the account, can end that user's
@@ -41,7 +41,7 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
      * hours-to-days, so letting the stored expiry drift by a few minutes never
      * risks a premature logout — but it lets updateTimestamp() skip the UPDATE on
      * the vast majority of requests (a read, not a write), so authenticated calls
-     * no longer serialize on SQLite's single writer.
+     * don't serialize on SQLite's single writer.
      */
     private const int WRITE_THROTTLE = 300;
 
@@ -183,8 +183,8 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
             // seconds. Reading the current expiry is a WAL-concurrent read; on most
             // requests the session still has almost its full lifetime left, so we
             // return here and skip the write entirely — no writer-lock contention.
-            // Unless the row names the wrong user (one written before the column
-            // existed, say): destroyForUser() must find it, so that's fixed now.
+            // A row naming the wrong user (one written before the column existed,
+            // say) is rewritten regardless: destroyForUser() must be able to find it.
             $sel = $this->db->prepare('SELECT expires, user_id FROM sessions WHERE id = :id');
             $sel->execute([':id' => $key]);
             $current = $sel->fetch(PDO::FETCH_NUM);

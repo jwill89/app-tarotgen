@@ -801,7 +801,7 @@ and it has its own version, package, and release channel.
 
 ## 13. Where this project departs from the standards
 
-Each item is a place where the code still does what [`shared/standards/`](shared/standards/README.md) now rules out. Each says what the code does today, and each moves to the standard in a follow-up of its own. The first eight come from shared-tooling's `PLAN.md` (step 3's follow-ups for TarotGen.io, and its accessibility and timestamp decisions); the rest were found in this repo's docs and code on 2026-11-07.
+Each item is a place where the code still does what [`shared/standards/`](shared/standards/README.md) now rules out. Each says what the code does today, and each moves to the standard in a follow-up of its own. The first eight come from [`plans/shared-tooling-rollout.md`](plans/shared-tooling-rollout.md) (step 3's follow-ups for TarotGen.io, and its accessibility and timestamp decisions); the rest were found in this repo's docs and code on 2026-11-07.
 
 - **Error bodies (RFC 9457):** every error is a JSON `{ "error": "…" }` body (registration's validation sends `{ "errors": [...] }`), never an `application/problem+json` problem details body.
 - **Validation status (422):** most failed validations answer 400 (`withJson(['error' => …], 400)` in the controllers); a few already answer 422 (registration, the display name, a weak password). A wrong current password on a password change answers 422, where the guide says 403.
@@ -813,6 +813,7 @@ Each item is a place where the code still does what [`shared/standards/`](shared
 - **Timestamps:** every timestamp column is `TEXT` in SQLite's space form (`2026-11-07 09:18:09`, in UTC), written by `Clock::now()` (`Y-m-d H:i:s`) or `DEFAULT CURRENT_TIMESTAMP`, with no CHECK, and the API sends that form. The guide's form is a `DATETIME` column holding `2026-11-07T09:18:09Z`, with a `strftime` default and a CHECK; each table moves in one migration (`database.md`, "Timestamps").
 - **The session cookie** keeps PHP's default name, `PHPSESSID`, not a `__Host-` name.
 - **The document root** is the flat web root, which holds the code, `vendor/` and `scripts/` beside `dist/`, with `backend/.htaccess` refusing them (§6). The guide puts a PHP site's document root at its `public/` folder. `.env` and the database already sit outside it, in `TAROT_DATA_DIR`.
+- **The Apache vhost** is not a repo template: it lives on the droplet and is edited there by hand (it carries `SetEnv TAROT_DATA_DIR`, §6), so the deploy neither ships it nor checks it with `apachectl configtest`. The guide has every deploy ship the vhost from a template with host values as placeholders. The backup timer's unit and the cron file are shipped by the deploy already.
 - **Layout** comes from Bulma's helpers (columns, spacing), which the guide counts as neither of its two ways (Tailwind or object classes). They go when the app adopts the component kit.
 - **State class:** the navigation marks the current page with a bare `active` class (`exact-active-class="active"` in `App.vue`), not `is-active`.
 - **`Referrer-Policy`:** `backend/.htaccess` sends `strict-origin-when-cross-origin`, not `same-origin`.

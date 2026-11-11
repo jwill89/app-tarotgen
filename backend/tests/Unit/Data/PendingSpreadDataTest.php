@@ -77,7 +77,7 @@ final class PendingSpreadDataTest extends TestCase
 
     public function testLegacyFreeTextSubmitterIsUsedWhenNoAccount(): void
     {
-        // Simulate a pre-migration row that stored a free-text name.
+        // A row with no account shows its stored free-text submitter name.
         $this->pdo->exec("INSERT INTO pending_spreads (name, positions, submitter) VALUES ('Old', '[]', 'Old Timer')");
         $rows = $this->data->retrieve();
         $this->assertSame('Old Timer', $rows[0]->submitter);

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
- * Consistent page header for the reskin: a display-serif title, an
- * optional subtitle, and the signature gold hairline rule (echoing the home
- * hero). Gives every view the same elevated "page start" as the home page.
+ * Consistent page header: a display-serif title, an optional subtitle, and
+ * the signature gold hairline rule (echoing the home hero). Gives every view
+ * the same elevated "page start" as the home page.
  *
  *   <PageHeader title="New Draw" subtitle="Choose the settings for your draw." />
  *

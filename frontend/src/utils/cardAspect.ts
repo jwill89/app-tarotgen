@@ -1,6 +1,6 @@
 import type { Deck } from '@/types'
 
-/** The historical fixed card ratio, used as a fallback. */
+/** The standard tarot card ratio, used when a deck gives none. */
 export const DEFAULT_CARD_ASPECT = '5 / 8.6'
 
 /** A deck's card slot aspect ratio as a CSS `aspect-ratio` value (e.g. "5 / 8.6"). */

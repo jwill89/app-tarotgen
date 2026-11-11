@@ -15,9 +15,9 @@
  * Icons come from the per-style packages (@fortawesome/pro-{solid,regular,duotone}-svg-icons
  * + free @fortawesome/free-brands-svg-icons), NOT the monolithic @awesome.me kit.
  * The kit tarball is ~760 MB (every family + format + metadata), so re-pulling it
- * on each cold CI install blew the Font Awesome bandwidth quota; these per-style
- * packages carry only JS path data and install a fraction of that. Still
- * self-hosted — no CDN requests, no pageview/impression metering.
+ * on each cold CI install would exhaust the Font Awesome bandwidth quota; these
+ * per-style packages carry only JS path data and install a fraction of that.
+ * Still self-hosted — no CDN requests, no pageview/impression metering.
  */
 import { config } from '@fortawesome/fontawesome-svg-core'
 import type { IconDefinition, IconName, IconPrefix } from '@fortawesome/fontawesome-svg-core'

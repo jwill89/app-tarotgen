@@ -19,7 +19,7 @@ trait NormalizesPositions
 
     /**
      * A position's description is optional and only stored when it has one, so
-     * positions saved before descriptions existed keep the same shape.
+     * a position without one keeps the plain shape.
      *
      * @return list<array{order:int, title:string, x:float, y:float, rotation:int, description?:string}>
      */

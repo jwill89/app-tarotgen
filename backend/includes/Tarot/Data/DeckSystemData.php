@@ -10,7 +10,7 @@ use Tarot\Structure\DeckSystemCard;
 class DeckSystemData extends AbstractData
 {
     // Listed, not *: FETCH_CLASS turns any column the Structure doesn't declare
-    // into a dynamic property (deprecated, fatal in PHP 9) — AUDIT §1.2/§2.4.
+    // into a dynamic property (deprecated, fatal in PHP 9).
     private const string SYSTEM_COLS = 'deck_system_id, name, short_name, total_cards, approved, submitted_by';
     private const string CARD_COLS = 'deck_system_id, card_id, name, keywords, meaning, advice, '
         . 'reversed_keywords, reversed_meaning, reversed_advice';

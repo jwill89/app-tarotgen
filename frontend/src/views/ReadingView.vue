@@ -126,7 +126,7 @@ const editable = computed(() => {
   }
 })
 
-/** The owner saved the edit dialog: show what's stored now, without a refetch. */
+/** The owner saved the edit dialog: show what was saved, without a refetch. */
 function onEdited(saved: AccountReading): void {
   editing.value = false
   toasts.success('Reading updated.')
@@ -758,7 +758,7 @@ watch(
                   <span>Spread Details: {{ spread.name }}</span>
                 </CollapsibleTrigger>
                 <CollapsibleContent class="collapsible-anim">
-                  <!-- Sanitized by renderMarkdown() (marked + DOMPurify) — see utils/markdown.ts -->
+                  <!-- Sanitized by renderMarkdown() (marked + DOMPurify). -->
                   <!-- eslint-disable-next-line vue/no-v-html -->
                   <div class="spread-details-body content" v-html="spreadDescriptionHtml"></div>
                 </CollapsibleContent>

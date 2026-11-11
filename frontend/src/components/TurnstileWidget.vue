@@ -1,6 +1,6 @@
 <script lang="ts">
-// The loader lives here, not in <script setup>, which runs once per widget: as
-// it was there, every widget appended its own copy of Cloudflare's script.
+// The loader lives here, not in <script setup>, which runs once per widget: in
+// there, every widget would append its own copy of Cloudflare's script.
 interface TurnstileApi {
   render: (el: HTMLElement, opts: Record<string, unknown>) => string
   reset: (id?: string) => void

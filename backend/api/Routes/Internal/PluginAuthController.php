@@ -15,10 +15,10 @@ use OpenApi\Spec as OAS;
 
 /**
  * The Dalamud plugin account-linking endpoints (OAuth-style, PKCE public client).
- * See plugin/docs/auth.md. TarotGen.io is its own identity provider: the browser
- * consent step ({@see authorize}) mints a short-lived code, and the plugin
- * exchanges it ({@see token}) for a long-lived Bearer token. Tokens are listed
- * and revoked from the account's "Connected Apps" screen ({@see listTokens},
+ * TarotGen.io is its own identity provider: the browser consent step
+ * ({@see authorize}) mints a short-lived code, and the plugin exchanges it
+ * ({@see token}) for a long-lived Bearer token. Tokens are listed and revoked
+ * from the account's "Connected Apps" screen ({@see listTokens},
  * {@see revokeToken}).
  */
 class PluginAuthController extends AbstractController

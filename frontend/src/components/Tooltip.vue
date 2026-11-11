@@ -12,7 +12,7 @@ withDefaults(
 defineOptions({ name: 'Tooltip' })
 /**
  * Themed tooltip built on Reka UI's Tooltip. Wrap any focusable control to give
- * it a consistent, styled, collision-aware tooltip (replacing bare `title=`):
+ * it a consistent, styled, collision-aware tooltip (use it, not a bare `title=`):
  *
  *   <Tooltip text="Undo"><button …>…</button></Tooltip>
  *

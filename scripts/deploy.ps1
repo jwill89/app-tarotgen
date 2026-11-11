@@ -6,8 +6,8 @@
     Build and deploy TarotGen.io to the droplet: the Vue SPA, the PHP API, both, or the Dalamud plugin.
 
 .DESCRIPTION
-    Built on shared-tooling's SharedDeploy module (shared/deploy/pwsh), the shape every
-    deploy follows: one archive, one held SSH connection, one remote run.
+    Built on the SharedDeploy module (shared/deploy/pwsh): one archive, one held SSH
+    connection, one remote run.
 
     The live site is one flat web root (WebRoot): the SPA in dist, the API's files beside
     it, the plugin repository in plugin. Its private data sit outside it, in TAROT_DATA_DIR
@@ -18,7 +18,7 @@
     What ships is the newest release: the newest tag CI made on main for
     frontend/package.json's version (the tags are fetched first), checked out into a folder
     of its own, with npm ci from its lockfile, and built and packed from there; the plugin,
-    which keeps its own version, is built from it too. Commits after it, a shared-tooling
+    which keeps its own version, is built from it too. Commits after it, such as a shared
     update or work not yet released, are not part of it, and neither is anything
     uncommitted. -Preview ships the working tree instead. The host records the release the
     backend and the frontend each run; when every part a run deploys already runs this
@@ -77,7 +77,7 @@
     scripts/deploy.config.ps1 (copy scripts/deploy.config.example.ps1). Nothing about the
     host's address, user or key is in this file.
 
-    Needs PowerShell 7.4 and PuTTY's plink 0.85 or later (pscp is no longer used), with a
+    Needs PowerShell 7.4 and PuTTY's plink 0.85 or later, with a
     key that has a passphrase loaded into Pageant first: pageant.exe "<KeyPath>". The SSH
     user must be root. The host needs composer, php, sqlite3, gzip and runuser. The whole
     run is one SSH connection (plus one only if it drops and reconnects), which stays
@@ -139,8 +139,7 @@
 
 .PARAMETER Preview
     Deploy the working tree as it is, uncommitted changes included, stamped
-    preview-<date-time>. Without it every part ships from the newest release
-    (standards/deploy-and-ops.md).
+    preview-<date-time>. Without it every part ships from the newest release.
 
 .EXAMPLE
     .\scripts\deploy.ps1                 # backend then frontend (default)
@@ -218,18 +217,17 @@ $records = @(
 )
 
 # The host's data, fixed by the site rather than by this machine's settings: TAROT_DATA_DIR is
-# set in the vhost, /etc/environment and scripts/server/tarotgen.cron, and AGENTS.md documents it.
+# set in the vhost, /etc/environment and scripts/server/tarotgen.cron.
 $dataDir = '/var/lib/tarotgen'
 $liveDb = "$dataDir/db/tarotdb.db"
 $dbOwner = 'www-data'
 # The snapshot before the migrations, SharedDeploy's Backup-RemoteDatabase: <Database>.pre-<UTC
-# time>.gz beside the database, written as www-data under umask 077 (AGENTS.md section 7), the
-# newest three kept. The block sets $snapshot and $snapshot_restore for the host's messages; its
+# time>.gz beside the database, written as www-data under umask 077, the newest three kept. The block sets $snapshot and $snapshot_restore for the host's messages; its
 # .Snapshot and .Restore are the same, for this script's own.
 $snapshotBlock = Backup-RemoteDatabase -Database $liveDb -Owner $dbOwner -Umask '077'
 $snapshot = $snapshotBlock.Snapshot
 $restoreDb = $snapshotBlock.Restore
-# The owner's command (decided 2026-11-06), run from the web root.
+# The migration command, run from the web root.
 $migrate = "runuser -u $dbOwner -- env TAROT_DATA_DIR=$dataDir php vendor/bin/phinx migrate"
 
 # The backend's code, by its top-level entries in the web root: what the archive carries (under
@@ -244,9 +242,8 @@ $codeBackup = '.deploy/backend-prev'
 # Every check after the deploy asks with this, so no edge-cached answer can stand in for the origin's.
 $token = [guid]::NewGuid().ToString('N').Substring(0, 12)
 
-# Only a release ships: the newest tag CI made for frontend/package.json's version
-# (standards/deploy-and-ops.md), the plugin with it. -Preview ships the tree as it is, stamped
-# preview-<date-time>.
+# Only a release ships: the newest tag CI made for frontend/package.json's version, the plugin
+# with it. -Preview ships the tree as it is, stamped preview-<date-time>.
 $release = $null
 if ($Preview) {
     $version = 'preview-' + (Get-Date -Format 'yyyyMMdd-HHmm')
@@ -284,7 +281,7 @@ for t in composer php sqlite3 gzip runuser; do
   if ! command -v "$t" >/dev/null 2>&1; then echo "$t is not installed (or not on PATH) on the host, so nothing was changed." >&2; exit 3; fi
 done
 # Only db/migrations ships. The retired one-off scripts beside it on the host stay where they
-# are (AGENTS.md section 7), so they move into the new db with it.
+# are, so they move into the new db with it.
 mkdir -p "$stage/db"
 if [ -d db ]; then
   find db -mindepth 1 -maxdepth 1 ! -name migrations -exec cp -a {} "$stage/db/" \;
@@ -333,8 +330,8 @@ else
   exit 6
 fi
 # <<< migrate
-# The previous deploy script's rollback archive and staging folder; .deploy/backend-prev holds
-# the previous code now.
+# Leftover rollback archive and staging folder from an earlier deploy script; the rollback
+# copy of the code is .deploy/backend-prev.
 rm -f .deploy/backend-prev.tgz
 rm -rf .deploy.new
 '@
@@ -533,7 +530,7 @@ try {
             Invoke-SmokeCheck -Check $checks -Attempts 3 -DelaySeconds 2 -NoRollback
         } else {
             # The reverse of the deploy. The code goes back without the database: the migrations
-            # are additive, so the previous code runs on the new schema (AGENTS.md section 10).
+            # are additive, so the previous code runs on the new schema.
             $rollback = @(
                 if ($withPlugin) { Restore-RemoteDirectory -Live "$web/plugin" -AsScript }
                 if ($withFrontend) { Restore-RemoteDirectory -Live "$web/dist" -AsScript }
@@ -571,8 +568,7 @@ try {
 
         if (-not $NoDbPull) {
             # sqlite3 runs as www-data, under umask 077, so its copy (tarotdb.db.pull, removed
-            # after the download) and anything it makes in the database's folder are www-data's
-            # (AGENTS.md section 7).
+            # after the download) and anything it makes in the database's folder are www-data's.
             $null = Copy-LiveDatabase -Database $liveDb -Destination $devDb -Owner $dbOwner
         }
     }

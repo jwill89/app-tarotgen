@@ -72,7 +72,7 @@ final class BaselineMigrationTest extends TestCase
 
     public function testAPartlyMigratedDatabaseIsRefusedAndLeftAsItWas(): void
     {
-        // As if the daily-card and sign-in-method scripts had never run.
+        // A database missing the daily_cards table and users.password_login_disabled.
         $path = $this->databaseFrom($this->schemaSql());
         $this->execute($path, 'DROP TABLE daily_cards; ALTER TABLE users DROP COLUMN password_login_disabled;');
         $before = $this->snapshot($path);
@@ -108,7 +108,7 @@ final class BaselineMigrationTest extends TestCase
 
     public function testTheRetiredTablesAreDroppedAndNothingElse(): void
     {
-        // The share relay's tables and the old changelog, still there with rows.
+        // The share relay's tables and the changelog table, still there with rows.
         $path = $this->databaseFrom($this->schemaSql());
         $this->execute($path, <<<'SQL'
             CREATE TABLE plugin_clients (client_id INTEGER PRIMARY KEY, token_hash TEXT NOT NULL, user_id INTEGER REFERENCES users(user_id));

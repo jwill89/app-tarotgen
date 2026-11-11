@@ -471,7 +471,7 @@ describe('NewReadingView', () => {
     expect(input(wrapper, 'ro-name').element.value).toBe('')
     expect(wrapper.find('#ro-password').exists()).toBe(false)
 
-    // A reading drawn now isn't password-protected by the form's old state.
+    // A reading drawn after the reset carries no password or name from the form's earlier state.
     await generate(wrapper)
     const sent = sentFields(api)
     expect(sent.password).toBeUndefined()

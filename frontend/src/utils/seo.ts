@@ -47,8 +47,8 @@ export interface RouteSeo {
 
 /**
  * Apply description, canonical and robots tags for the given route.
- * @param seo  the route's `meta` (only description/noindex are read)
- * @param path the route path used to build a self-referencing canonical URL
+ * @param seo - the route's `meta` (only description/noindex are read)
+ * @param path - the route path used to build a self-referencing canonical URL
  */
 export function applyRouteSeo(seo: RouteSeo, path: string): void {
   upsertMetaByName('description', seo.description || DEFAULT_DESCRIPTION)

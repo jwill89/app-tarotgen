@@ -22,7 +22,7 @@
   /* Backgrounds → surfaces, deepest to most raised. Neutral charcoal — no violet. */
   --myst-bg: #0b0b0f;
   --myst-bg-2: #101016;
-  --myst-chrome: #101016; /* SOLID nav/footer chrome — a distinct token, currently equal to --myst-bg-2, kept separate so it can diverge later */
+  --myst-chrome: #101016; /* SOLID nav/footer chrome — its own token, equal to --myst-bg-2 but separate so the two can diverge */
   --myst-surface: #16161d; /* dropdowns, modals */
   --myst-surface-2: #1c1c25; /* boxes, panels, inputs, tables */
   --myst-surface-3: #24242f; /* raised / hover */
@@ -31,9 +31,9 @@
   --myst-border-strong: rgb(255 255 255 / 16%);
   --myst-hair-gold: color-mix(in srgb, var(--myst-gold) 38%, transparent); /* thin gold hairline */
 
-  /* Text tiers — all SOLID and WCAG-AA (>=6:1) on every surface. The old
-       opacity-based --myst-text-dim (0.45 white) FAILED AA at ~3.3:1; it is now
-       a solid #a3a1b2 (~6:1). Never use text below --myst-text-dim on a surface,
+  /* Text tiers — all SOLID and WCAG-AA (>=6:1) on every surface. Opacity-based
+       text (--myst-text-dim at 0.45 white) fails AA at ~3.3:1, so --myst-text-dim
+       is a solid #a3a1b2 (~6:1). Never use text below --myst-text-dim on a surface,
        but for Bulma's .has-text-grey (--myst-text-grey, below). */
   --myst-text: #ecebf2;
   --myst-text-strong: #f6f5fb;
@@ -41,8 +41,8 @@
   --myst-text-dim: #a3a1b2;
   --myst-text-soft: var(--myst-text-dim);
 
-  /* Bulma's .has-text-grey, the quietest text (hints, empty states), which reads
-       it below. Bulma's own #69748c read 2.7–4.2:1 on these surfaces. Same hue
+  /* Bulma's .has-text-grey, the quietest text (hints, empty states), reads this
+       token. Bulma's own #69748c reads 2.7–4.2:1 on these surfaces. Same hue
        (222deg, 14%), lightened to the first step that reaches 4.5:1 on all of
        them: 6–7:1 on the page and panels, 5.4:1 on --myst-surface-3, 4.55:1 on
        surface-3 under a 6% white hover, the lightest. */
@@ -74,17 +74,17 @@
   --myst-info: #4a9fd1;
   --myst-warning: #dda13a;
 
-  /* Legacy alias for the panel surface (one consumer: .box in style.css). */
+  /* Alias for the panel surface (one consumer: .box in style.css). */
   --myst-panel: var(--myst-surface-2);
 
   /* Heading/display font. Every heading style reads this single token, so one
        value drives all display type across the app. */
   --myst-heading-font: 'Crucial', Georgia, 'Times New Roman', serif;
 
-  /* ── Bulma intent palette → reskin ─────────────────────── */
+  /* ── Bulma intent palette → the mystical theme ─────────── */
 
   /* Action semantics (used consistently across the app):
-       primary = create/generate (now AQUA, the single pop), link = gold/utility,
+       primary = create/generate (AQUA, the single pop), link = gold/utility,
        info = edit, success = save/submit/approve, danger = delete/reject,
        warning = caution. */
   --bulma-primary-h: 174deg;
@@ -95,7 +95,7 @@
   --bulma-link-l: 52%;
 
   /* Text on a gold fill (an is-link button) is dark ink, as on the aqua primary:
-     Bulma picked white for its own blue link, which reads at 2.4:1 on the gold. */
+     Bulma's white reads at 2.4:1 on the gold. */
   --bulma-link-invert-l: var(--bulma-link-05-l);
   --bulma-info-h: 205deg;
   --bulma-info-s: 52%;
@@ -205,7 +205,7 @@
   font-family: var(--myst-heading-font);
 
   /* Headings render in normal case. The display face has no real small-caps
-       glyphs, so `font-variant-caps: small-caps` made the browser SYNTHESISE
+       glyphs, so `font-variant-caps: small-caps` would make the browser SYNTHESISE
        them by scaling capitals down — which thins the strokes of a
        high-contrast serif and renders inconsistently across browsers. */
   letter-spacing: 0.01em;
@@ -223,7 +223,7 @@
 }
 
 /* Bulma writes its grey as a fixed #69748c (bulma-helpers.css, kept byte-identical
-   to upstream), under 4.5:1 on every surface on screen: the token above replaces
+   to upstream), under 4.5:1 on every surface on screen: the token above overrides
    it, on screen and on paper. */
 .has-text-grey {
   color: var(--myst-text-grey) !important;

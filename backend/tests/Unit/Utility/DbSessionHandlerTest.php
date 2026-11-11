@@ -26,7 +26,7 @@ final class DbSessionHandlerTest extends TestCase
 
     protected function setUp(): void
     {
-        // Mirror db/migrate_sessions.php + migrate_sessions_user_id.php.
+        // The sessions table, with the user_id that ties a session to its account.
         $this->pdo = new PDO('sqlite::memory:');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->pdo->exec(

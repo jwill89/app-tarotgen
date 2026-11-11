@@ -3,13 +3,13 @@ import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 import { local } from '@/utils/storage'
 
-// Predates the `tarot.` namespace in STORAGE_KEYS; renaming it would show the
-// banner again to everyone who has dismissed it.
+// Outside the `tarot.` namespace of STORAGE_KEYS on purpose: renaming it would
+// show the banner again to everyone who has dismissed it.
 const STORAGE_KEY = 'cookie_notice_dismissed'
 const visible = ref(false)
 
-// Through the guarded wrapper: with storage blocked or full, a raw access threw,
-// and "Got it" then never hid the banner.
+// Through the guarded wrapper: with storage blocked or full, a raw access would
+// throw, and "Got it" would then never hide the banner.
 onMounted(() => {
   if (local.get<unknown>(STORAGE_KEY, null) === null) {
     visible.value = true

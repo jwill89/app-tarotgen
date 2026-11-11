@@ -2,7 +2,7 @@
 /**
  * "Which cards keep turning up": a tally of the cards in the signed-in user's
  * own readings, over every deck or one, all time or a recent window. Counts and
- * proportions only — the site never interprets a card (AGENTS.md §10).
+ * proportions only — the site never interprets a card.
  */
 import { byPrefixAndName } from '@/fontawesome'
 import { computed, onMounted, ref, useId, watch } from 'vue'

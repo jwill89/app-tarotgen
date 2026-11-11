@@ -72,7 +72,7 @@ return function (ContainerInterface $container, bool $is_production): App {
     $error_middleware = $app->addErrorMiddleware($is_production === false, true, true);
 
     // Every error answers in the API's `{ error }` JSON, whatever the request's
-    // Accept header: this is a JSON API, and the client reads `error` (AUDIT §5.9).
+    // Accept header: this is a JSON API, and the client reads `error`.
     $default_error_handler = $error_middleware->getDefaultErrorHandler();
     if (!$default_error_handler instanceof ErrorHandler) {
         throw new LogicException('Expected Slim\'s own ErrorHandler as the default.');
@@ -81,8 +81,8 @@ return function (ContainerInterface $container, bool $is_production): App {
     $default_error_handler->forceContentType('application/json');
 
     // 404/405s are mostly scanners probing for /api/.env and the like (~100 a day).
-    // Answer them exactly as before, but without writing a stack trace to the shared
-    // Apache error log each time; real exceptions keep full logging (AUDIT §1.8).
+    // Answer them as the default handler does, but without writing a stack trace to
+    // the shared Apache error log each time; real exceptions keep full logging.
     // Not a static closure: Slim's CallableResolver binds closures to the container.
     $error_middleware->setErrorHandler(
         [HttpNotFoundException::class, HttpMethodNotAllowedException::class],

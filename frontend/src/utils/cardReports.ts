@@ -77,8 +77,8 @@ export function earlierSubmissions(report: CardReport): CardReportSubmission[] {
 }
 
 /**
- * How many reports came without a reason: made before reasons were collected,
- * or from a plugin build that predates them. Those only bumped the counter.
+ * How many reports came without a reason, such as from a plugin build that
+ * doesn't send one. Those only raise the counter, not the submissions.
  */
 export function reportsWithoutReason(report: CardReport): number {
   return Math.max(0, report.report_count - report.submissions.length)

@@ -14,7 +14,7 @@ const SEND_FAILED = 'Failed to send your message. Please try again.'
 
 /**
  * Sending the contact form. Kept out of ContactView so the tests exercise the
- * real request and response handling, not a copy of it (AUDIT §5.5). Every
+ * real request and response handling, not a copy of it. Every
  * failure — server message, rate limit, network — comes back as a user-ready
  * `error` string; this never throws.
  *

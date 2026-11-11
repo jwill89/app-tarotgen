@@ -2,8 +2,8 @@ version: '3'
 
 # Day-to-day commands; `task` alone lists them. CI (.github/workflows/ci.yml) runs the same checks.
 
-# The tasks every repo shares, from the shared-tooling submodule (shared:lint:scripts,
-# shared:lint:md, shared:update and the rest).
+# The shared tasks, from the shared submodule (shared:lint:scripts, shared:lint:md,
+# shared:update and the rest).
 includes:
   shared: ./shared/repo/Taskfile.yml
 
@@ -117,7 +117,7 @@ tasks:
       - composer lint
       - composer rector:check
       - composer stan
-      # The committed openapi.json is what the PHP attributes make now.
+      # The committed openapi.json must be what the PHP attributes generate.
       - composer docs:check
 
   lint:plugin:
@@ -125,7 +125,7 @@ tasks:
       - dotnet format plugin/TarotGen.Plugin/TarotGen.Plugin.csproj --verify-no-changes
 
   # PSScriptAnalyzer, with the shared settings, on every tracked script (the local
-  # deploy.config.ps1 is the owner's and untracked). Install it once with
+  # deploy.config.ps1 is untracked). Install it once with
   # Install-PSResource PSScriptAnalyzer -Version 1.25.0 -Scope CurrentUser -TrustRepository
   lint:scripts:
     cmds:
@@ -142,7 +142,7 @@ tasks:
     desc: Lint, audit, and run every test (CI also checks the generated files and coverage floors)
     cmds:
       # The steps that don't depend on each other run at once, each line prefixed with
-      # its task (standards/testing.md).
+      # its task.
       - task --parallel --output prefixed lint vuln test
 
   push:
@@ -151,8 +151,8 @@ tasks:
     cmds:
       - task: shared:push
 
-  # task deploy ships everything, in order, and each part also deploys alone
-  # (standards/deploy-and-ops.md). The plugin goes last, and only when its version is new.
+  # task deploy ships everything, in order, and each part also deploys alone. The
+  # plugin goes last, and only when its version is new.
   deploy:
     desc: Deploy everything - the backend and the SPA in one upload, then the plugin if its version is new (pass flags after --, e.g. -- -NoDbPull)
     cmds:

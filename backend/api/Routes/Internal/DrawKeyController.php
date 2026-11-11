@@ -13,7 +13,7 @@ use Tarot\Utility\RateLimiter;
 use OpenApi\Spec as OAS;
 
 /**
- * Minting a draw key for an unlinked plugin install (AUDIT §9.14): the browser
+ * Minting a draw key for an unlinked plugin install: the browser
  * passes the key page's Turnstile challenge and gets a one-time code for the
  * plugin's loopback listener ({@see authorize}); the plugin swaps code and PKCE
  * verifier for the key ({@see token}). The account link's flow, with Turnstile

@@ -1,15 +1,15 @@
 // Stylelint checks the styles for mistakes and holds the palette rule; it doesn't
-// format them (Prettier does). The shared CSS rules (shared-tooling's lint/web), in
+// format them (Prettier does). The shared CSS rules (lint/web), in
 // the .vue files' style blocks as well. A rule is turned off here with its reason, or
 // at the one line it doesn't fit with the reason beside it.
 import { paletteRules } from '@jwill89/lint-web/stylelint'
 
-// AUDIT §4.6: a palette colour is defined once, in tokens.css, and used through
+// A palette colour is defined once, in tokens.css, and used through
 // var(--myst-*) (a tint is color-mix(in srgb, var(--myst-*) N%, transparent)).
 // Neutral white and black at some alpha — hairlines, hovers, scrims — are not
 // palette colours and may be written inline.
 const PALETTE_MESSAGE =
-  'Use a tokens.css colour (var(--myst-*), color-mix() for a tint); only neutral white/black may be written inline (AUDIT §4.6)'
+  'Use a tokens.css colour (var(--myst-*), color-mix() for a tint); only neutral white/black may be written inline'
 
 export default {
   extends: ['@jwill89/lint-web/stylelint'],
@@ -49,10 +49,9 @@ export default {
       },
     },
     {
-      // bulma.scss configures the Bulma modules it builds from (AGENTS.md §5). It is
-      // read as SCSS and checked by the CSS rules, with Sass's own at-rules allowed:
-      // stylelint-config-recommended-scss had no Stylelint 18 release (decided
-      // 2026-11-06, shared-tooling 2.0.0).
+      // bulma.scss configures the Bulma modules it builds from. It is read as SCSS
+      // and checked by the CSS rules, with Sass's own at-rules allowed, because
+      // stylelint-config-recommended-scss has no Stylelint 18 release.
       files: ['**/*.scss'],
       customSyntax: 'postcss-scss',
       rules: {

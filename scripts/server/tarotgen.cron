@@ -5,12 +5,12 @@ SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 TAROT_DATA_DIR=/var/lib/tarotgen
 
-# The database's daily backup is no longer here: tarotgen-backup.timer (SharedDeploy's
+# The database's daily backup is not a cron job: tarotgen-backup.timer (SharedDeploy's
 # Install-BackupTimer, installed by the deploy) writes it at 10:00 UTC, with up to 15
 # minutes' spread, to /var/lib/tarotgen/db/backups/tarotgen-YYYY-MM-DD.db.gz (UTC date).
 # Check it with: journalctl -u tarotgen-backup
 #
-# 10:30 UTC daily, once that window has passed: data retention (AUDIT.md 1.7). Guest
+# 10:30 UTC daily, once that window has passed: data retention. Guest
 # readings older than a year are deleted, as the privacy policy states, and the planner
 # statistics refreshed. It runs only when today's backup exists, so there is always a
 # copy from before it; otherwise it logs that it skipped. The droplet's clock is UTC.

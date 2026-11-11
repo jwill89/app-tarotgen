@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * Spread picker built on Reka UI's Combobox. Same public API as before:
- * `options` + `modelValue` (a SpreadOption or null), `update:modelValue`, and a
+ * Spread picker built on Reka UI's Combobox. Its API is `options` +
+ * `modelValue` (a SpreadOption or null), `update:modelValue`, and a
  * `free-draw` emit. The null "No Spread (Free Draw)" choice is modelled as a
  * sentinel value so it can live in Reka's value-keyed selection, then mapped back
  * to null + the `free-draw` emit. Favourites, then My Spreads, then the public
@@ -53,8 +53,8 @@ const FREE_DRAW_ID = '__free_draw__'
 const FREE_DRAW = { id: FREE_DRAW_ID } as unknown as SpreadOption
 const FREE_DRAW_LABEL = 'No Spread (Free Draw)'
 
-// No spread is free draw, however it came about: a parent resetting the form
-// to null once left the input blank, as the choice was tracked here instead.
+// No spread (null) is free draw, however it came about: a parent resetting the
+// form to null still shows the choice in the input, as nothing is tracked here.
 const selected = computed<SpreadOption>({
   get: () => props.modelValue ?? FREE_DRAW,
   set: (val) => {
@@ -224,7 +224,7 @@ function onToggleFavorite(option: SpreadOption): void {
                 v-if="isLoggedIn"
                 :text="option.isFavorite ? 'Remove from favorites' : 'Add to favorites'"
               >
-                <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/interactive-supports-focus -- a focusable control can't sit inside a listbox option, so keyboard users can't favourite yet (AUDIT §6.1, open) -->
+                <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/interactive-supports-focus -- a focusable control can't sit inside a listbox option, so keyboard users can't favourite from the list -->
                 <span
                   class="myst-combobox__star ml-auto"
                   :class="{ 'is-active': option.isFavorite }"

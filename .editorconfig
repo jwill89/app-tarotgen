@@ -43,8 +43,8 @@ trim_trailing_whitespace = false
 [backend/**.json]
 indent_size = 4
 
-# schema.sql keeps each CREATE exactly as SQLite stores it (AUDIT §2), tabs included,
-# so it can be compared with a live database's sqlite_master.
+# schema.sql keeps each CREATE exactly as SQLite stores it, tabs included, so it can be
+# compared with a live database's sqlite_master.
 [backend/db/schema.sql]
 indent_style = unset
 indent_size = unset

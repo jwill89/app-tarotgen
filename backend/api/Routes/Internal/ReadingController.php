@@ -126,7 +126,7 @@ class ReadingController extends AbstractController
 
         return $response
             ->withJson($this->accessiblePayload($reading, $isOwner))
-            // Response depends on the viewer's session now, so it must not be cached.
+            // The response depends on the viewer's session, so it must not be cached.
             ->withHeader('Cache-Control', 'private, no-store');
     }
 
@@ -625,7 +625,7 @@ class ReadingController extends AbstractController
     }
 
     /**
-     * Who may make a reading (AUDIT §9.14), on the two routes that make one. With
+     * Who may make a reading, on the two routes that make one. With
      * Turnstile configured, a request with no signed-in user needs a draw key (an
      * unlinked plugin, which can't show a browser challenge) or a passed challenge
      * (a signed-out visitor). Without Turnstile, as in development, nothing more.
@@ -647,7 +647,7 @@ class ReadingController extends AbstractController
             return $this->limitKeyDraw($request, $response, $fingerprint);
         }
 
-        // Any other Bearer credential was an account token, and resolved to no one:
+        // Any other Bearer credential is an account token that resolves to no one:
         // revoked from Connected Apps, or its account deleted.
         if (BearerToken::from($authorization) !== null) {
             return $response->withJson(['error' => self::ACCOUNT_LINK_INVALID], 401);

@@ -342,7 +342,7 @@ async function clearAll() {
 </template>
 
 <style scoped>
-/* Local aliases → the global mystical tokens, so the mockup CSS reads cleanly. */
+/* Short local aliases for the global `--myst-*` tokens, so the rules below read cleanly. */
 .home {
   --gold: var(--myst-gold);
   --gold-bright: var(--myst-gold-bright);

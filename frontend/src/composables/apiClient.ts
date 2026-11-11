@@ -91,7 +91,7 @@ export async function apiRequest<T>(
   }
 
   // Parse the body once; tolerate an empty/non-JSON body (e.g. 204, HTML error).
-  // Several DELETE/PATCH endpoints now answer 204 No Content with no body, so
+  // Several DELETE/PATCH endpoints answer 204 No Content with no body, so
   // skip parsing entirely when there is provably nothing to read — calling
   // `res.json()` on an empty body throws.
   const body = hasNoBody(res) ? null : await parseJsonSafe(res)

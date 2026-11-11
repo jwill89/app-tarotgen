@@ -40,10 +40,10 @@ describe('useToasts', () => {
     expect(toasts.value.find((t) => t.id === id)).toBeUndefined()
   })
 
-  // The composable is now a pure queue — Reka's <ToastRoot> owns the auto-dismiss
-  // timer (see ToastContainer, which wires Reka's close event back to dismiss()).
-  // So the composable's contract is to resolve and store the duration, not to run
-  // the timer itself.
+  // The composable is a pure queue: Reka's <ToastRoot> owns the auto-dismiss
+  // timer (ToastContainer wires Reka's close event back to dismiss()). So the
+  // composable's contract is to resolve and store the duration, not to run the
+  // timer itself.
   it('records the given auto-dismiss duration on the toast', () => {
     const id = success('bye', { duration: 1000 })
     expect(toasts.value.find((t) => t.id === id)).toMatchObject({ duration: 1000 })

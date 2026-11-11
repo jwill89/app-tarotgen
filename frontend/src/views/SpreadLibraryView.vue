@@ -254,7 +254,7 @@ async function copyOpen(): Promise<void> {
         </div>
       </div>
 
-      <!-- Sanitized by renderMarkdown() (marked + DOMPurify) — see utils/markdown.ts -->
+      <!-- Sanitized by renderMarkdown() (marked + DOMPurify). -->
       <!-- eslint-disable-next-line vue/no-v-html -->
       <div v-if="openDescriptionHtml" class="content mt-4" v-html="openDescriptionHtml"></div>
 

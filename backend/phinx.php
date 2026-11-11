@@ -7,7 +7,7 @@ use Tarot\Database\Schema;
 
 /*
  * Phinx, which owns the schema: `composer migrate` / `composer migrate:status`
- * here, `php vendor/bin/phinx migrate` as www-data on the host (AGENTS.md §7).
+ * here, `php vendor/bin/phinx migrate` as www-data on the host.
  *
  * It opens the database the app opens, Paths::database(), so TAROT_DATA_DIR
  * picks the same file for the site, the CLI scripts and the migrations.

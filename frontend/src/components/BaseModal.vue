@@ -2,12 +2,11 @@
 /**
  * Modal dialog, built on Reka UI's Dialog primitive.
  *
- * The public API is unchanged from the hand-rolled version, so every existing
- * call site keeps working: props `active` / `title` / `maxWidth` / `closeOnBackdrop`,
- * an emitted `close`, and default + `footer` slots. Reka now provides the focus
- * trap, focus restoration, scroll-lock, and Escape/overlay handling that used to
- * be hand-rolled (or missing). Styles live in style.css because Reka portals the
- * content to <body>, out of this component's scoped styles.
+ * Its API is props `active` / `title` / `maxWidth` / `closeOnBackdrop`, an
+ * emitted `close`, and default + `footer` slots. Reka provides the focus trap,
+ * focus restoration, scroll-lock, and Escape/overlay handling. Styles live in
+ * style.css because Reka portals the content to <body>, out of this component's
+ * scoped styles.
  */
 import { byPrefixAndName } from '@/fontawesome'
 import {

@@ -6,8 +6,8 @@ use Phinx\Migration\AbstractMigration;
 use Phinx\Migration\IrreversibleMigrationException;
 
 /**
- * The baseline: the schema the one-off db/ scripts had built by 2026-11-06,
- * frozen in 20261106000000_baseline.sql. Production already has it.
+ * The baseline: the schema production already has, frozen in
+ * 20261106000000_baseline.sql.
  *
  * It looks before it builds:
  *
@@ -16,7 +16,7 @@ use Phinx\Migration\IrreversibleMigrationException;
  * - Any other database must already hold every table and index defined there,
  *   each as defined there (layout and identifier quotes aside). Then nothing is
  *   changed, and Phinx records the baseline as run. Objects it doesn't define
- *   are left alone; later migrations drop the retired ones.
+ *   are left alone; a later migration drops the tables no code uses.
  * - Otherwise it refuses, naming what is missing or different, and nothing is
  *   recorded. A partly migrated or drifted database needs a person: creating
  *   only the missing tables would leave an old table's columns behind and still

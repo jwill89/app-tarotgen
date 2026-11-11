@@ -39,7 +39,7 @@ describe('useLayoutTools — selection', () => {
       { x: 0, y: 0 },
     ])
     tools.setSelection([0, 1, 2])
-    tools.pruneSelection(2) // now only indices < 2 remain valid
+    tools.pruneSelection(2) // only indices < 2 remain valid
     expect([...tools.selected.value].sort()).toEqual([0, 1])
   })
 })

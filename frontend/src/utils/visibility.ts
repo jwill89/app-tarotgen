@@ -1,6 +1,6 @@
 import type { Visibility } from '@/types'
 
-/** Who can open a reading, in the words the pages use (AUDIT §9.9). */
+/** Who can open a reading, in the words the pages use. */
 export const visibilityLabels: Record<Visibility, string> = {
   link: 'Anyone with the link',
   password: 'Password',

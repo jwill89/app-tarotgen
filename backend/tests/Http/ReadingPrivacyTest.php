@@ -18,7 +18,7 @@ use Tarot\Structure\Reading;
 use Tarot\Utility\Clock;
 
 /**
- * Who can open a reading (AUDIT §9.9): anyone with the link (the default),
+ * Who can open a reading: anyone with the link (the default),
  * anyone with its password, or — private — only its owner, in the browser or
  * through their linked plugin; everyone else gets the same 404 as for a reading
  * that doesn't exist, on every reading route. And a guest's chosen expiry: past
@@ -138,7 +138,7 @@ final class ReadingPrivacyTest extends HttpTestCase
         $this->assertSame([['is_private' => 0, 'password_hash' => null]], $this->rows("SELECT is_private, password_hash FROM readings WHERE reading_id = '{$id}'"));
         $this->assertFalse($this->assertJsonResponse(200, $this->asGuest(fn() => $this->get("/readings/{$id}")))['locked']);
 
-        // A password sent without visibility still means Password, as it always did.
+        // A password sent without visibility still means Password.
         $legacy = $this->assertJsonResponse(200, $this->request('PATCH', "/account/readings/{$id}", ['password' => 'efgh']));
         $this->assertSame('password', $legacy['visibility']);
     }

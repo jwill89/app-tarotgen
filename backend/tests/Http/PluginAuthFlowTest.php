@@ -12,10 +12,10 @@ use Tarot\Repository\PluginTokenRepository;
 use Tarot\Service\PluginTokenService;
 
 /**
- * Linking the Dalamud plugin to an account (PKCE, as plugin/docs/auth.md lays
- * out): the signed-in browser approves and gets a one-time code for the
- * plugin's loopback listener; the plugin swaps code + verifier for a Bearer
- * token; the account lists and revokes its linked tokens.
+ * Linking the Dalamud plugin to an account (PKCE): the signed-in browser
+ * approves and gets a one-time code for the plugin's loopback listener; the
+ * plugin swaps code + verifier for a Bearer token; the account lists and
+ * revokes its linked tokens.
  */
 #[CoversClass(PluginAuthController::class)]
 #[CoversClass(PluginTokenService::class)]

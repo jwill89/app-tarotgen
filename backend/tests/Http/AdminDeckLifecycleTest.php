@@ -120,7 +120,7 @@ final class AdminDeckLifecycleTest extends HttpTestCase
         }
 
         $this->assertSame([['name' => 'Thoth', 'artist' => 'Someone']], $this->rows('SELECT name, artist FROM decks'));
-        // Leaving the name out changes the rest, as before.
+        // Leaving the name out is fine: the rest changes.
         $this->assertSame('Renamed', $this->assertJsonResponse(200, $this->request('PATCH', "/admin/decks/{$deck->deck_id}", ['artist' => 'Renamed']))['artist']);
     }
 
@@ -196,7 +196,8 @@ final class AdminDeckLifecycleTest extends HttpTestCase
     {
         $deck = $this->storeDeck('Thoth', usable: true);
 
-        // A NULL artist used to reach Deck's string property and fail every read.
+        // A NULL artist reads back as an empty string: Deck's artist is a string
+        // property, and a NULL would fail every read.
         $updated = $this->assertJsonResponse(200, $this->request('PATCH', "/admin/decks/{$deck->deck_id}", ['artist' => null, 'purchase_url' => null]));
 
         $this->assertSame(['', ''], [$updated['artist'], $updated['purchase_url']]);

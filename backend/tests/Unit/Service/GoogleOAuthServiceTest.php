@@ -100,7 +100,7 @@ final class GoogleOAuthServiceTest extends TestCase
         yield 'true' => [true, true];
         yield 'the string "true"' => ['true', true];
         yield 'false' => [false, false];
-        // A (bool) cast read this one as verified.
+        // A (bool) cast would read this one as verified.
         yield 'the string "false"' => ['false', false];
         yield 'one' => [1, false];
         yield 'null' => [null, false];

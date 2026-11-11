@@ -12,10 +12,10 @@ use Tarot\Data\DeckSystemData;
 use Tarot\Data\PendingSpreadData;
 
 /**
- * Responses the spec documented as less than they send until AUDIT §7.2: a deck
- * system viewed with its cards (documented as a bare DeckSystem) and the pending
- * spread queue (a list of "object"). The public views also leave out the
- * submitter, which the spec now says is admin-only.
+ * Responses that send everything the spec documents for them: a deck system
+ * viewed with its cards (DeckSystemWithCards, not a bare DeckSystem) and the
+ * pending spread queue (typed rows, not a list of "object"). The public views
+ * also leave out the submitter, which the spec marks admin-only.
  */
 #[CoversClass(DeckSystemController::class)]
 #[CoversClass(AdminDeckSystemController::class)]

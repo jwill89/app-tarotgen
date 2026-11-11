@@ -32,7 +32,7 @@ final class DeckSystemDataTest extends TestCase
         // The real Connection enables this; needed for the cascade test.
         $this->pdo->exec('PRAGMA foreign_keys = ON');
 
-        // Mirror db/migrate_deck_systems.php.
+        // The deck system tables, in the shape DeckSystemData reads and writes.
         $this->pdo->exec(
             "CREATE TABLE deck_systems (
                 deck_system_id INTEGER PRIMARY KEY AUTOINCREMENT,

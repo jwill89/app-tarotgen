@@ -14,8 +14,8 @@
  *   about a private or expired reading). The SPA still hydrates as normal for
  *   visitors.
  *
- * Every other page gets the shell exactly as built. (Named og.php for its
- * original, reading-only job.)
+ * Every other page gets the shell exactly as built. (The og.php name is from the
+ * Open Graph tags, the part that is specific to a reading.)
  */
 
 require_once __DIR__ . '/vendor/autoload.php';

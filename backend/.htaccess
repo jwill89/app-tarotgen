@@ -7,13 +7,13 @@
 
     # No Content-Security-Policy here: it is set per response by PHP, because it
     # needs a fresh nonce each time (og.php → Tarot\Utility\ContentSecurityPolicy;
-    # /api/docs sends its own). Only HTML documents need one, and every page now
-    # goes through og.php — see the SPA fallback at the bottom (AUDIT §1.5).
+    # /api/docs sends its own). Only HTML documents need one, and every page
+    # goes through og.php — see the SPA fallback at the bottom.
 
     # /_app/ and /fonts/ are served by an internal rewrite into dist/ (below), so
     # these match on the FILE being served, not the URL: a `SetEnvIf Request_URI
-    # "^/_app/"` rule never matched the rewritten request, and these headers were
-    # silently never sent.
+    # "^/_app/"` rule would never match the rewritten request, and these headers
+    # would silently never be sent.
 
     # Vite writes content-hashed filenames into /_app/ (assetsDir), so the bytes
     # behind a given URL never change — a new build means a new URL. Say so, or
@@ -31,7 +31,7 @@
     </If>
 
     # The HTML shell (served by og.php for every page; index.html if ever hit
-    # directly) must be revalidated on every load — and it now carries a
+    # directly) must be revalidated on every load — and it carries a
     # per-response CSP nonce: it names the hashed bundles of ONE build, and a
     # deploy deletes the previous build's files. Left to heuristic caching, a
     # returning browser could boot a stale shell that requests bundles which no

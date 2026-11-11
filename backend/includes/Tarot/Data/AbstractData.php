@@ -14,9 +14,9 @@ use RuntimeException;
  * The PDO handle is injected so the Data layer never reaches for a global
  * singleton, which keeps it isolatable in tests (pass an in-memory SQLite PDO).
  *
- * Every row read fetches straight into a class through fetchOne()/fetchAllAs()
- * (AUDIT §2.5): no FETCH_ASSOC and hand-written hydrate(). So the SELECT must
- * produce exactly the class's properties:
+ * Every row read fetches straight into a class through fetchOne()/fetchAllAs(),
+ * not FETCH_ASSOC plus a hand-written hydrate(). So the SELECT must produce
+ * exactly the class's properties:
  * - List the columns, never `*`: FETCH_CLASS turns a column the class doesn't
  *   declare into a dynamic property.
  * - Derive in SQL what SQL can derive (`… IS NOT NULL AS password_protected`,

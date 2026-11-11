@@ -67,8 +67,8 @@ describe('ConfirmDialog', () => {
   })
 
   // Reka's own close and the button's click both fire on the one click; the
-  // dialog once settled before the click had recorded the choice, so this
-  // resolved false.
+  // dialog must not settle before the click has recorded the choice, or this
+  // would resolve false.
   it('resolves true when the user confirms', async () => {
     const { answer } = await ask({ message: 'Proceed?' })
 

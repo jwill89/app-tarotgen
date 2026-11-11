@@ -10,7 +10,7 @@ namespace Tarot\Utility;
  * which injects scripts into our pages: Bot Fight Mode's JavaScript detection is
  * an inline script that differs on every request (no hash could allow it), and
  * Cloudflare stamps the nonce it finds in this header onto what it injects. Our
- * own code needs none: the app is one external module script (AUDIT §1.5).
+ * own code needs none: the app is one external module script.
  *
  * /api/docs sends its own, narrower policy (Routes\Internal\ApiDocsController).
  */
@@ -27,7 +27,7 @@ final class ContentSecurityPolicy
         return implode('; ', [
             "default-src 'self'",
             "script-src 'self' 'nonce-{$nonce}' https://challenges.cloudflare.com https://static.cloudflareinsights.com",
-            // Inline styles stay: Vue, Reka UI, FontAwesome and Turnstile set them.
+            // Inline styles are allowed: Vue, Reka UI, FontAwesome and Turnstile set them.
             "style-src 'self' 'unsafe-inline'",
             "font-src 'self'",
             "img-src 'self' data:",

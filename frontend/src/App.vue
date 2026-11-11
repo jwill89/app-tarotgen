@@ -35,13 +35,14 @@ const searchReadingId = ref('')
 const codeDialogOpen = ref(false)
 const currentYear = computed(() => new Date().getFullYear())
 
-// See the note in the previous revision: /assets is proxied to the PHP host, so
-// the brand logo is referenced as a runtime URL string, not a bundled import.
+// /assets is proxied to the PHP host, so the brand logo is referenced as a
+// runtime URL string, not a bundled import (Vite would compile an import of it
+// into a module that returns raw image bytes).
 const brandLogo = '/assets/favicon.png'
 
 // Primary nav links (also used by the mobile menu). Creating a spread starts
 // from the Spreads library (and Home), which keeps the bar to five links: a
-// sixth wrapped them between the burger breakpoint and ~1100px.
+// sixth would wrap them between the burger breakpoint and ~1100px.
 const navLinks = [
   { label: 'Home', to: { name: 'home' } },
   { label: 'New Draw', to: { name: 'new-reading' } },

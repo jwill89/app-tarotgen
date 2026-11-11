@@ -4,7 +4,7 @@
 require_once('../vendor/autoload.php');
 
 // Timestamps are UTC everywhere (Tarot\Utility\Clock, SQLite's CURRENT_TIMESTAMP);
-// pin PHP's zone too, so any stray date() — ours or a library's — agrees (AUDIT §1.4).
+// pin PHP's zone too, so any stray date() — ours or a library's — agrees.
 date_default_timezone_set('UTC');
 
 use DI\ContainerBuilder;

@@ -99,7 +99,7 @@ final class SpreadsTest extends HttpTestCase
         $this->signInAs($gone->user_id);
         $this->service(UserRepository::class)->delete($gone->user_id);
 
-        // Its id used to fail the foreign key, and the submission was lost to a 500.
+        // The session's user is gone: the submission is kept with no user, not lost to a 500 from the foreign key.
         $this->assertJsonResponse(201, $this->post('/spreads', ['name' => 'Crossroads', 'positions' => [self::POSITION]]));
 
         $this->assertSame([['name' => 'Crossroads', 'user_id' => null]], $this->rows('SELECT name, user_id FROM pending_spreads'));
@@ -178,7 +178,7 @@ final class SpreadsTest extends HttpTestCase
         $this->assertSame('The matter at hand', $copy['positions'][0]['description']);
         $this->assertSame([['user_spread_id' => $copy['user_spread_id'], 'name' => 'Celtic Cross (copy)']], $this->rows('SELECT user_spread_id, name FROM user_spreads'));
 
-        // Copying again names the next one apart, whatever case the first is in now.
+        // Copying again names the next one apart, whatever case the first copy's name is in.
         $this->db->exec("UPDATE user_spreads SET name = 'CELTIC CROSS (COPY)'");
         $again = $this->assertJsonResponse(201, $this->post("/spreads/{$spread->spread_id}/copy/"));
         $this->assertSame('Celtic Cross (copy 2)', $again['name']);

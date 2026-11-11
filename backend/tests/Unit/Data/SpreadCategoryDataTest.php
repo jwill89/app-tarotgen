@@ -95,7 +95,7 @@ final class SpreadCategoryDataTest extends TestCase
             [[6, 1], [5, 2], [4, 3], [3, 4], [2, 5], [1, 6]],
             array_map(static fn(SpreadCategory $c): array => [$c->category_id, $c->sort_order], $this->categories->retrieve())
         );
-        // A spread named into none now goes into the first: Seasonal.
+        // A spread named into none goes into the first category, Seasonal after the reorder.
         $this->assertSame(6, new SpreadData($this->db)->store(['name' => 'Solstice'])?->category_id);
     }
 

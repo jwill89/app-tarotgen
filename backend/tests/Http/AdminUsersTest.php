@@ -191,7 +191,7 @@ final class AdminUsersTest extends HttpTestCase
             $queue
         ));
         // submitted_by has no foreign key, so decks and systems keep naming an
-        // account that no longer exists (reported, not changed here).
+        // account that no longer exists.
         $this->assertSame([['submitted_by' => $id]], $this->rows('SELECT submitted_by FROM decks'));
         $this->assertSame([['submitted_by' => $id]], $this->rows('SELECT submitted_by FROM deck_systems'));
     }

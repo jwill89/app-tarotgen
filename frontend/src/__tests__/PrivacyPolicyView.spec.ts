@@ -31,8 +31,8 @@ function section(heading: string): string {
   return parts.join(' ')
 }
 
-// AGENTS.md: the retention window is stated here and enforced by the daily
-// jobs; change both together. These fail when one moves without the other.
+// The retention window is stated here and enforced by the daily jobs; change
+// both together. These fail when one moves without the other.
 describe('PrivacyPolicyView', () => {
   afterEach(cleanup)
 

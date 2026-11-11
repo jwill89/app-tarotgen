@@ -10,8 +10,8 @@ use Tarot\Utility\Pkce;
 
 /**
  * Draw keys: how an unlinked plugin install draws readings once Turnstile guards
- * New Draw (AUDIT §9.14). A game client can't show a browser challenge, so the
- * person passes one once, on the site's key page, and the install keeps the key.
+ * New Draw. A game client can't show a browser challenge, so the person passes
+ * one once, on the site's key page, and the install keeps the key.
  *
  * Minted the way the account link's tokens are (PKCE over a loopback redirect):
  *   1. The key page, its Turnstile challenge passed, calls {@see createCode()}

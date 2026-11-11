@@ -74,12 +74,12 @@ const {
 })
 
 async function fetchData() {
-  // Special cards are now nested under decks (`/decks/{id}/special-cards`), so
+  // Special cards are nested under decks (`/decks/{id}/special-cards`), so
   // there is no single "all cards" endpoint — fetch decks first, then each
   // deck's special cards and flatten. Always every deck, even with a deck
   // filter on: the filter is applied client-side, and fetching only the
-  // filtered deck replaced the whole list with it, so switching back to
-  // "All Decks" after a save or delete showed that one deck's cards.
+  // filtered deck would replace the whole list with it, so switching back to
+  // "All Decks" after a save or delete would show only that one deck's cards.
   const dk = await api.get<Deck[]>(endpoints.admin.decks.list)
   if (dk) {
     decks.value = dk

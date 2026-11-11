@@ -20,8 +20,8 @@ export function markAuthChecked(): void {
 const router = createRouter({
   history: createWebHistory(),
   // Its replacement (ScrollRestoration, vue-router/experimental) is still
-  // experimental and would also change Back from "top" to "where you were":
-  // an owner's decision, deferred in AUDIT §7.3.
+  // experimental and would also change Back from "top" to "where you were",
+  // which is a product choice, so the deprecated hook stays until that is made.
   // eslint-disable-next-line @typescript-eslint/no-deprecated
   scrollBehavior() {
     return { top: 0 }

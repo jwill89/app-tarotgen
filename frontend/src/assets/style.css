@@ -10,16 +10,15 @@
   min-height: calc(100vh - 64px);
 }
 
-/* Clear the 64px fixed .site-nav. This used to be spelled has-navbar-fixed-top,
-   overriding the 3.25rem Bulma's navbar module applied — but that module is no
-   longer built (see bulma.scss), so the padding is now entirely ours. */
+/* Clear the 64px fixed .site-nav. Bulma's navbar module isn't built (see
+   bulma.scss), so the padding is entirely ours. */
 body.has-fixed-nav {
   padding-top: 64px;
 }
 
 /* The <main> landmark grows to keep the footer at the bottom of a short page,
-   and the view's root <section> fills it, as it did when it was the wrapper's
-   own child. Focus lands here from the skip link; no ring for a whole page. */
+   and the view's root <section> fills it. Focus lands here from the skip link;
+   no ring for a whole page. */
 .app-wrapper > main {
   flex: 1;
   display: flex;
@@ -400,8 +399,8 @@ body.has-fixed-nav {
   right: 12px;
 }
 
-/* These controls now sit inside Reka's focus trap (and one of them takes the
-   mount-autofocus), so they need a visible focus ring — they had none before. */
+/* These controls sit inside Reka's focus trap (and one of them takes the
+   mount-autofocus), so they need a visible focus ring. */
 .lightbox-close:focus-visible,
 .lightbox-nav:focus-visible,
 .lightbox-zoom-btn:focus-visible {
@@ -923,7 +922,7 @@ body.has-fixed-nav {
   height: 100%;
   display: block;
 
-  /* Give the cards a visible edge now that the box shadow is gone. */
+  /* The cards have no box shadow, so a border gives them a visible edge. */
   border: 1px solid rgb(255 255 255 / 12%);
   transition:
     transform 0.15s ease,
@@ -1066,7 +1065,7 @@ body {
 }
 
 /* One hover tint for every row. Bulma's three hover rules out-rank a plain
-   `tr:hover` and colour odd and even rows differently, which brought the zebra
+   `tr:hover` and colour odd and even rows differently, which would bring the zebra
    striping back on hover; these are its selectors, so ours win by coming later. */
 .table.is-hoverable tbody tr:not(.is-selected):hover,
 .table.is-hoverable.is-striped tbody tr:not(.is-selected):hover,
@@ -1187,8 +1186,8 @@ body {
 }
 
 /* ── Data-table chips + status pills ─────────────────────────
-   Neutral chip for system/type labels and a dot+label status pill — replaces the
-   stacks of saturated is-*-light tags so a row reads calm, with colour reserved
+   Neutral chip for system/type labels and a dot+label status pill — instead of
+   stacks of saturated is-*-light tags, so a row reads calm, with colour reserved
    for the one status that matters. */
 .data-chip {
   display: inline-flex;
@@ -1270,14 +1269,15 @@ body {
 }
 
 /* A link in the callout's sentences: the gold alone sits too close to the text
-   around it (2:1, WCAG 1.4.1 asks 3:1), so it is underlined as well. */
+   around it (2:1, where WCAG asks 3:1 for a link told apart by colour alone),
+   so it is underlined as well. */
 .myst-callout p a {
   text-decoration: underline;
 }
 
 /* ── Segmented Control ───────────────────────────────────── */
 
-/* A pill-shaped two-or-more-option toggle (replaces radio buttons
+/* A pill-shaped two-or-more-option toggle (used instead of radio buttons
    for binary/ternary choices). */
 .myst-segmented {
   display: inline-flex;

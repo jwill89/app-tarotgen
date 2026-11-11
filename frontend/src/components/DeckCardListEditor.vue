@@ -3,8 +3,7 @@
  * The collapsible card-definition list shared by the public "Submit a Deck
  * System" flow and the admin deck-system editor. Owns the accordion, the
  * expand/collapse toolbar, per-row open state and title-input focus management,
- * so neither view re-implements ~140 lines of identical markup and ~70 lines of
- * identical CSS.
+ * so neither view re-implements identical markup and CSS.
  *
  * The array stays caller-owned (`v-model`, mutated in place): each view seeds
  * and resizes it itself, because that is bound to its own `total_cards` field
@@ -72,8 +71,8 @@ function setTitleRef(el: unknown, index: number): void {
  *
  * Reka unmounts a collapsed AccordionContent, so a row we have only just opened
  * has no input on the next tick — Presence mounts it a frame later. A plain
- * `nextTick(() => input?.focus())` therefore silently did nothing, which is why
- * "Done" advanced to the next card without focusing it. Retry across a few
+ * `nextTick(() => input?.focus())` would therefore silently do nothing, and
+ * "Done" would advance to the next card without focusing it. Retry across a few
  * animation frames, bounded so a row that never mounts can't spin forever.
  */
 function focusCard(index: number): void {

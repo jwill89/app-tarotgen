@@ -5,7 +5,7 @@ import { markAuthChecked } from './router'
 import { useUser } from './composables/useUser'
 import { FontAwesomeIcon, FontAwesomeLayers } from '@fortawesome/vue-fontawesome'
 
-// Modular Bulma (only the modules we use) plus the 41 helper classes we kept —
+// Modular Bulma (only the modules we use) plus the 41 helper classes we use —
 // see assets/bulma.scss for what's deliberately left out.
 import './assets/bulma.scss'
 import './assets/bulma-helpers.css'

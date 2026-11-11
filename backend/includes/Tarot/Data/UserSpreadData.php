@@ -9,7 +9,7 @@ class UserSpreadData extends AbstractData
 {
     use NormalizesPositions;
 
-    /** Exactly the properties UserSpread declares (AUDIT §2.4). */
+    /** Exactly the properties UserSpread declares. */
     private const string SELECT_COLS = 'user_spread_id, user_id, name, description, card_count, positions, '
         . 'created_at, updated_at';
 

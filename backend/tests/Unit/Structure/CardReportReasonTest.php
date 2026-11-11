@@ -9,8 +9,8 @@ use PHPUnit\Framework\TestCase;
 use Tarot\Structure\CardReportReason;
 
 /**
- * The report reasons exist in three places by design (AUDIT §4.7). The website's
- * copy is typed from the generated spec, so the compiler keeps it in step; the
+ * The report reasons exist in three places by design. The website's copy is
+ * typed from the generated spec, so the compiler keeps it in step; the
  * plugin's C# copy has nothing like that, so this reads it. A reason added here
  * that the plugin lacks is one it can't offer; one only the plugin has is a 400.
  */

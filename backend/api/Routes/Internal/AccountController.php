@@ -86,8 +86,8 @@ class AccountController extends AbstractController
     /**
      * The current user's readings, newest first. The site pages with ?limit and
      * reads the total from X-Total-Count; without ?limit every reading comes back
-     * as a plain array, which the Dalamud plugin's List<Reading> still expects —
-     * keep that shape until the plugin pages too (AUDIT §2.6).
+     * as a plain array, the shape the Dalamud plugin's List<Reading> expects (it
+     * doesn't page).
      */
     public function myReadings(Request $request, Response $response): Response|ResponseInterface
     {
@@ -340,9 +340,8 @@ class AccountController extends AbstractController
     }
 
     /**
-     * Partial update of the current account's profile. Currently the only
-     * editable field is the display name (previously the dedicated
-     * PUT /account/display-name).
+     * Partial update of the current account's profile. The display name is the
+     * only editable field.
      */
     #[OAS\Operation\Patch(
         path: '/account',
@@ -482,7 +481,7 @@ class AccountController extends AbstractController
             return $response->withJson(['error' => $result['error'] ?? 'Could not delete account.'], 403);
         }
 
-        // End the now-orphaned session.
+        // End the session, whose account is gone.
         unset($_SESSION['user_id']);
         Session::regenerate();
 
@@ -829,7 +828,7 @@ class AccountController extends AbstractController
         $deckId = (int) ($params['deck_id'] ?? 0);
 
         // An unknown deck (e.g. one deleted while the page was open) would fail the
-        // favourite's foreign key, which surfaced as a 500. A pending submission
+        // favourite's foreign key as a 500. A pending submission
         // gets the same answer: only admins may learn that its id exists.
         $deck = $deckId < 1 ? null : $this->decks->get($deckId);
         if (!$deck instanceof Deck || !$deck->approved) {

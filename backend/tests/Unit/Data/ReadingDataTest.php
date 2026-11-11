@@ -105,8 +105,8 @@ final class ReadingDataTest extends TestCase
 
     public function testCleanGuestOlderThanDeletesOnlyOldGuestReadings(): void
     {
-        // The nightly retention job (scripts/retention.php, AUDIT §1.7) relies on
-        // this: guest readings past the window go; account readings never do.
+        // The nightly retention job (scripts/retention.php) relies on this: guest
+        // readings past the window go; account readings never do.
         $insert = $this->pdo->prepare(
             "INSERT INTO readings (reading_id, reading_info, reading_time, user_id)
              VALUES (:id, '{}', datetime('now', :age), :uid)"

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /**
- * Reusable on/off toggle built on Reka UI's Switch. Replaces the hand-rolled
- * `<label class="toggle-switch">` + hidden-checkbox markup that was duplicated
- * across many views. The label text goes in the default slot and stays clickable
- * (associated to the switch via a generated id).
+ * Reusable on/off toggle built on Reka UI's Switch, so no view needs its own
+ * `<label class="toggle-switch">` + hidden-checkbox markup. The label text goes
+ * in the default slot and stays clickable (associated to the switch via a
+ * generated id).
  *
  *   <ToggleSwitch v-model="flag">Hide my display name</ToggleSwitch>
  */

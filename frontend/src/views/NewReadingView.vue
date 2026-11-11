@@ -39,7 +39,7 @@ const { generate: generateReading } = useReadings()
 const { isLoggedIn } = useUser()
 
 // A signed-out visitor passes a Turnstile challenge to draw, where the site has
-// Turnstile on (AUDIT §9.14); a signed-in reader never sees one.
+// Turnstile on; a signed-in reader never sees one.
 const turnstileToken = ref('')
 const turnstileEnabled = ref(false)
 const turnstile = useTemplateRef('turnstile')
@@ -330,7 +330,7 @@ async function submitNewReading() {
             <div v-if="selectedSpread" class="columns">
               <div v-if="selectedSpread.description" class="column">
                 <div class="notification spread-description">
-                  <!-- Sanitized by renderMarkdown() (marked + DOMPurify) — see utils/markdown.ts -->
+                  <!-- Sanitized by renderMarkdown() (marked + DOMPurify). -->
                   <!-- eslint-disable-next-line vue/no-v-html -->
                   <div class="content" v-html="spreadDescriptionHtml"></div>
                 </div>

@@ -414,7 +414,7 @@
                     "Account"
                 ],
                 "summary": "Update the account profile (currently the display name)",
-                "description": "Partial update of the current account's profile. Currently the only\neditable field is the display name (previously the dedicated\nPUT /account/display-name).",
+                "description": "Partial update of the current account's profile. The display name is the\nonly editable field.",
                 "operationId": "54aecbcbefb600912a309f51b00f7e75",
                 "requestBody": {
                     "content": {
@@ -1279,7 +1279,7 @@
                     "Admin · Contacts"
                 ],
                 "summary": "Partially update a contact message",
-                "description": "Partial update of a contact message. Currently the only editable field is\nthe `is_read` flag (previously the dedicated POST …/read action).",
+                "description": "Partial update of a contact message. The `is_read` flag is the only\neditable field.",
                 "operationId": "27b7c177d701145299a73bc3fbf3c122",
                 "parameters": [
                     {

@@ -270,7 +270,7 @@ describe('LightboxOverlay', () => {
     expect(form?.textContent).toContain('Report a problem')
     expect(form?.textContent).toContain('The Fool')
 
-    // Arrows belong to the form's radio group now, not to paging the lightbox.
+    // With the report form open, arrows belong to its radio group, not to paging the lightbox.
     await press('ArrowRight')
     await press('+')
     expect(caption()).toBe('The Fool')
@@ -368,7 +368,7 @@ describe('LightboxOverlay', () => {
       await nextTick()
       expect(pan()).toEqual([150, 0])
 
-      // Released: moving the mouse no longer drags.
+      // Released: moving the mouse doesn't drag.
       window.dispatchEvent(new MouseEvent('mouseup'))
       window.dispatchEvent(new MouseEvent('mousemove', { clientX: 0, clientY: 0 }))
       await nextTick()

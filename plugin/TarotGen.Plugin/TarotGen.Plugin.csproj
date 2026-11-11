@@ -20,8 +20,8 @@
     <Deterministic>true</Deterministic>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- The analyzers and code style come from ../Directory.Build.props
-         (shared-tooling's lint/dotnet). TarotGen's own on top: any warning fails
-         every build, a local or deploy.ps1 one too, not only CI's (AUDIT §6.3).
+         (the shared lint/dotnet). On top of them, any warning fails every build,
+         a local or deploy.ps1 one too, not only CI's.
          Vulnerability advisories on packages stay warnings: one landing on a
          Dalamud dependency shouldn't block a release; Dependabot raises the update. -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

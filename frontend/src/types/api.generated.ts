@@ -127,9 +127,8 @@ export interface paths {
         head?: never;
         /**
          * Update the account profile (currently the display name)
-         * @description Partial update of the current account's profile. Currently the only
-         *     editable field is the display name (previously the dedicated
-         *     PUT /account/display-name).
+         * @description Partial update of the current account's profile. The display name is the
+         *     only editable field.
          */
         patch: operations["54aecbcbefb600912a309f51b00f7e75"];
         trace?: never;
@@ -412,8 +411,8 @@ export interface paths {
         head?: never;
         /**
          * Partially update a contact message
-         * @description Partial update of a contact message. Currently the only editable field is
-         *     the `is_read` flag (previously the dedicated POST …/read action).
+         * @description Partial update of a contact message. The `is_read` flag is the only
+         *     editable field.
          */
         patch: operations["27b7c177d701145299a73bc3fbf3c122"];
         trace?: never;

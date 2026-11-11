@@ -117,7 +117,7 @@ async function loadSystem(systemId: string): Promise<void> {
 // Watch rather than a native @change listener: Reka's NumberField commits the
 // model on blur/Enter AND on the −/+ steppers, but the steppers set it
 // programmatically, which fires no native `change` — so an @change handler
-// silently missed every stepper click. Typing is safe here because the model is
+// would silently miss every stepper click. Typing is safe here because the model is
 // only committed on blur, never per keystroke (NumberFieldInput's onInput
 // updates the displayed text only).
 watch(

@@ -7,11 +7,8 @@ use ReflectionClass;
 use ReflectionProperty;
 
 /**
- * Abstract class AbstractStructure
- *
- * This abstract class implements the JsonSerializable interface and provides
- * a generic constructor and methods for setting properties and serializing
- * the object to JSON.
+ * Base of the entity classes: a generic constructor that sets properties from
+ * an array, and JSON serialization of the public properties.
  */
 abstract class AbstractStructure implements JsonSerializable
 {
@@ -24,8 +21,6 @@ abstract class AbstractStructure implements JsonSerializable
     private static array $propertyCache = [];
 
     /**
-     * Constructor method
-     *
      * @param array<string,mixed> $params An associative array of properties to set on the object.
      */
     public function __construct(array $params = [])
@@ -34,9 +29,7 @@ abstract class AbstractStructure implements JsonSerializable
     }
 
     /**
-     * Set properties method
-     *
-     * This method sets the properties of the object based on the provided associative array.
+     * Sets each property the array names; keys that aren't properties are ignored.
      *
      * @param array<string,mixed> $params An associative array of properties to set on the object.
      */

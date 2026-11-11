@@ -310,7 +310,7 @@ describe('admin ErroredCardsView', () => {
       await answerConfirm('confirm')
 
       expect(apiCalls(api)).toEqual([['POST', '/api/admin/card-reports/1/regenerate', {}]])
-      // The row now reads as resolved; there is nothing left to regenerate.
+      // The row reads as resolved; there is nothing left to regenerate.
       expect(row('Thoth Tarot').classList).toContain('has-text-grey')
       expect(hasButton('Reopen', row('Thoth Tarot'))).toBe(true)
       expect(hasButton('Regenerate images & resolve', row('Thoth Tarot'))).toBe(false)

@@ -7,7 +7,7 @@ use Tarot\Config\Paths;
 /**
  * Stand-in passkey credential ids, so that passkey sign-in options for an email
  * look the same whether or not it belongs to an account with passkeys (the
- * decoy approach of WebAuthn §14.6.2, "username enumeration").
+ * decoy approach WebAuthn describes for preventing username enumeration).
  *
  * Why not simply drop allowCredentials: passkeys are registered with
  * residentKey "preferred", so an authenticator that can't store one (an older
@@ -21,7 +21,7 @@ use Tarot\Config\Paths;
  * do (mostly one passkey; ids of 16 to 64 bytes, by provider).
  *
  * The key is made on first use and kept beside the database (in production
- * outside the web root): no setting to configure. It isn't in the nightly
+ * outside the web root): no setting to configure. It isn't in the database
  * backup; losing it only changes every stand-in once.
  */
 class PasskeyDecoys

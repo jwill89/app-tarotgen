@@ -19,7 +19,7 @@ use Tarot\Data\UserSpreadData;
  * the production schema — instead of the minimal tables the other Data tests
  * build. A column list that drifts from the real schema fails here (SQLite
  * rejects unknown columns at prepare time), and a stray column reaching a
- * FETCH_CLASS Structure fails as a dynamic-property deprecation (AUDIT §2.4).
+ * FETCH_CLASS Structure fails as a dynamic-property deprecation.
  */
 #[CoversClass(DeckData::class)]
 #[CoversClass(DeckSystemData::class)]
