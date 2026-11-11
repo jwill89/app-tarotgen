@@ -1,7 +1,7 @@
 {
   "name": "tarot-site",
   "private": true,
-  "version": "5.5.1",
+  "version": "5.6.0",
   "license": "UNLICENSED",
   "type": "module",
   "engines": {

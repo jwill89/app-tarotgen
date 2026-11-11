@@ -8,6 +8,8 @@ Releases before 5.0.0 were reconstructed from the Git history; their dates are t
 
 ## [Unreleased]
 
+## [5.6.0] - 2026-11-11
+
 ### Changed
 
 - `task deploy` deploys the newest release tagged on main, built from a checkout of its own, so later commits and uncommitted changes never reach the site. A release the server already runs is skipped unless `-Force` is given, and `-SkipBuild` now goes with `-Preview` alone.
@@ -303,7 +305,8 @@ Initial release.
 
 - A server-rendered PHP tarot reading generator with a jQuery front end and a lightbox card viewer.
 
-[Unreleased]: https://github.com/jwill89/tarot-site/compare/v5.5.1...HEAD
+[Unreleased]: https://github.com/jwill89/tarot-site/compare/v5.6.0...HEAD
+[5.6.0]: https://github.com/jwill89/tarot-site/compare/v5.5.1...v5.6.0
 [5.5.1]: https://github.com/jwill89/tarot-site/compare/v5.5.0...v5.5.1
 [5.5.0]: https://github.com/jwill89/tarot-site/compare/v5.4.0...v5.5.0
 [5.4.0]: https://github.com/jwill89/tarot-site/compare/v5.3.0...v5.4.0
