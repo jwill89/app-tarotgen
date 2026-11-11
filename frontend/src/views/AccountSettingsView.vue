@@ -422,8 +422,8 @@ async function revokePluginToken(token: PluginToken) {
                   ? 'Your account signs in with Google and has no password yet.'
                   : 'Your account has no password yet.'
               }}
-              To set one, we'll email a link to <strong>{{ currentUser?.email }}</strong
-              >. Setting it signs you out everywhere, so you'll sign in again with the new password.
+              To set one, we'll email a link to <strong>{{ currentUser?.email }}</strong>. Setting
+              it signs you out everywhere, so you'll sign in again with the new password.
             </p>
             <div v-if="setLinkError" class="notification is-danger is-light">
               {{ setLinkError }}

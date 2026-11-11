@@ -27,7 +27,7 @@
         "symfony/console": "^8.1.11"
     },
     "require-dev": {
-        "ergebnis/composer-normalize": "^2.56",
+        "ergebnis/composer-normalize": "^2.56.1",
         "friendsofphp/php-cs-fixer": "^3.95.30",
         "icanhazstring/composer-unused": "^0.9.8",
         "maglnet/composer-require-checker": "^4.24",

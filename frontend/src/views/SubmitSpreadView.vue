@@ -99,8 +99,7 @@ function goHome() {
                 <span class="icon-text">
                   <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['user']" /></span>
                   <span>
-                    Submitting as <strong>{{ currentUser?.display_name ?? 'Guest' }}</strong
-                    >.
+                    Submitting as <strong>{{ currentUser?.display_name ?? 'Guest' }}</strong>.
                     <template v-if="!currentUser">
                       <router-link :to="{ name: 'login' }">Log in</router-link> to be credited by
                       your display name.
