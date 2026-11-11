@@ -22,3 +22,12 @@ $DeployWebRoot = '<apache-documentroot-on-host>'  # e.g. /var/www/example.com
 # visitors reach it, through Cloudflare; the plugin's download links are built from it
 # too. Unset, it is https://tarotgen.io; set it only to check another.
 # $DeploySiteUrl = '<https-address-of-the-site>'  # e.g. https://example.com
+# The vhost the deploy installs (deploy/apache-vhost.conf), one file named for the site.
+# The folder under /etc/letsencrypt/live whose certificate covers every name the vhost serves.
+$DeployCertName = '<certificate-folder-name>'     # e.g. example.com
+# The address Apache shows on its error pages (ServerAdmin in the vhost).
+$DeployServerAdmin = '<admin-email-address>'      # e.g. webmaster@example.com
+# Optional: the vhost's ServerName and other names. Unset, the name is the host of the site's
+# address and there are no others; a ServerAlias may hold several names, space-separated.
+# $DeployServerName = '<primary-host-name>'       # e.g. example.com
+# $DeployServerAlias = '<other-host-names>'       # e.g. www.example.com

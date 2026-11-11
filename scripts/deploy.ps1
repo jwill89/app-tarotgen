@@ -28,6 +28,8 @@
       frontend  builds frontend (vue-tsc + vite) into frontend/dist;
       backend   packs the runtime PHP: api, includes, scripts, db/migrations, og.php,
                 openapi.json, phinx.php, composer.json, composer.lock and the .htaccess;
+      vhost     with the backend or the frontend, renders deploy/apache-vhost.conf from the
+                settings (ServerName, ServerAlias, ServerAdmin, CertName);
       plugin    refuses a csproj Version that is not higher than the published repo.json's,
                 then builds the plugin from clean and lays out its repository: latest.zip,
                 icon.png and repo.json, written from the built manifest with ?v=<version>
@@ -37,6 +39,15 @@
     Then, on one SSH connection held for the whole run:
       1. Upload the archive to the SSH user's home.
       2. One remote run checks its SHA-256 and file count, then, API first:
+           the vhost goes in with the first of the backend and frontend steps, before that
+                     step changes anything: SharedDeploy installs it as
+                     /etc/apache2/sites-available/<ServerName>.conf where it differs (the
+                     previous kept as <ServerName>.conf.old), enables it, and disables every
+                     other enabled site serving its names, such as certbot's -le-ssl file
+                     (they stay in sites-available). It tries Apache with the change on a copy
+                     of its config first and refuses, changing nothing, if Apache would. Apache
+                     reloads once the rest of the run has succeeded; a rollback puts the file
+                     and those sites back;
            backend   builds the new code whole in WebRoot/.deploy/next: the upload, a copy
                      of the live vendor with composer install --no-dev run on it, and the
                      retired db scripts carried over. Snapshots the database (below). Swaps
@@ -117,6 +128,24 @@
     address the SPA's canonical link and the plugin's IconUrl already publish). The
     plugin's download links are built from it too.
 
+.PARAMETER ServerName
+    The vhost's ServerName, which also names its file. If omitted, resolved from
+    $env:DEPLOY_SERVER_NAME, then $DeployServerName, then the host of SiteUrl.
+
+.PARAMETER ServerAlias
+    The vhost's other names, space-separated. If omitted, resolved from
+    $env:DEPLOY_SERVER_ALIAS, then $DeployServerAlias; none by default. The certificate must
+    cover them.
+
+.PARAMETER ServerAdmin
+    The address the vhost gives as ServerAdmin. If omitted, resolved from
+    $env:DEPLOY_SERVER_ADMIN, then $DeployServerAdmin. It has no default.
+
+.PARAMETER CertName
+    The vhost's certificate: its folder's name under /etc/letsencrypt/live, one whose
+    certificate covers every name. If omitted, resolved from $env:DEPLOY_CERT_NAME, then
+    $DeployCertName. It has no default.
+
 .PARAMETER ConfigPath
     The untracked settings file; by default scripts/deploy.config.ps1. It need not exist.
 
@@ -165,6 +194,10 @@ param(
     [string]$KeyPath,
     [string]$WebRoot,
     [string]$SiteUrl,
+    [string]$ServerName,
+    [string]$ServerAlias,
+    [string]$ServerAdmin,
+    [string]$CertName,
     [string]$ConfigPath = (Join-Path -Path $PSScriptRoot -ChildPath 'deploy.config.ps1'),
 
     [switch]$SkipBuild,
@@ -181,12 +214,16 @@ Import-Module (Join-Path $PSScriptRoot '..\shared\deploy\pwsh\SharedDeploy.psd1'
 trap { Close-DeployConnection; Write-Host "`nERROR: $($_.Exception.Message)" -ForegroundColor Red; exit 1 }
 
 $settings = Resolve-DeploySetting -ConfigPath $ConfigPath -Value @{
-    VpsHost = $VpsHost
-    VpsUser = $VpsUser
-    KeyPath = $KeyPath
-    WebRoot = $WebRoot
-    SiteUrl = $SiteUrl
-} -Required VpsHost, VpsUser, KeyPath, WebRoot -Default @{
+    VpsHost     = $VpsHost
+    VpsUser     = $VpsUser
+    KeyPath     = $KeyPath
+    WebRoot     = $WebRoot
+    SiteUrl     = $SiteUrl
+    ServerName  = $ServerName
+    ServerAlias = $ServerAlias
+    ServerAdmin = $ServerAdmin
+    CertName    = $CertName
+} -Required (@('VpsHost', 'VpsUser', 'KeyPath', 'WebRoot') + @(if ($Target -ne 'plugin') { 'ServerAdmin', 'CertName' })) -Default @{
     # Public already (frontend/index.html's canonical link, the plugin's IconUrl), so not a host secret.
     SiteUrl = 'https://tarotgen.io'
 }
@@ -195,6 +232,21 @@ $web = $settings.WebRoot.TrimEnd('/')
 $site = $settings.SiteUrl.TrimEnd('/')
 if ($site -notmatch '^https?://[^/\s]+$') {
     throw "SiteUrl must be the site's address alone, such as https://tarotgen.io, not '$($settings.SiteUrl)'."
+}
+
+# The vhost's names: the site's own host unless set, lower case. The first is also the vhost file's name.
+# An unset optional setting comes back as no value at all, which "$()" turns into ''.
+$serverName = "$($settings.ServerName)".Trim()
+if (-not $serverName) { $serverName = ([uri]$site).Host }
+$serverName = $serverName.ToLowerInvariant()
+$serverAlias = "$($settings.ServerAlias)".Trim().ToLowerInvariant() -replace '\s+', ' '
+foreach ($name in @($serverName) + @($serverAlias -split ' ' | Where-Object { $_ })) {
+    if ($name -notmatch '^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$') { throw "ServerName and ServerAlias must be plain host names, not '$name'." }
+}
+if ($Target -ne 'plugin') {
+    if ($settings.CertName -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$') { throw 'CertName must be a folder name of letters, digits and . _ - only, not a path.' }
+    if ($settings.ServerAdmin -notmatch '^[^\s@]+@[^\s@]+$') { throw 'ServerAdmin must be an email address.' }
+    if ($web -notmatch '^/[A-Za-z0-9._/-]+$') { throw "WebRoot must be an absolute path of plain names, not '$web'." }
 }
 
 $withBackend = $Target -in 'backend', 'both'
@@ -222,8 +274,9 @@ $dataDir = '/var/lib/tarotgen'
 $liveDb = "$dataDir/db/tarotdb.db"
 $dbOwner = 'www-data'
 # The snapshot before the migrations, SharedDeploy's Backup-RemoteDatabase: <Database>.pre-<UTC
-# time>.gz beside the database, written as www-data under umask 077, the newest three kept. The block sets $snapshot and $snapshot_restore for the host's messages; its
-# .Snapshot and .Restore are the same, for this script's own.
+# time>.gz beside the database, written as www-data under umask 077, the newest three kept. The
+# block sets $snapshot and $snapshot_restore for the host's messages; its .Snapshot and .Restore
+# are the same, for this script's own.
 $snapshotBlock = Backup-RemoteDatabase -Database $liveDb -Owner $dbOwner -Umask '077'
 $snapshot = $snapshotBlock.Snapshot
 $restoreDb = $snapshotBlock.Restore
@@ -365,9 +418,18 @@ if [ -d "$nightly" ]; then
 fi
 '@
 
+# The vhost goes in through the module with the first step that swaps the site, before that step
+# changes anything: the backend's, or the frontend's when the run has no backend. A rollback
+# puts it back through the same step's Restore- call.
+$vhostArchivePath = 'host/apache-vhost.conf'
+$vhostArgs = @{ Vhost = $vhostArchivePath; ServerName = $serverName }
+$frontendVhost = if ($withBackend) { @{} } else { $vhostArgs }
+$frontendRestore = if ($withBackend) { @{} } else { @{ ServerName = $serverName } }
+
 # One archive, laid out as the host's steps want it: the code under backend/, the SPA as dist,
-# the plugin repository as plugin.
+# the plugin repository as plugin, and the rendered vhost under host/.
 $content = [ordered]@{}
+$vhostFile = $null
 $entryScript = $null
 $repo = $null
 $archive = $null
@@ -440,6 +502,27 @@ try {
         $retire = Format-RemoteScript -Template $retireTemplate -Value @{ CRON = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($cron)) }
     }
 
+    if ($withBackend -or $withFrontend) {
+        # The vhost, filled in for this host; the host installs it where it differs from the live one.
+        $vhostTemplate = Join-Path $build 'deploy\apache-vhost.conf'
+        if (-not (Test-Path -LiteralPath $vhostTemplate)) { throw "deploy/apache-vhost.conf is not in $version. Nothing was changed." }
+        $vhost = (Get-Content -LiteralPath $vhostTemplate -Raw) -replace "`r", ''
+        # A site with one name has no ServerAlias line: Apache refuses one with nothing on it.
+        if (-not $serverAlias) { $vhost = $vhost -replace '(?m)^[ \t]*ServerAlias[ \t]+__SERVER_ALIAS__[ \t]*\n', '' }
+        $vhost = Format-RemoteScript -Template $vhost -Value @{
+            SERVER_NAME  = $serverName
+            SERVER_ALIAS = $serverAlias
+            SERVER_ADMIN = $settings.ServerAdmin
+            WEB_ROOT     = $web
+            DATA_DIR     = $dataDir
+            CERT_NAME    = $settings.CertName
+        }
+        if ($vhost -match '__[A-Z_]+__') { throw "deploy/apache-vhost.conf has a placeholder the settings do not fill: $($Matches[0]). Nothing was changed." }
+        $vhostFile = Join-Path ([IO.Path]::GetTempPath()) "tarotgen-vhost-$([guid]::NewGuid().ToString('N').Substring(0, 8)).conf"
+        [IO.File]::WriteAllText($vhostFile, $vhost, [Text.UTF8Encoding]::new($false))
+        $content[$vhostArchivePath] = $vhostFile
+    }
+
     if ($withFrontend) {
         $shell = Join-Path $distDir 'index.html'
         if ($SkipBuild) {
@@ -483,10 +566,10 @@ try {
     $steps = @(
         if ($withBackend) {
             Switch-RemoteItemSet -AsStep -Root $web -Item $backendCode -Source 'backend' -Staging $codeStaging -Backup $codeBackup `
-                -Prepare $prepare -AfterSwap $afterSwap -NoBackup:$NoBackup
+                -Prepare $prepare -AfterSwap $afterSwap @vhostArgs -NoBackup:$NoBackup
         }
         if ($withFrontend) {
-            Switch-RemoteDirectory -AsStep -Live "$web/dist" -NoBackup:$NoBackup
+            Switch-RemoteDirectory -AsStep -Live "$web/dist" @frontendVhost -NoBackup:$NoBackup
         }
         if ($withPlugin) {
             Publish-PluginRepository -AsStep -Live "$web/plugin" -Version $repo.Version -IndexPath 'repo.json' -NoBackup:$NoBackup
@@ -533,8 +616,8 @@ try {
             # are additive, so the previous code runs on the new schema.
             $rollback = @(
                 if ($withPlugin) { Restore-RemoteDirectory -Live "$web/plugin" -AsScript }
-                if ($withFrontend) { Restore-RemoteDirectory -Live "$web/dist" -AsScript }
-                if ($withBackend) { Restore-RemoteItemSet -Root $web -Item $backendCode -Backup $codeBackup -AsScript }
+                if ($withFrontend) { Restore-RemoteDirectory -Live "$web/dist" @frontendRestore -AsScript }
+                if ($withBackend) { Restore-RemoteItemSet -Root $web -Item $backendCode -Backup $codeBackup -ServerName $serverName -AsScript }
             )
             Invoke-SmokeCheck -Check $checks -Attempts 3 -DelaySeconds 2 -Rollback {
                 Invoke-RemoteStep -Script $rollback -FailureMessage 'Rolling back failed on the host'
@@ -575,6 +658,7 @@ try {
 } finally {
     Close-DeployConnection
     if ($archive) { Remove-Item -LiteralPath $archive.Path -ErrorAction SilentlyContinue }
+    if ($vhostFile) { Remove-Item -LiteralPath $vhostFile -ErrorAction SilentlyContinue }
     if ($repo) { Remove-Item -LiteralPath $repo.Path -Recurse -ErrorAction SilentlyContinue }
     if ($tree) { Remove-ReleaseTree -Path $tree -Repository $repoRoot }
 }

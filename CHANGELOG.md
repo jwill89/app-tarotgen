@@ -11,6 +11,7 @@ Releases before 5.0.0 were reconstructed from the Git history; their dates are t
 ### Changed
 
 - `task deploy` deploys the newest release tagged on main, built from a checkout of its own, so later commits and uncommitted changes never reach the site. A release the server already runs is skipped unless `-Force` is given, and `-SkipBuild` now goes with `-Preview` alone.
+- Deploys ship the site's Apache vhost and retire the separate HTTPS file certbot wrote for it. Needs a one-time step at deploy (docs/ops.md, Upgrading to 5.6.0).
 
 ## [5.5.1] - 2026-11-07
 

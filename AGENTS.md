@@ -118,6 +118,7 @@ flattens both into the live server's single flat web root.
 │   └── TarotGen.Plugin/    #   C# project (net10.0-windows, Dalamud.NET.Sdk); packaged by DalamudPackager.
 │
 ├── shared/                 # Git submodule: shared-tooling v2.1.0 (`git submodule update --init`).
+├── deploy/apache-vhost.conf # The site's one vhost (port 80 and 443), a template every deploy of the site fills and ships (§6).
 ├── scripts/deploy.ps1      # Build & deploy orchestration (frontend + backend + plugin), on shared/deploy/pwsh.
 ├── scripts/server/tarotgen.cron # /etc/cron.d/tarotgen (retention); the backend deploy installs it.
 ├── Taskfile.yml            # `task` commands; includes shared/repo/Taskfile.yml as shared:*.
@@ -420,8 +421,9 @@ disk) for PHP's built-in server, which has no `.htaccess`. Any PHP host serving
 The site runs on a DigitalOcean droplet (Apache on the event MPM + **PHP 8.5
 FPM**, since 2026-11-03; one pool shared with the droplet's other PHP sites) at
 `/var/www/tarotgen.io`, a single **flat** web root. OPcache re-checks files every
-2 s, so a deploy needs no FPM reload; `SetEnv TAROT_DATA_DIR` in the vhost reaches
-FPM; `.htaccess` `php_value` lines would be ignored under FPM (there are none).
+2 s, so a deploy needs no FPM reload; `SetEnv TAROT_DATA_DIR` in the vhost
+(`deploy/apache-vhost.conf`, shipped by the deploy) reaches FPM; `.htaccess`
+`php_value` lines would be ignored under FPM (there are none).
 PHP errors land in `/var/log/apache2/error.log` (`AH01071 … PHP message:`) and
 `/var/log/php8.5-fpm.log`, beside the other sites': filter by `/var/www/tarotgen.io`. `scripts/deploy.ps1` flattens
 `frontend/dist` and the `backend/` runtime files into it. It is built on
@@ -444,7 +446,11 @@ Settings resolve from the parameter, then `$env:DEPLOY_*`, then the gitignored
 `scripts/deploy.config.ps1` (copy `scripts/deploy.config.example.ps1`; `-ConfigPath`
 names another file): `VpsHost`, `VpsUser` (no default: it must be set somewhere),
 `KeyPath`, `WebRoot`, and `SiteUrl`, the public address the smoke check fetches and
-the plugin's download links are built from (default `https://tarotgen.io`).
+the plugin's download links are built from (default `https://tarotgen.io`). The
+vhost's settings, which a plugin-only run doesn't need: `ServerAdmin` and `CertName`
+(the folder under `/etc/letsencrypt/live` whose certificate covers every name), with
+no defaults, and the optional `ServerName` (the host of `SiteUrl` unless set; it also
+names the vhost file) and `ServerAlias` (more names, space-separated).
 `-NoBackup` removes the rollback copies once the run succeeds on the host, so a
 failed smoke check then only stops the run; the database snapshot is still taken.
 `Get-Help .\scripts\deploy.ps1 -Full` walks through the whole run.
@@ -460,6 +466,16 @@ place before the files they guard.
 
 **One archive, one connection, one remote run**, as the shared module does it (Windows `tar.exe`, ustar; `plink -share`). The one held connection, plus one more only if it drops and reconnects, keeps the run under the droplet's `ufw limit ssh` (6 connections in 30 s). The archive streams to the SSH user's home, and the remote run takes each target's step, API first:
 
+- **the vhost** (`deploy/apache-vhost.conf`, filled from the settings when the archive
+  is packed) goes in with the first of the backend and frontend steps, before that step
+  changes anything. SharedDeploy installs it as
+  `/etc/apache2/sites-available/<ServerName>.conf` where it differs (the previous kept
+  as `.conf.old`), enables it, and disables every other enabled site serving its names,
+  such as certbot's `-le-ssl` file; those stay in `sites-available`. It tries Apache
+  with the change on a copy of its config first and refuses, changing nothing, if
+  Apache would; Apache reloads once the rest of the run has succeeded, and a rollback
+  puts the file and those sites back. Nobody edits the vhost on the host: a change
+  goes in the template.
 - **backend:** the database and the host's tools (`composer`, `php`, `sqlite3`,
   `gzip`, `runuser`) are checked first. The new code is built whole in
   `.deploy/next`: the upload, a copy of the live `vendor/` with `composer install
@@ -813,7 +829,6 @@ Each item is a place where the code still does what [`shared/standards/`](shared
 - **Timestamps:** every timestamp column is `TEXT` in SQLite's space form (`2026-11-07 09:18:09`, in UTC), written by `Clock::now()` (`Y-m-d H:i:s`) or `DEFAULT CURRENT_TIMESTAMP`, with no CHECK, and the API sends that form. The guide's form is a `DATETIME` column holding `2026-11-07T09:18:09Z`, with a `strftime` default and a CHECK; each table moves in one migration (`database.md`, "Timestamps").
 - **The session cookie** keeps PHP's default name, `PHPSESSID`, not a `__Host-` name.
 - **The document root** is the flat web root, which holds the code, `vendor/` and `scripts/` beside `dist/`, with `backend/.htaccess` refusing them (§6). The guide puts a PHP site's document root at its `public/` folder. `.env` and the database already sit outside it, in `TAROT_DATA_DIR`.
-- **The Apache vhost** is not a repo template: it lives on the droplet and is edited there by hand (it carries `SetEnv TAROT_DATA_DIR`, §6), so the deploy neither ships it nor checks it with `apachectl configtest`. The guide has every deploy ship the vhost from a template with host values as placeholders. The backup timer's unit and the cron file are shipped by the deploy already.
 - **Layout** comes from Bulma's helpers (columns, spacing), which the guide counts as neither of its two ways (Tailwind or object classes). They go when the app adopts the component kit.
 - **State class:** the navigation marks the current page with a bare `active` class (`exact-active-class="active"` in `App.vue`), not `is-active`.
 - **`Referrer-Policy`:** `backend/.htaccess` sends `strict-origin-when-cross-origin`, not `same-origin`.
