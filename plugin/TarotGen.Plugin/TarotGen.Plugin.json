@@ -4,7 +4,7 @@
   "InternalName": "TarotGen.Plugin",
   "Punchline": "Draw and view TarotGen.io tarot readings in-game.",
   "Description": "Draw a tarot reading from TarotGen.io without leaving the game: pick a public spread or do a free draw, see the cards and their meanings, and open any reading by its share code. Drawing without an account needs a draw key, which the plugin gets once through a quick check in your browser. Linking a TarotGen account is optional: it lets you lock readings, sort the pickers by your favorites, and list your readings. Talks only to tarotgen.io over HTTPS.",
-  "RepoUrl": "https://github.com/jwill89/tarot-site",
+  "RepoUrl": "https://github.com/jwill89/app-tarotgen",
   "ApplicableVersion": "any",
   "Tags": ["tarot", "reading", "fun", "utility"],
   "CategoryTags": ["utility"],

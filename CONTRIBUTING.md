@@ -43,7 +43,7 @@ The owner works on `main`, with no branches, and CI on GitHub is the gate. A cha
 
 **Please do not open public issues for security vulnerabilities.** Report them
 privately to the maintainer (see the repository owner's contact on
-[GitHub](https://github.com/jwill89/tarot-site)) so a fix can ship before
+[GitHub](https://github.com/jwill89/app-tarotgen)) so a fix can ship before
 disclosure. Authentication, session handling, CSRF (`OriginGuard`), rate
 limiting, and the Turnstile/secret configuration are especially sensitive areas
 — flag anything you find in those.

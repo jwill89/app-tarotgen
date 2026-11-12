@@ -35,9 +35,9 @@ const changelog = [
   '',
   '- A hyphen before the date, as Keep a Changelog writes it.',
   '',
-  '[Unreleased]: https://github.com/jwill89/tarot-site/compare/v5.2.0...HEAD',
-  '[5.2.0]: https://github.com/jwill89/tarot-site/compare/v5.1.0...v5.2.0',
-  '[5.1.0]: https://github.com/jwill89/tarot-site/compare/v5.0.0...v5.1.0',
+  '[Unreleased]: https://github.com/jwill89/app-tarotgen/compare/v5.2.0...HEAD',
+  '[5.2.0]: https://github.com/jwill89/app-tarotgen/compare/v5.1.0...v5.2.0',
+  '[5.1.0]: https://github.com/jwill89/app-tarotgen/compare/v5.0.0...v5.1.0',
   '',
 ].join('\n')
 
@@ -89,7 +89,7 @@ describe('parseChangelog', () => {
       '## [1.0.0] — 2025-04-08',
       '',
       'Initial release, [compared][1.0.0].',
-      '[1.0.0]: https://github.com/jwill89/tarot-site/releases/tag/v1.0.0',
+      '[1.0.0]: https://github.com/jwill89/app-tarotgen/releases/tag/v1.0.0',
       '   [docs]: <https://example.test/docs> "Docs"',
       '- Generator.',
     ].join('\n')

@@ -305,21 +305,21 @@ Initial release.
 
 - A server-rendered PHP tarot reading generator with a jQuery front end and a lightbox card viewer.
 
-[Unreleased]: https://github.com/jwill89/tarot-site/compare/v5.6.0...HEAD
-[5.6.0]: https://github.com/jwill89/tarot-site/compare/v5.5.1...v5.6.0
-[5.5.1]: https://github.com/jwill89/tarot-site/compare/v5.5.0...v5.5.1
-[5.5.0]: https://github.com/jwill89/tarot-site/compare/v5.4.0...v5.5.0
-[5.4.0]: https://github.com/jwill89/tarot-site/compare/v5.3.0...v5.4.0
-[5.3.0]: https://github.com/jwill89/tarot-site/compare/v5.2.0...v5.3.0
-[5.2.0]: https://github.com/jwill89/tarot-site/compare/v5.1.0...v5.2.0
-[5.1.0]: https://github.com/jwill89/tarot-site/compare/v5.0.0...v5.1.0
-[5.0.0]: https://github.com/jwill89/tarot-site/compare/v4.1.0...v5.0.0
-[4.1.0]: https://github.com/jwill89/tarot-site/compare/v4.0.0...v4.1.0
-[4.0.0]: https://github.com/jwill89/tarot-site/compare/v3.4.0...v4.0.0
-[3.4.0]: https://github.com/jwill89/tarot-site/compare/v3.3.0...v3.4.0
-[3.3.0]: https://github.com/jwill89/tarot-site/compare/v3.2.0...v3.3.0
-[3.2.0]: https://github.com/jwill89/tarot-site/compare/v3.1.0...v3.2.0
-[3.1.0]: https://github.com/jwill89/tarot-site/compare/v3.0.0...v3.1.0
-[3.0.0]: https://github.com/jwill89/tarot-site/compare/v2.0.0...v3.0.0
-[2.0.0]: https://github.com/jwill89/tarot-site/compare/v1.0.0...v2.0.0
-[1.0.0]: https://github.com/jwill89/tarot-site/releases/tag/v1.0.0
+[Unreleased]: https://github.com/jwill89/app-tarotgen/compare/v5.6.0...HEAD
+[5.6.0]: https://github.com/jwill89/app-tarotgen/compare/v5.5.1...v5.6.0
+[5.5.1]: https://github.com/jwill89/app-tarotgen/compare/v5.5.0...v5.5.1
+[5.5.0]: https://github.com/jwill89/app-tarotgen/compare/v5.4.0...v5.5.0
+[5.4.0]: https://github.com/jwill89/app-tarotgen/compare/v5.3.0...v5.4.0
+[5.3.0]: https://github.com/jwill89/app-tarotgen/compare/v5.2.0...v5.3.0
+[5.2.0]: https://github.com/jwill89/app-tarotgen/compare/v5.1.0...v5.2.0
+[5.1.0]: https://github.com/jwill89/app-tarotgen/compare/v5.0.0...v5.1.0
+[5.0.0]: https://github.com/jwill89/app-tarotgen/compare/v4.1.0...v5.0.0
+[4.1.0]: https://github.com/jwill89/app-tarotgen/compare/v4.0.0...v4.1.0
+[4.0.0]: https://github.com/jwill89/app-tarotgen/compare/v3.4.0...v4.0.0
+[3.4.0]: https://github.com/jwill89/app-tarotgen/compare/v3.3.0...v3.4.0
+[3.3.0]: https://github.com/jwill89/app-tarotgen/compare/v3.2.0...v3.3.0
+[3.2.0]: https://github.com/jwill89/app-tarotgen/compare/v3.1.0...v3.2.0
+[3.1.0]: https://github.com/jwill89/app-tarotgen/compare/v3.0.0...v3.1.0
+[3.0.0]: https://github.com/jwill89/app-tarotgen/compare/v2.0.0...v3.0.0
+[2.0.0]: https://github.com/jwill89/app-tarotgen/compare/v1.0.0...v2.0.0
+[1.0.0]: https://github.com/jwill89/app-tarotgen/releases/tag/v1.0.0
