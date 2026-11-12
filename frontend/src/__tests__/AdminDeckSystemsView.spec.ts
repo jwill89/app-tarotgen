@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import DeckSystemsView from '@/views/admin/DeckSystemsView.vue'
 import { useUser } from '@/composables/useUser'
-import { cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -99,7 +99,7 @@ describe('admin DeckSystemsView', () => {
       const { router } = await mountPage(DeckSystemsView, { path: '/admin/deck-systems' })
 
       // The login route's component loads lazily, so the navigation lands a beat later.
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'), lazyLoad)
       expect(useUser().currentUser.value).toBeNull()
       expect(toasts()).toEqual([])
     })
@@ -116,7 +116,10 @@ describe('admin DeckSystemsView', () => {
       expect(link('Submissions').querySelector('.tag')).toBeNull()
 
       await click(link('Add Deck System'))
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-deck-system-new'))
+      await vi.waitFor(
+        () => expect(router.currentRoute.value.name).toBe('admin-deck-system-new'),
+        lazyLoad,
+      )
     })
 
     it('counts the submissions waiting for review on their link, and lists none of them', async () => {
@@ -136,7 +139,10 @@ describe('admin DeckSystemsView', () => {
 
       await click(button('Edit', row('Lenormand')))
 
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-deck-system-edit'))
+      await vi.waitFor(
+        () => expect(router.currentRoute.value.name).toBe('admin-deck-system-edit'),
+        lazyLoad,
+      )
       expect(router.currentRoute.value.params.id).toBe('3')
       // The editor loads the system itself.
       expect(api).not.toHaveBeenCalled()

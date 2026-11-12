@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import DecksView from '@/views/admin/DecksView.vue'
 import { useUser } from '@/composables/useUser'
 import { NETWORK_ERROR_MESSAGE } from '@/composables/apiClient'
-import { cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -188,7 +188,7 @@ describe('admin DecksView', () => {
       const { router } = await mountPage(DecksView, { path: '/admin/decks' })
 
       // The login route's component loads lazily, so the navigation lands a beat later.
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'), lazyLoad)
       expect(useUser().currentUser.value).toBeNull()
       expect(toasts()).toEqual([])
     })

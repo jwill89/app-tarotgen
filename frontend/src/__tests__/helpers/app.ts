@@ -12,6 +12,9 @@ export function testRouter(): Router {
   return createRouter({ history: createMemoryHistory(), routes })
 }
 
+/** vi.waitFor's options for a lazily loaded view or component: a cold import can take over 1 s. */
+export const lazyLoad = { timeout: 10_000 }
+
 const webRouters = new Set<Router>()
 
 /**

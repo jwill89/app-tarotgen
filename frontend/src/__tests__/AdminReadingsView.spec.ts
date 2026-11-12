@@ -4,7 +4,7 @@ import ReadingsView from '@/views/admin/ReadingsView.vue'
 import { useUser } from '@/composables/useUser'
 import { NETWORK_ERROR_MESSAGE } from '@/composables/apiClient'
 import { formatDateTime } from '@/utils/datetime'
-import { cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -192,7 +192,7 @@ describe('admin ReadingsView', () => {
       const { router } = await mountPage(ReadingsView, { path: '/admin/readings' })
 
       // The login route's component loads lazily, so the navigation lands a beat later.
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'), lazyLoad)
       expect(useUser().currentUser.value).toBeNull()
       expect(toasts()).toEqual([])
     })

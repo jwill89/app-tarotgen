@@ -4,7 +4,7 @@ import DailyCardView from '@/views/DailyCardView.vue'
 import { useDecks } from '@/composables/useDecks'
 import { useToasts } from '@/composables/useToasts'
 import { STORAGE_KEYS } from '@/constants'
-import { mountWithApp, cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
 import type { DailyCard, Deck } from '@/types'
 
 const TODAY = '2026-10-30'
@@ -215,7 +215,10 @@ describe('DailyCardView', () => {
       button("Draw today's card").click()
       await flushPromises()
 
-      await vi.waitFor(() => expect(router.currentRoute.value.fullPath).toBe('/reading/abc123'))
+      await vi.waitFor(
+        () => expect(router.currentRoute.value.fullPath).toBe('/reading/abc123'),
+        lazyLoad,
+      )
       expect(useToasts().toasts.value.map((t) => t.message)).toEqual([
         'You have already drawn your daily card for this day.',
       ])

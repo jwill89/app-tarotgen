@@ -4,7 +4,7 @@ import App from '@/App.vue'
 import { useUser } from '@/composables/useUser'
 import { useDecks } from '@/composables/useDecks'
 import { useToasts } from '@/composables/useToasts'
-import { mountWithApp, cleanup, signIn, stubApi, testUser } from './helpers/app'
+import { mountWithApp, cleanup, signIn, stubApi, testUser, lazyLoad } from './helpers/app'
 
 // A page with no API calls of its own, so each test states only the app's.
 async function openApp(path = '/privacy') {
@@ -163,7 +163,7 @@ describe('App', () => {
 
       expect(api).toHaveBeenCalledWith('/api/auth/logout', { method: 'POST' })
       expect(useUser().currentUser.value).toBeNull()
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'), lazyLoad)
       expect(wrapper.find('a.btn-login').exists()).toBe(true)
     })
   })
@@ -207,7 +207,10 @@ describe('App', () => {
       expect(codeDialog()?.querySelector('h2')?.textContent).toBe('View a Reading')
       await submitCode('  abc123 ')
 
-      await vi.waitFor(() => expect(router.currentRoute.value.fullPath).toBe('/reading/abc123'))
+      await vi.waitFor(
+        () => expect(router.currentRoute.value.fullPath).toBe('/reading/abc123'),
+        lazyLoad,
+      )
       expect(codeDialog()).toBeUndefined()
     })
 
@@ -219,7 +222,7 @@ describe('App', () => {
       await flushPromises()
       await submitCode('   ')
 
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('new-reading'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('new-reading'), lazyLoad)
     })
   })
 

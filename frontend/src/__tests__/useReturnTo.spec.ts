@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import type { RouteLocationRaw, Router } from 'vue-router'
 import { useReturnTo } from '@/composables/useReturnTo'
-import { cleanup, mountWithApp, testRouter, testWebRouter } from './helpers/app'
+import { cleanup, mountWithApp, testRouter, testWebRouter, lazyLoad } from './helpers/app'
 
 /** useReturnTo as a page holds it, with `from` the page it is on. */
 async function onPage(router: Router, from: string) {
@@ -28,7 +28,7 @@ async function visited(...pages: string[]) {
 }
 
 const arrived = (router: Router, name: string) =>
-  vi.waitFor(() => expect(router.currentRoute.value.name).toBe(name))
+  vi.waitFor(() => expect(router.currentRoute.value.name).toBe(name), lazyLoad)
 
 describe('useReturnTo', () => {
   afterEach(cleanup)

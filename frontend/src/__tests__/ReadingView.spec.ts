@@ -11,7 +11,15 @@ import { useToasts } from '@/composables/useToasts'
 import { NETWORK_ERROR_MESSAGE } from '@/composables/apiClient'
 import { formatDateTime } from '@/utils/datetime'
 import { cardBackImageUrls, cardImageUrls } from '@/utils/cardImages'
-import { mountWithApp, cleanup, signIn, stubApi, testRouter, testUser } from './helpers/app'
+import {
+  mountWithApp,
+  cleanup,
+  signIn,
+  stubApi,
+  testRouter,
+  testUser,
+  lazyLoad,
+} from './helpers/app'
 import type { Deck, LockedReading, Reading, ReadingInfo } from '@/types'
 
 // Drawing the export needs a 2D canvas, which jsdom lacks; the export itself
@@ -875,7 +883,10 @@ describe('ReadingView', () => {
       )
       await click('Draw')
 
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('free-draw-placement'))
+      await vi.waitFor(
+        () => expect(router.currentRoute.value.name).toBe('free-draw-placement'),
+        lazyLoad,
+      )
       expect(router.currentRoute.value.params.id).toBe('abc123')
       expect(toastMessages()).toEqual([['success', 'Cards drawn! Now place them on your spread.']])
     })
@@ -1085,7 +1096,7 @@ describe('ReadingView', () => {
       const { wrapper } = await openReading()
 
       await click('Edit')
-      await vi.waitFor(() => expect(editDialog()).toBeDefined())
+      await vi.waitFor(() => expect(editDialog()).toBeDefined(), lazyLoad)
       const question = field('Question')
       question.value = 'Will it last?'
       question.dispatchEvent(new Event('input'))
@@ -1120,7 +1131,7 @@ describe('ReadingView', () => {
       await openReading()
 
       await click('Edit')
-      await vi.waitFor(() => expect(editDialog()).toBeDefined())
+      await vi.waitFor(() => expect(editDialog()).toBeDefined(), lazyLoad)
       await click('Password')
       await click('Save')
 

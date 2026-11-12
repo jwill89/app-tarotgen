@@ -3,7 +3,7 @@ import { flushPromises } from '@vue/test-utils'
 import { RouterView, type Router } from 'vue-router'
 import DeckSystemEditorView from '@/views/admin/DeckSystemEditorView.vue'
 import { useUser } from '@/composables/useUser'
-import { cleanup, stubApi, signIn, testUser, testWebRouter } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, testWebRouter, lazyLoad } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -48,7 +48,7 @@ const editing = { 'GET /admin/deck-systems/3': { body: lenormand } }
 
 /** Wait for a navigation (its view loads lazily) and the calls the new page makes. */
 async function arrive(router: Router, name: string): Promise<void> {
-  await vi.waitFor(() => expect(router.currentRoute.value.name).toBe(name))
+  await vi.waitFor(() => expect(router.currentRoute.value.name).toBe(name), lazyLoad)
   await flushPromises()
 }
 
@@ -365,7 +365,7 @@ describe('admin DeckSystemEditorView', () => {
       stubApi({ 'GET /admin/deck-systems/3': { status: 401, body: { error: 'Unauthorized' } } })
       const { router } = await mountPage(DeckSystemEditorView, { path: EDIT })
 
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'), lazyLoad)
       expect(useUser().currentUser.value).toBeNull()
       expect(toasts()).toEqual([])
     })

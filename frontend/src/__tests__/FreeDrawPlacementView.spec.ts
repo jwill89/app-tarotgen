@@ -7,7 +7,7 @@ import { useDecks } from '@/composables/useDecks'
 import { useUserSpreads } from '@/composables/useUserSpreads'
 import { useToasts } from '@/composables/useToasts'
 import { cardImageUrls } from '@/utils/cardImages'
-import { mountWithApp, cleanup, signIn, stubApi, testUser } from './helpers/app'
+import { mountWithApp, cleanup, signIn, stubApi, testUser, lazyLoad } from './helpers/app'
 import type { Deck, Reading, ReadingInfo, UserSpread } from '@/types'
 
 const rws: Deck = {
@@ -214,7 +214,7 @@ describe('FreeDrawPlacementView', () => {
     const { router } = await openPage()
 
     expect(toastMessages()).toEqual([['error', 'Could not load the reading.']])
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'))
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'), lazyLoad)
   })
 
   it('sends the visitor home from a password-locked reading', async () => {
@@ -224,7 +224,7 @@ describe('FreeDrawPlacementView', () => {
     const { router } = await openPage()
 
     expect(toastMessages()).toEqual([['error', 'Could not load the reading.']])
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'))
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'), lazyLoad)
   })
 
   it('sends the owner back to a final reading, which can no longer change', async () => {
@@ -234,7 +234,7 @@ describe('FreeDrawPlacementView', () => {
     expect(toastMessages()).toEqual([
       ['warning', 'This reading is final and can no longer be edited.'],
     ])
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'))
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'), lazyLoad)
     expect(router.currentRoute.value.params.id).toBe('abc123')
   })
 
@@ -244,7 +244,7 @@ describe('FreeDrawPlacementView', () => {
 
     await click('Skip Placement')
 
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'))
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'), lazyLoad)
   })
 
   it('cannot be finalized until every card is placed', async () => {
@@ -285,7 +285,7 @@ describe('FreeDrawPlacementView', () => {
       spread_name: 'My Layout',
     })
     expect(saveDialog()).toBeUndefined()
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'))
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'), lazyLoad)
   })
 
   it("shows the server's error when the placement can't be saved", async () => {
@@ -341,7 +341,7 @@ describe('FreeDrawPlacementView', () => {
         ],
       })
       expect(toastMessages()).toEqual([['success', 'Spread submitted for review!']])
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'), lazyLoad)
     })
 
     it("saves a signed-in user's layout to their own spreads", async () => {
@@ -379,7 +379,7 @@ describe('FreeDrawPlacementView', () => {
       await click('Save Spread')
 
       expect(toastMessages()).toEqual([['error', 'A spread needs at least one card.']])
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'), lazyLoad)
     })
 
     it("says why a signed-in user's spread could not be saved", async () => {
@@ -399,7 +399,7 @@ describe('FreeDrawPlacementView', () => {
 
       await click('Skip')
 
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'), lazyLoad)
       expect(api.mock.calls.map(([url]) => url)).not.toContain('/api/spreads')
     })
   })

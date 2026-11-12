@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import DashboardView from '@/views/DashboardView.vue'
 import { useUser } from '@/composables/useUser'
-import { mountWithApp, cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
 
 const text = (el: Element) => el.textContent.replace(/\s+/g, ' ').trim()
 const linkTo = (title: string) =>
@@ -80,7 +80,7 @@ describe('DashboardView', () => {
 
     expect(api).toHaveBeenCalledWith('/api/auth/logout', { method: 'POST' })
     expect(useUser().isLoggedIn.value).toBe(false)
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'))
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'), lazyLoad)
   })
 
   it('signs out on this device even if the server cannot be reached', async () => {

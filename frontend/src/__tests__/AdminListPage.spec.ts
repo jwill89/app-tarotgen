@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import AdminListPage from '@/components/admin/AdminListPage.vue'
-import { mountWithApp, cleanup, testWebRouter } from './helpers/app'
+import { mountWithApp, cleanup, testWebRouter, lazyLoad } from './helpers/app'
 
 const backToSpreads = { to: { name: 'admin-spreads' }, label: 'Back to Spreads' }
 
@@ -30,7 +30,7 @@ describe('AdminListPage', () => {
     expect(back.attributes('href')).toBe(router.resolve({ name: 'admin-dashboard' }).href)
 
     await back.trigger('click')
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-dashboard'))
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-dashboard'), lazyLoad)
   })
 
   it('leads back where the page says instead', async () => {
@@ -45,7 +45,7 @@ describe('AdminListPage', () => {
 
     // A plain link: the list is pushed as a new page.
     await back.trigger('click')
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-spreads'))
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-spreads'), lazyLoad)
   })
 
   it('puts actions beside the title only when there are some', async () => {
@@ -82,7 +82,7 @@ describe('AdminListPage', () => {
       const entries = window.history.length
 
       await back.trigger('click')
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-spreads'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-spreads'), lazyLoad)
 
       expect(window.history.length).toBe(entries)
       expect(window.history.state.forward).toBe('/admin/spreads/new')
@@ -93,7 +93,7 @@ describe('AdminListPage', () => {
       const entries = window.history.length
 
       await back.trigger('click')
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-spreads'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-spreads'), lazyLoad)
 
       expect(window.history.length).toBe(entries)
       expect(window.history.state.back).toBe('/admin')

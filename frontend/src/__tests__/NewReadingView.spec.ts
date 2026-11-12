@@ -10,7 +10,7 @@ import { useFavoriteSpreads } from '@/composables/useFavoriteSpreads'
 import { useRecentReadings } from '@/composables/useRecentReadings'
 import { useToasts } from '@/composables/useToasts'
 import { STORAGE_KEYS } from '@/constants'
-import { mountWithApp, cleanup, signIn, stubApi, testUser } from './helpers/app'
+import { mountWithApp, cleanup, signIn, stubApi, testUser, lazyLoad } from './helpers/app'
 import { choose, labelled } from './helpers/page'
 import type { Deck, Reading, Spread, UserSpread } from '@/types'
 
@@ -233,7 +233,7 @@ describe('NewReadingView', () => {
       use_reversals: 'false',
       use_additional_cards: 'false',
     })
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'))
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'), lazyLoad)
     expect(router.currentRoute.value.params.id).toBe('new123')
     expect(useToasts().toasts.value.map((t) => t.message)).toEqual(['Your reading is ready!'])
     expect(useRecentReadings().recent.value).toEqual([
@@ -264,7 +264,10 @@ describe('NewReadingView', () => {
     )
     await generate(wrapper)
 
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('free-draw-placement'))
+    await vi.waitFor(
+      () => expect(router.currentRoute.value.name).toBe('free-draw-placement'),
+      lazyLoad,
+    )
     expect(useToasts().toasts.value.map((t) => t.message)).toEqual([
       'Cards drawn! Now arrange your spread.',
     ])
@@ -518,7 +521,7 @@ describe('NewReadingView', () => {
       await generate(wrapper)
 
       expect(sentFields(api)).toMatchObject({ turnstile_token: 'cf-token' })
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'), lazyLoad)
     })
 
     it('asks for a fresh challenge after a refused draw (tokens are single-use)', async () => {

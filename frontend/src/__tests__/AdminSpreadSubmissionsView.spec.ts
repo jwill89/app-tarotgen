@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import SpreadSubmissionsView from '@/views/admin/SpreadSubmissionsView.vue'
 import { useUser } from '@/composables/useUser'
 import { formatDateTime } from '@/utils/datetime'
-import { cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -315,7 +315,7 @@ describe('admin SpreadSubmissionsView', () => {
       path: '/admin/spreads/submissions',
     })
 
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'))
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'), lazyLoad)
     expect(useUser().currentUser.value).toBeNull()
     expect(toasts()).toEqual([])
   })

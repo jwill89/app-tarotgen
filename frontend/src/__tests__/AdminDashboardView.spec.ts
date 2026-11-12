@@ -3,7 +3,7 @@ import { flushPromises } from '@vue/test-utils'
 import DashboardView from '@/views/admin/DashboardView.vue'
 import { useUser } from '@/composables/useUser'
 import { APP_VERSION } from '@/constants'
-import { cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
 import { mountPage, resetPageState, click, toasts, apiCalls, button, dialog } from './helpers/page'
 import type { UsageStats } from '@/types'
 
@@ -119,7 +119,7 @@ describe('admin DashboardView', () => {
     await click(button(`v${APP_VERSION}`))
 
     // The dialog, and the notes with it, load on the first click.
-    await vi.waitFor(() => expect(dialog('Changelog')).not.toBeNull())
+    await vi.waitFor(() => expect(dialog('Changelog')).not.toBeNull(), lazyLoad)
     // CHANGELOG.md itself, through the build plugin: this version has its notes.
     const releases = [...(dialog('Changelog')?.querySelectorAll('h3 button') ?? [])].map(
       (trigger) => trigger.textContent.replace(/\s+/g, ' ').trim(),
@@ -224,7 +224,7 @@ describe('admin DashboardView', () => {
 
     await click(link('Users'))
 
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-users'))
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-users'), lazyLoad)
   })
 
   it('sums up readings: totals, the last days, the types and what is used most', async () => {
@@ -286,7 +286,7 @@ describe('admin DashboardView', () => {
     const { router } = await mountPage(DashboardView, { path: '/admin' })
 
     // The login route's component loads lazily, so the navigation lands a beat later.
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'))
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'), lazyLoad)
     expect(useUser().currentUser.value).toBeNull()
   })
 })

@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import DeckSystemSubmissionsView from '@/views/admin/DeckSystemSubmissionsView.vue'
 import { useUser } from '@/composables/useUser'
-import { cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -103,7 +103,7 @@ describe('admin DeckSystemSubmissionsView', () => {
       })
       const { router } = await mountPage(DeckSystemSubmissionsView, { path: PATH })
 
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'), lazyLoad)
       expect(useUser().currentUser.value).toBeNull()
       expect(toasts()).toEqual([])
     })
@@ -274,7 +274,10 @@ describe('admin DeckSystemSubmissionsView', () => {
 
       await click(button('Edit', row('Sola Busca')))
 
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-deck-system-edit'))
+      await vi.waitFor(
+        () => expect(router.currentRoute.value.name).toBe('admin-deck-system-edit'),
+        lazyLoad,
+      )
       expect(router.currentRoute.value.params.id).toBe('9')
       expect(api).not.toHaveBeenCalled()
     })
@@ -286,7 +289,10 @@ describe('admin DeckSystemSubmissionsView', () => {
 
       await click(button('Edit', previewFooter()))
 
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-deck-system-edit'))
+      await vi.waitFor(
+        () => expect(router.currentRoute.value.name).toBe('admin-deck-system-edit'),
+        lazyLoad,
+      )
       expect(router.currentRoute.value.params.id).toBe('9')
     })
   })

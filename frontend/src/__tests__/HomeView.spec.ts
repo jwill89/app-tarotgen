@@ -6,7 +6,7 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useRecentReadings, type RecentReading } from '@/composables/useRecentReadings'
 import { useConfirm } from '@/composables/useConfirm'
 import { STORAGE_KEYS } from '@/constants'
-import { mountWithApp, cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
 
 const text = (el: Element) => el.textContent.replace(/\s+/g, ' ').trim()
 
@@ -80,7 +80,10 @@ describe('HomeView', () => {
       input.dispatchEvent(new Event('input'))
       await click(button('View reading'))
 
-      await vi.waitFor(() => expect(router.currentRoute.value.fullPath).toBe('/reading/abc123'))
+      await vi.waitFor(
+        () => expect(router.currentRoute.value.fullPath).toBe('/reading/abc123'),
+        lazyLoad,
+      )
       expect(input.value).toBe('')
     })
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import SpreadCategoriesView from '@/views/admin/SpreadCategoriesView.vue'
 import { useUser } from '@/composables/useUser'
-import { cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -102,7 +102,7 @@ describe('admin SpreadCategoriesView', () => {
     stubApi({ 'GET /admin/spread-categories': { status: 401, body: { error: 'Unauthorized' } } })
     const { router } = await mountPage(SpreadCategoriesView, { path: '/admin/spreads/categories' })
 
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'))
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'), lazyLoad)
     expect(useUser().currentUser.value).toBeNull()
   })
 })

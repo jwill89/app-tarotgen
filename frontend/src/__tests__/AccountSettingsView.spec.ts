@@ -7,7 +7,7 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useToasts } from '@/composables/useToasts'
 import { useConfirm } from '@/composables/useConfirm'
 import { useUser } from '@/composables/useUser'
-import { mountWithApp, cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
 import type { Passkey, PluginToken } from '@/types'
 
 // The view inside what App.vue gives it: the TooltipProvider its Tooltips need
@@ -803,7 +803,7 @@ describe('AccountSettingsView', () => {
       expect(toastMessages()).toEqual(['Your account has been deleted.'])
       expect(useUser().currentUser.value).toBeNull()
       // The home page is a lazy chunk, so the navigation outlasts one flush.
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'), lazyLoad)
     })
 
     it('does nothing when the warning is cancelled', async () => {

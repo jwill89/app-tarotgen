@@ -3,7 +3,7 @@ import { flushPromises } from '@vue/test-utils'
 import { RouterView, type Router } from 'vue-router'
 import SpreadEditorView from '@/views/admin/SpreadEditorView.vue'
 import { useUser } from '@/composables/useUser'
-import { cleanup, stubApi, signIn, testUser, testWebRouter } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, testWebRouter, lazyLoad } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -55,7 +55,7 @@ async function placeNextCard(): Promise<void> {
 
 /** Wait for a navigation (its view loads lazily) and the calls the new page makes. */
 async function arrive(router: Router, name: string): Promise<void> {
-  await vi.waitFor(() => expect(router.currentRoute.value.name).toBe(name))
+  await vi.waitFor(() => expect(router.currentRoute.value.name).toBe(name), lazyLoad)
   await flushPromises()
 }
 
@@ -245,7 +245,7 @@ describe('admin SpreadEditorView', () => {
       stubApi({ 'GET /admin/spread-categories': expired, 'GET /admin/spreads/1': expired })
       const { router } = await mountPage(SpreadEditorView, { path: '/admin/spreads/1/edit' })
 
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'), lazyLoad)
       expect(useUser().currentUser.value).toBeNull()
       expect(toasts()).toEqual([])
     })

@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import SpreadsView from '@/views/admin/SpreadsView.vue'
 import { useUser } from '@/composables/useUser'
 import { NETWORK_ERROR_MESSAGE } from '@/composables/apiClient'
-import { cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -105,7 +105,7 @@ describe('admin SpreadsView', () => {
       const { router } = await mountPage(SpreadsView, { path: '/admin/spreads' })
 
       // The login route's component loads lazily, so the navigation lands a beat later.
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'), lazyLoad)
       expect(useUser().currentUser.value).toBeNull()
       expect(toasts()).toEqual([])
     })
@@ -131,7 +131,10 @@ describe('admin SpreadsView', () => {
       expect(link('Submissions').querySelector('.tag')).toBeNull()
 
       await click(link('Categories'))
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-spread-categories'))
+      await vi.waitFor(
+        () => expect(router.currentRoute.value.name).toBe('admin-spread-categories'),
+        lazyLoad,
+      )
     })
 
     it('counts the submissions waiting for review on their link', async () => {
@@ -150,7 +153,10 @@ describe('admin SpreadsView', () => {
 
       await click(button('Edit', row('Three Card')))
 
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-spread-edit'))
+      await vi.waitFor(
+        () => expect(router.currentRoute.value.name).toBe('admin-spread-edit'),
+        lazyLoad,
+      )
       expect(router.currentRoute.value.params.id).toBe('1')
       // The editor loads the spread itself.
       expect(api).not.toHaveBeenCalled()

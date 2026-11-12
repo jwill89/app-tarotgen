@@ -11,7 +11,7 @@ import { useRecentReadings } from '@/composables/useRecentReadings'
 import { useToasts } from '@/composables/useToasts'
 import { STORAGE_KEYS } from '@/constants'
 import { cardImageUrls } from '@/utils/cardImages'
-import { mountWithApp, cleanup, signIn, stubApi, testUser } from './helpers/app'
+import { mountWithApp, cleanup, signIn, stubApi, testUser, lazyLoad } from './helpers/app'
 import type { AccountReading, Deck, DeckCard, Spread } from '@/types'
 
 function deck(deck_id: number, name: string): Deck {
@@ -282,7 +282,7 @@ describe('CustomReadingView', () => {
       name: 'Morning pull',
       cards: [{ card_id: 2, reversed: true, title: '', x: 40, y: 40, rotation: 0 }],
     })
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'))
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'), lazyLoad)
     expect(router.currentRoute.value.params.id).toBe('cus123')
     expect(toastMessages()).toEqual([['success', 'Your custom reading has been saved!']])
     expect(useRecentReadings().recent.value).toEqual([
@@ -416,7 +416,7 @@ describe('CustomReadingView', () => {
       await click('Recreate Draw')
 
       expect(sentPayload(api)).toMatchObject({ turnstile_token: 'cf-token' })
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'), lazyLoad)
     })
 
     it('asks for a fresh challenge after a refused save (tokens are single-use)', async () => {

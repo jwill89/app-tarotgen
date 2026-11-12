@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import SubmitSpreadView from '@/views/SubmitSpreadView.vue'
-import { cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -109,7 +109,7 @@ describe('SubmitSpreadView', () => {
 
       await click(button('Back to Home'))
 
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'), lazyLoad)
     })
 
     it("shows the server's reason, such as the rate limit, and keeps the form", async () => {
@@ -135,7 +135,7 @@ describe('SubmitSpreadView', () => {
 
       await click(button('Cancel'))
 
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'), lazyLoad)
       expect(api).not.toHaveBeenCalled()
     })
   })
@@ -187,7 +187,10 @@ describe('SubmitSpreadView', () => {
 
       expect(apiCalls(api)).toEqual([['POST', '/api/account/spreads', dailyDraw]])
       expect(toasts()).toEqual(['Spread saved to your personal collection!'])
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('account-spreads'))
+      await vi.waitFor(
+        () => expect(router.currentRoute.value.name).toBe('account-spreads'),
+        lazyLoad,
+      )
     })
 
     it("says why the personal save failed, in the server's words, and stays on the form", async () => {

@@ -3,7 +3,7 @@ import { flushPromises } from '@vue/test-utils'
 import LoginView from '@/views/LoginView.vue'
 import { useToasts } from '@/composables/useToasts'
 import { useUser } from '@/composables/useUser'
-import { mountWithApp, cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
 
 const text = (el: Element) => el.textContent.replace(/\s+/g, ' ').trim()
 
@@ -107,7 +107,7 @@ describe('LoginView', () => {
       })
       expect(toastMessages()).toEqual(['Welcome back!'])
       expect(useUser().isLoggedIn.value).toBe(true)
-      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'))
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('home'), lazyLoad)
     })
 
     it('asks to be remembered when the switch is on', async () => {
@@ -130,7 +130,10 @@ describe('LoginView', () => {
       await fillIn()
       await click(button('Log In'))
 
-      await vi.waitFor(() => expect(router.currentRoute.value.fullPath).toBe('/account/readings'))
+      await vi.waitFor(
+        () => expect(router.currentRoute.value.fullPath).toBe('/account/readings'),
+        lazyLoad,
+      )
     })
 
     it("shows the server's reason and stays put", async () => {
@@ -248,7 +251,10 @@ describe('LoginView', () => {
       expect(get).toHaveBeenCalledTimes(1)
       expect(toastMessages()).toEqual(['Welcome back!'])
       expect(useUser().isLoggedIn.value).toBe(true)
-      await vi.waitFor(() => expect(router.currentRoute.value.fullPath).toBe('/account/spreads'))
+      await vi.waitFor(
+        () => expect(router.currentRoute.value.fullPath).toBe('/account/spreads'),
+        lazyLoad,
+      )
     })
 
     it('says why a passkey sign-in failed', async () => {
