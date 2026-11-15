@@ -24,7 +24,8 @@ jobs:
     name: Package (Release)
     # Linux: the .csproj enables Windows targeting off Windows, and DALAMUD_HOME
     # says where Dalamud is.
-    runs-on: ubuntu-24.04
+    # A pull request from a fork runs on GitHub's runners, never on a self-hosted one.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04' || vars.CI_RUNNER || 'ubuntu-24.04' }}
     steps:
       # The analyzers and code style come from the shared/ submodule
       # (plugin/Directory.Build.props), so it is checked out with the repo.
