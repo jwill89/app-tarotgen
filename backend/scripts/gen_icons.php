@@ -2,7 +2,7 @@
 
 /**
  * Icon generator. Produces the PWA icons in frontend/public/ from two masters
- * in backend/assets/ using GD:
+ * in backend/public/assets/ using GD:
  *   - favicon.png       512x512 charcoal medallion  (tab / any-purpose mark)
  *   - favicon-mark.png  512x512 bare gold star-in-ring on transparency
  *
@@ -10,10 +10,10 @@
  *   php scripts/gen_icons.php
  */
 
-$tile = imagecreatefrompng(__DIR__ . '/../assets/favicon.png');
-$mark = imagecreatefrompng(__DIR__ . '/../assets/favicon-mark.png');
+$tile = imagecreatefrompng(__DIR__ . '/../public/assets/favicon.png');
+$mark = imagecreatefrompng(__DIR__ . '/../public/assets/favicon-mark.png');
 if ($tile === false || $mark === false) {
-    fwrite(STDERR, "Could not load assets/favicon.png and assets/favicon-mark.png\n");
+    fwrite(STDERR, "Could not load public/assets/favicon.png and public/assets/favicon-mark.png\n");
     exit(1);
 }
 foreach ([$tile, $mark] as $im) {

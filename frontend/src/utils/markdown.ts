@@ -8,14 +8,15 @@ import DOMPurify from 'dompurify'
  * user-supplied content (contact messages, reading notes, user spread
  * descriptions), so the DOMPurify pass is load-bearing, not cosmetic: it is the
  * only thing that makes the `v-html` call sites safe. Every non-empty path goes
- * through it — keep it that way.
+ * through it — keep it that way. It also drops style="" attributes, which the
+ * page's Content-Security-Policy would refuse anyway.
  */
 export function renderMarkdown(md: string | null | undefined): string {
   if (!md) {
     return ''
   }
   const html = marked.parse(md, { async: false })
-  return DOMPurify.sanitize(html)
+  return DOMPurify.sanitize(html, { FORBID_ATTR: ['style'] })
 }
 
 /**

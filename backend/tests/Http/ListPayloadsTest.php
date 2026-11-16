@@ -32,10 +32,10 @@ final class ListPayloadsTest extends HttpTestCase
         $owner = $this->createUser('morgan@example.test');
 
         $insert = $this->db->prepare('INSERT INTO readings (reading_id, reading_info, reading_time, user_id) VALUES (?, ?, ?, ?)');
-        $insert->execute(['guest00001', json_encode(['deck_id' => $deck->deck_id, 'spread' => ['name' => 'Celtic Cross']]), '2026-01-01 10:00:00', null]);
+        $insert->execute(['guest00001', json_encode(['deck_id' => $deck->deck_id, 'spread' => ['name' => 'Celtic Cross']]), '2026-01-01T10:00:00Z', null]);
         // A deck deleted since, and a free draw with no spread.
-        $insert->execute(['nodeck0002', json_encode(['deck_id' => 999]), '2026-01-02 10:00:00', $owner->user_id]);
-        $insert->execute(['newest0003', json_encode(['deck_id' => $deck->deck_id, 'spread' => ['name' => 'Three Card']]), '2026-01-03 10:00:00', $owner->user_id]);
+        $insert->execute(['nodeck0002', json_encode(['deck_id' => 999]), '2026-01-02T10:00:00Z', $owner->user_id]);
+        $insert->execute(['newest0003', json_encode(['deck_id' => $deck->deck_id, 'spread' => ['name' => 'Three Card']]), '2026-01-03T10:00:00Z', $owner->user_id]);
 
         $this->signInAs($this->createUser('admin@example.test', admin: true)->user_id);
 
@@ -44,11 +44,11 @@ final class ListPayloadsTest extends HttpTestCase
         $this->assertSame(3, $first['total']);
         $this->assertSame([
             [
-                'reading_id' => 'newest0003', 'reading_time' => '2026-01-03 10:00:00', 'user_id' => $owner->user_id,
+                'reading_id' => 'newest0003', 'reading_time' => '2026-01-03T10:00:00Z', 'user_id' => $owner->user_id,
                 'display_name' => 'morgan', 'deck_id' => $deck->deck_id, 'deck_name' => 'Test Deck', 'spread_name' => 'Three Card',
             ],
             [
-                'reading_id' => 'nodeck0002', 'reading_time' => '2026-01-02 10:00:00', 'user_id' => $owner->user_id,
+                'reading_id' => 'nodeck0002', 'reading_time' => '2026-01-02T10:00:00Z', 'user_id' => $owner->user_id,
                 'display_name' => 'morgan', 'deck_id' => 999, 'deck_name' => 'Deck #999', 'spread_name' => '',
             ],
         ], $first['rows']);
@@ -56,7 +56,7 @@ final class ListPayloadsTest extends HttpTestCase
         $last = $this->assertJsonResponse(200, $this->get('/admin/readings?limit=2&offset=2'));
         $this->assertSame([
             [
-                'reading_id' => 'guest00001', 'reading_time' => '2026-01-01 10:00:00', 'user_id' => null,
+                'reading_id' => 'guest00001', 'reading_time' => '2026-01-01T10:00:00Z', 'user_id' => null,
                 'display_name' => 'Guest', 'deck_id' => $deck->deck_id, 'deck_name' => 'Test Deck', 'spread_name' => 'Celtic Cross',
             ],
         ], $last['rows']);

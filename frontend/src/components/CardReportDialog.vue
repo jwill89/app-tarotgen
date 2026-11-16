@@ -240,7 +240,7 @@ async function submit(): Promise<void> {
 
 .report-reason:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 .report-reason[data-state='checked'] {

@@ -74,8 +74,8 @@ final class DailyCardsTest extends HttpTestCase
 
     public function testAVisitorWhoIsNotSignedInIsTurnedAway(): void
     {
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->get('/account/daily-cards?month=2026-10')));
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->draw(self::day())));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->get('/account/daily-cards?month=2026-10')));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->draw(self::day())));
         $this->assertSame(0, $this->rowCount('readings'));
     }
 
@@ -85,8 +85,8 @@ final class DailyCardsTest extends HttpTestCase
         $bearer = ['Authorization' => "Bearer {$token}"];
 
         // Session only: the plugin doesn't use the daily card, so its token doesn't open it.
-        $this->assertJsonResponse(401, $this->get('/account/daily-cards?month=2026-10', $bearer));
-        $this->assertJsonResponse(401, $this->post('/account/daily-cards', ['day' => self::day(), 'deck_id' => $this->deckId], $bearer));
+        $this->assertProblem(401, $this->get('/account/daily-cards?month=2026-10', $bearer));
+        $this->assertProblem(401, $this->post('/account/daily-cards', ['day' => self::day(), 'deck_id' => $this->deckId], $bearer));
         $this->assertSame(0, $this->rowCount('daily_cards'));
     }
 
@@ -129,10 +129,10 @@ final class DailyCardsTest extends HttpTestCase
         $this->signInAs($this->userId);
         $first = $this->assertJsonResponse(201, $this->draw(self::day()));
 
-        $again = $this->assertJsonResponse(409, $this->draw(self::day(), ['use_reversals' => true]));
+        $again = $this->draw(self::day(), ['use_reversals' => true]);
 
-        $this->assertDocumented('post', '/account/daily-cards', 409, $again);
-        $this->assertSame(['error' => 'You have already drawn your daily card for this day.', 'reading_id' => $first['reading_id']], $again);
+        $this->assertSame('You have already drawn your daily card for this day.', $this->assertDocumentedProblem('post', '/account/daily-cards', 409, $again));
+        $this->assertSame($first['reading_id'], $this->problemBody(409, $again)['reading_id']);
         $this->assertSame(1, $this->rowCount('readings'));
     }
 
@@ -190,7 +190,7 @@ final class DailyCardsTest extends HttpTestCase
             $body['day'] = $day;
         }
 
-        $this->assertSame(['error' => $error], $this->assertJsonResponse(400, $this->post('/account/daily-cards', $body)));
+        $this->assertSame($error, $this->assertProblem(422, $this->post('/account/daily-cards', $body)));
         $this->assertSame(0, $this->rowCount('readings'));
     }
 
@@ -200,12 +200,12 @@ final class DailyCardsTest extends HttpTestCase
         $this->assertNotNull($pending);
         $this->signInAs($this->userId);
 
-        $choose = ['error' => 'Choose a deck to draw from.'];
-        $this->assertSame($choose, $this->assertJsonResponse(400, $this->post('/account/daily-cards', ['day' => self::day()])));
-        $this->assertSame($choose, $this->assertJsonResponse(400, $this->draw(self::day(), ['deck_id' => 0])));
-        $this->assertSame($choose, $this->assertJsonResponse(400, $this->draw(self::day(), ['deck_id' => 'three'])));
-        $this->assertSame(['error' => 'InvalidDeckID'], $this->assertJsonResponse(400, $this->draw(self::day(), ['deck_id' => $this->deckId + 100])));
-        $this->assertSame(['error' => 'InvalidDeckID'], $this->assertJsonResponse(400, $this->draw(self::day(), ['deck_id' => $pending->deck_id])));
+        $choose = 'Choose a deck to draw from.';
+        $this->assertSame($choose, $this->assertProblem(422, $this->post('/account/daily-cards', ['day' => self::day()])));
+        $this->assertSame($choose, $this->assertProblem(422, $this->draw(self::day(), ['deck_id' => 0])));
+        $this->assertSame($choose, $this->assertProblem(422, $this->draw(self::day(), ['deck_id' => 'three'])));
+        $this->assertSame('InvalidDeckID', $this->assertProblem(422, $this->draw(self::day(), ['deck_id' => $this->deckId + 100])));
+        $this->assertSame('InvalidDeckID', $this->assertProblem(422, $this->draw(self::day(), ['deck_id' => $pending->deck_id])));
         $this->assertSame(0, $this->rowCount('readings'));
 
         // A deck id sent as a numeric string is still a deck id.
@@ -255,13 +255,13 @@ final class DailyCardsTest extends HttpTestCase
     {
         $this->signInAs($this->userId);
 
-        $this->assertSame(['error' => 'month must be a month, as YYYY-MM.'], $this->assertJsonResponse(400, $this->get('/account/daily-cards' . $query)));
+        $this->assertSame('month must be a month, as YYYY-MM.', $this->assertProblem(422, $this->get('/account/daily-cards' . $query)));
     }
 
     public function testMyReadingsMarksTheDailyCard(): void
     {
         $this->signInAs($this->userId);
-        $this->db->exec("INSERT INTO readings (reading_id, reading_info, reading_time, user_id) VALUES ('plain00001', '{\"deck_id\":1,\"draw\":[]}', '2020-01-01 00:00:00', {$this->userId})");
+        $this->db->exec("INSERT INTO readings (reading_id, reading_info, reading_time, user_id) VALUES ('plain00001', '{\"deck_id\":1,\"draw\":[]}', '2020-01-01T00:00:00Z', {$this->userId})");
         $daily = $this->assertJsonResponse(201, $this->draw(self::day()));
 
         $list = $this->assertJsonResponse(200, $this->get('/account/readings?limit=10'));
@@ -282,9 +282,12 @@ final class DailyCardsTest extends HttpTestCase
 
         // No redrawing until a card suits: the day stays drawn, with no reading.
         $this->assertSame([['day' => self::day(), 'reading_id' => null]], $this->rows('SELECT day, reading_id FROM daily_cards'));
-        $again = $this->assertJsonResponse(409, $this->draw(self::day()));
-        $this->assertDocumented('post', '/account/daily-cards', 409, $again);
-        $this->assertSame(['error' => 'You have already drawn your daily card for this day, and its reading was deleted.', 'reading_id' => null], $again);
+        $again = $this->draw(self::day());
+        $this->assertSame(
+            'You have already drawn your daily card for this day, and its reading was deleted.',
+            $this->assertDocumentedProblem('post', '/account/daily-cards', 409, $again)
+        );
+        $this->assertNull($this->problemBody(409, $again)['reading_id']);
         $this->assertSame(0, $this->rowCount('readings'));
 
         $month = $this->assertJsonResponse(200, $this->get('/account/daily-cards?month=' . substr(self::day(), 0, 7)));
@@ -307,7 +310,7 @@ final class DailyCardsTest extends HttpTestCase
         $this->assertSame([['user_id' => $this->userId, 'reading_id' => null]], $this->rows('SELECT user_id, reading_id FROM daily_cards'));
         $this->useSessionCookie(null);
         $this->signInAs($this->userId);
-        $this->assertNull($this->assertJsonResponse(409, $this->draw(self::day()))['reading_id']);
+        $this->assertNull($this->problemBody(409, $this->draw(self::day()))['reading_id']);
         $this->assertSame(0, $this->rowCount('readings'));
     }
 

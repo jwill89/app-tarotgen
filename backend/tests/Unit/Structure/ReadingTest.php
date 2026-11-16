@@ -57,10 +57,10 @@ final class ReadingTest extends TestCase
             ->setQuestion('What now?')
             ->setQuerent('Sam')
             ->setVisibility('password')
-            ->setExpiresAt('2026-11-01 00:00:00');
+            ->setExpiresAt('2026-11-01T00:00:00Z');
 
         $this->assertSame(
-            ['What now?', 'Sam', 'password', '2026-11-01 00:00:00'],
+            ['What now?', 'Sam', 'password', '2026-11-01T00:00:00Z'],
             [$reading->question, $reading->querent, $reading->visibility, $reading->expires_at]
         );
     }

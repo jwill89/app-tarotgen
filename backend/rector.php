@@ -16,7 +16,7 @@ return RectorConfig::configure()
         __DIR__ . '/includes',
         __DIR__ . '/scripts',
         __DIR__ . '/tests',
-        __DIR__ . '/og.php',
+        __DIR__ . '/public',
         __DIR__ . '/dev-router.php',
         __DIR__ . '/phinx.php',
     ])

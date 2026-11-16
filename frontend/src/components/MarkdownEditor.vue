@@ -8,6 +8,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import TurndownService from 'turndown'
 import { marked } from 'marked'
 import Tooltip from '@/components/Tooltip.vue'
+import { cspNonce } from '@/utils/cspNonce'
 
 const props = withDefaults(
   defineProps<{
@@ -48,6 +49,9 @@ function htmlToMd(html: string): string {
 
 const editor = useEditor({
   content: mdToHtml(props.modelValue),
+  // TipTap adds its editor styles as a <style> element, which the page's policy
+  // admits only with its nonce.
+  injectNonce: cspNonce(),
   // The editable region is a plain contenteditable: say what it is, and name it.
   editorProps: {
     attributes: {
@@ -231,7 +235,7 @@ function setLink() {
 .wysiwyg-editor {
   padding: 0;
   overflow: hidden;
-  border: 1px solid var(--myst-border-strong);
+  border: 1px solid var(--myst-control-border);
 }
 
 .wysiwyg-toolbar {
@@ -247,7 +251,7 @@ function setLink() {
 .wysiwyg-toolbar .button.is-active {
   background-color: var(--bulma-link);
   border-color: transparent;
-  color: rgb(255 255 255);
+  color: var(--bulma-link-invert);
 }
 
 .wysiwyg-content {

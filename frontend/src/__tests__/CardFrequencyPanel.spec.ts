@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import CardFrequencyPanel from '@/components/CardFrequencyPanel.vue'
 import { useDecks } from '@/composables/useDecks'
-import { mountWithApp, cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, signIn, testUser, problem } from './helpers/app'
 import type { CardCount, CardFrequency, Deck } from '@/types'
 
 const text = (el: Element) => el.textContent.replace(/\s+/g, ' ').trim()
@@ -189,7 +189,7 @@ describe('CardFrequencyPanel', () => {
     let fail = true
     serve(() =>
       fail
-        ? { status: 500, body: { error: 'Database is resting.' } }
+        ? { status: 500, body: problem('Database is resting.') }
         : { body: frequency([card('The Moon', 2)]) },
     )
     await mountWithApp(CardFrequencyPanel)

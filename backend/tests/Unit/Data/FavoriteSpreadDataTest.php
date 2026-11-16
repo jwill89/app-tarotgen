@@ -30,7 +30,7 @@ final class FavoriteSpreadDataTest extends TestCase
                 user_id INTEGER NOT NULL,
                 spread_type TEXT NOT NULL,
                 spread_id INTEGER NOT NULL,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                created_at DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
                 UNIQUE (user_id, spread_type, spread_id)
             )"
         );

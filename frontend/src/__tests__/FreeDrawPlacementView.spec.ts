@@ -7,7 +7,7 @@ import { useDecks } from '@/composables/useDecks'
 import { useUserSpreads } from '@/composables/useUserSpreads'
 import { useToasts } from '@/composables/useToasts'
 import { cardImageUrls } from '@/utils/cardImages'
-import { mountWithApp, cleanup, signIn, stubApi, testUser, lazyLoad } from './helpers/app'
+import { mountWithApp, cleanup, signIn, stubApi, testUser, lazyLoad, problem } from './helpers/app'
 import type { Deck, Reading, ReadingInfo, UserSpread } from '@/types'
 
 const rws: Deck = {
@@ -52,7 +52,7 @@ function reading(info: ReadingInfo, overrides: Partial<Reading> = {}): Reading {
   return {
     reading_id: 'abc123',
     reading_info: info,
-    reading_time: '2026-10-28 09:00:00',
+    reading_time: '2026-10-28T09:00:00Z',
     reading_name: null,
     reading_notes: null,
     reader: 'Reader',
@@ -73,8 +73,8 @@ const savedSpread: UserSpread = {
   description: '',
   card_count: 2,
   positions: [],
-  created_at: '2026-10-28 09:00:00',
-  updated_at: '2026-10-28 09:00:00',
+  created_at: '2026-10-28T09:00:00Z',
+  updated_at: '2026-10-28T09:00:00Z',
 }
 
 function loads(body: Reading, extra: Parameters<typeof stubApi>[0] = {}) {
@@ -210,7 +210,7 @@ describe('FreeDrawPlacementView', () => {
   })
 
   it('sends the visitor home when the reading cannot be loaded', async () => {
-    loads(reading(freeDraw), { 'GET /readings/abc123': { status: 404, body: { error: 'Nope' } } })
+    loads(reading(freeDraw), { 'GET /readings/abc123': { status: 404, body: problem('Nope') } })
     const { router } = await openPage()
 
     expect(toastMessages()).toEqual([['error', 'Could not load the reading.']])
@@ -290,7 +290,7 @@ describe('FreeDrawPlacementView', () => {
 
   it("shows the server's error when the placement can't be saved", async () => {
     loads(reading(freeDraw), {
-      'PUT /readings/abc123/placement': { status: 403, body: { error: 'Not your reading.' } },
+      'PUT /readings/abc123/placement': { status: 403, body: problem('Not your reading.') },
     })
     const { wrapper } = await openPage()
     await placeAll(wrapper)
@@ -372,7 +372,7 @@ describe('FreeDrawPlacementView', () => {
 
     it('says when the spread could not be saved, and still moves on to the reading', async () => {
       const { router } = await finalized({
-        'POST /spreads': { status: 422, body: { error: 'A spread needs at least one card.' } },
+        'POST /spreads': { status: 422, body: problem('A spread needs at least one card.') },
       })
 
       await typeInto('#freedraw-spread-name', 'Two Card Pull')
@@ -385,7 +385,7 @@ describe('FreeDrawPlacementView', () => {
     it("says why a signed-in user's spread could not be saved", async () => {
       signIn(testUser())
       await finalized({
-        'POST /account/spreads': { status: 400, body: { error: 'Invalid position data.' } },
+        'POST /account/spreads': { status: 422, body: problem('Invalid position data.') },
       })
 
       await typeInto('#freedraw-spread-name', 'Two Card Pull')

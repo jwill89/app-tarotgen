@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { usePluginLink, type AuthorizeParams } from '@/composables/usePluginLink'
 import { NETWORK_ERROR_MESSAGE } from '@/composables/apiClient'
-import { stubApi } from './helpers/app'
+import { stubApi, problem } from './helpers/app'
 import type { PluginToken } from '@/types'
 
 const params: AuthorizeParams = {
@@ -16,7 +16,7 @@ const token = (id: number, label: string): PluginToken => ({
   user_id: 7,
   label,
   scope: 'plugin',
-  created_at: '2026-09-01 10:00:00',
+  created_at: '2026-09-01T10:00:00Z',
   last_used_at: null,
   expires_at: null,
   revoked_at: null,
@@ -42,8 +42,8 @@ describe('usePluginLink.authorize', () => {
   it("passes the server's refusal through", async () => {
     stubApi({
       'POST /plugin/authorize': {
-        status: 400,
-        body: { error: 'redirect_uri must be a loopback address.' },
+        status: 422,
+        body: problem('redirect_uri must be a loopback address.'),
       },
     })
 
@@ -95,8 +95,8 @@ describe('usePluginLink.authorizeDrawKey', () => {
   it("passes the server's refusal through, or its own message without one", async () => {
     stubApi({
       'POST /plugin/draw-keys/authorize': {
-        status: 400,
-        body: { error: 'Captcha verification failed. Please try again.' },
+        status: 422,
+        body: problem('Captcha verification failed. Please try again.'),
       },
     })
     expect(await usePluginLink().authorizeDrawKey(params, '')).toEqual({
@@ -122,7 +122,7 @@ describe('usePluginLink connected apps', () => {
   })
 
   it('shows no apps rather than failing when the list cannot load', async () => {
-    stubApi({ 'GET /account/tokens': { status: 401, body: { error: 'Not authenticated' } } })
+    stubApi({ 'GET /account/tokens': { status: 401, body: problem('Not authenticated') } })
     expect(await usePluginLink().listTokens()).toEqual([])
 
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError(NETWORK_ERROR_MESSAGE)))
@@ -139,7 +139,7 @@ describe('usePluginLink connected apps', () => {
     stubApi({ 'DELETE /account/tokens/4': { status: 204 } })
     expect(await usePluginLink().revokeToken(4)).toBe(true)
 
-    stubApi({ 'DELETE /account/tokens/4': { status: 404, body: { error: 'Not found.' } } })
+    stubApi({ 'DELETE /account/tokens/4': { status: 404, body: problem('Not found.') } })
     expect(await usePluginLink().revokeToken(4)).toBe(false)
   })
 })

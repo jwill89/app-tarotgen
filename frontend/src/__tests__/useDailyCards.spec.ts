@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { useDailyCards } from '@/composables/useDailyCards'
-import { stubApi } from './helpers/app'
+import { stubApi, problem } from './helpers/app'
 import type { DailyCard } from '@/types'
 
 const card: DailyCard = {
@@ -43,7 +43,7 @@ describe('useDailyCards', () => {
     stubApi({
       'POST /account/daily-cards': {
         status: 409,
-        body: { error: 'Already drawn.', reading_id: 'first1' },
+        body: problem('Already drawn.', { reading_id: 'first1' }),
       },
     })
 
@@ -65,7 +65,7 @@ describe('useDailyCards', () => {
     stubApi({
       'POST /account/daily-cards': {
         status: 409,
-        body: { error: 'Already drawn, and its reading was deleted.', reading_id: null },
+        body: problem('Already drawn, and its reading was deleted.', { reading_id: null }),
       },
     })
 
@@ -87,8 +87,8 @@ describe('useDailyCards', () => {
     stubApi({
       'POST /account/daily-cards': (body) =>
         (body as { deck_id: number }).deck_id === 1
-          ? { status: 400, body: { error: 'Choose a deck to draw from.', reading_id: 'ignored' } }
-          : { status: 409, body: { error: 'Already drawn.' } },
+          ? { status: 422, body: problem('Choose a deck to draw from.', { reading_id: 'ignored' }) }
+          : { status: 409, body: problem('Already drawn.') },
     })
     const { drawDailyCard } = useDailyCards()
 

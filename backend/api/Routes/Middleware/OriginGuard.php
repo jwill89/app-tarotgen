@@ -5,6 +5,7 @@ namespace Routes\Middleware;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\RequestHandlerInterface as Handler;
+use Routes\Problem;
 use Slim\Psr7\Response;
 use Tarot\Config\Env;
 
@@ -40,9 +41,7 @@ final class OriginGuard
         // Only block when we have a source host that isn't us. No header at all
         // → not a browser CSRF vector (SameSite=Lax covers browsers); allow.
         if ($sourceHost !== null && !$this->isAllowedHost($sourceHost, $request)) {
-            $response = new Response();
-            $response->getBody()->write((string) json_encode(['error' => 'Cross-origin request blocked.']));
-            return $response->withStatus(403)->withHeader('Content-Type', 'application/json');
+            return Problem::respond(new Response(), 403, 'Cross-origin request blocked.');
         }
 
         return $handler->handle($request);

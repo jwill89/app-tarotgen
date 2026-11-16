@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import DeckSystemsView from '@/views/admin/DeckSystemsView.vue'
 import { useUser } from '@/composables/useUser'
-import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -91,7 +91,7 @@ describe('admin DeckSystemsView', () => {
     })
 
     it('drops to the login page when the session has expired', async () => {
-      const expired = { status: 401, body: { error: 'Unauthorized' } }
+      const expired = { status: 401, body: problem('Unauthorized') }
       stubApi({
         'GET /admin/deck-systems': expired,
         'GET /admin/deck-systems/pending': expired,
@@ -193,7 +193,7 @@ describe('admin DeckSystemsView', () => {
     it('keeps the system listed when the delete fails', async () => {
       stubApi({
         ...loads(),
-        'DELETE /admin/deck-systems/2': { status: 404, body: { error: 'Deck system not found.' } },
+        'DELETE /admin/deck-systems/2': { status: 404, body: problem('Deck system not found.') },
       })
       await mountPage(DeckSystemsView, { path: '/admin/deck-systems' })
       await click(button('Delete', row('Thoth')))

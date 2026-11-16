@@ -160,7 +160,7 @@ final class ReadingServiceTest extends TestCase
         try {
             $this->service()->generate(['deck_id' => 999]);
         } catch (ApiException $e) {
-            $this->assertSame(400, $e->getStatusCode());
+            $this->assertSame([422, 'body.deck_id'], [$e->getStatusCode(), $e->getLocation()]);
             throw $e;
         }
     }
@@ -313,14 +313,14 @@ final class ReadingServiceTest extends TestCase
                 $make(false);
                 $this->fail("{$kind}: expected InvalidDeckID");
             } catch (ApiException $e) {
-                $this->assertSame(['InvalidDeckID', 400], [$e->getMessage(), $e->getStatusCode()], $kind);
+                $this->assertSame(['InvalidDeckID', 422], [$e->getMessage(), $e->getStatusCode()], $kind);
             }
 
             $this->assertSame(1, $this->decodeInfo($make(true))['deck_id'], $kind);
         }
     }
 
-    public function testGenerateThrowsWithStatus404WhenSaveFails(): void
+    public function testGenerateThrowsWithStatus500WhenSaveFails(): void
     {
         $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 3]));
         $this->cardNames->method('resolve')->willReturn([1 => 'A', 2 => 'B', 3 => 'C']);
@@ -330,7 +330,7 @@ final class ReadingServiceTest extends TestCase
             $this->service()->generate(['deck_id' => 1, 'number_of_cards' => 1]);
             $this->fail('Expected ApiException');
         } catch (ApiException $e) {
-            $this->assertSame(404, $e->getStatusCode());
+            $this->assertSame(500, $e->getStatusCode());
             $this->assertSame('ErrorGeneratingReading', $e->getMessage());
         }
     }

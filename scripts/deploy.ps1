@@ -9,11 +9,12 @@
     Built on the SharedDeploy module (shared/deploy/pwsh): one archive, one held SSH
     connection, one remote run.
 
-    The live site is one flat web root (WebRoot): the SPA in dist, the API's files beside
-    it, the plugin repository in plugin. Its private data sit outside it, in TAROT_DATA_DIR
-    (/var/lib/tarotgen): the .env and the database, db/tarotdb.db, which belongs to
-    www-data. A deploy never ships the .env, the database, assets or the retired one-off
-    scripts in db.
+    The site lives in one folder on the host (WebRoot): the PHP code, vendor and the scripts,
+    and public/, Apache's document root, which holds the API's front controller, og.php,
+    the SPA in dist, the plugin repository in plugin and the images in assets. Its private
+    data sit outside it, in TAROT_DATA_DIR (DataDir): the .env and the database,
+    db/tarotdb.db, which belongs to www-data. A deploy never ships the .env, the database,
+    public/assets or the retired one-off scripts in db.
 
     What ships is the newest release: the newest tag CI made on main for
     frontend/package.json's version (the tags are fetched first), checked out into a folder
@@ -26,10 +27,12 @@
 
     Locally, from the release (or the working tree, with -Preview):
       frontend  builds frontend (vue-tsc + vite) into frontend/dist;
-      backend   packs the runtime PHP: api, includes, scripts, db/migrations, og.php,
-                openapi.json, phinx.php, composer.json, composer.lock and the .htaccess;
+      backend   packs the runtime PHP: api, includes, scripts, db/migrations, openapi.json,
+                phinx.php, composer.json, composer.lock, and public's .htaccess, og.php and
+                api front controller; fills deploy/tarotgen.cron from the settings
+                (WebRoot, DataDir);
       vhost     with the backend or the frontend, renders deploy/apache-vhost.conf from the
-                settings (ServerName, ServerAlias, ServerAdmin, CertName);
+                settings (ServerName, ServerAlias, ServerAdmin, CertName, WebRoot, DataDir);
       plugin    refuses a csproj Version that is not higher than the published repo.json's,
                 then builds the plugin from clean and lays out its repository: latest.zip,
                 icon.png and repo.json, written from the built manifest with ?v=<version>
@@ -49,35 +52,41 @@
                      reloads once the rest of the run has succeeded; a rollback puts the file
                      and those sites back;
            backend   builds the new code whole in WebRoot/.deploy/next: the upload, a copy
-                     of the live vendor with composer install --no-dev run on it, and the
-                     retired db scripts carried over. Snapshots the database (below). Swaps
-                     every entry in by renames, keeping the previous ones in
-                     WebRoot/.deploy/backend-prev. Then, from the web root:
-                       runuser -u www-data -- env TAROT_DATA_DIR=/var/lib/tarotgen php vendor/bin/phinx migrate
+                     of the live vendor with composer install --no-dev run on it, the
+                     retired db scripts carried over, and the folders of public/ the
+                     backend doesn't ship (dist, plugin, assets) carried over as hard
+                     links, so no second copy is written and the live ones stay as they
+                     are until the swap. Snapshots the database (below). Swaps every entry
+                     in by renames, keeping the previous ones in WebRoot/.deploy/backend-prev.
+                     Then, from WebRoot:
+                       runuser -u www-data -- env TAROT_DATA_DIR=<DataDir> php vendor/bin/phinx migrate
                      If that fails the deploy stops and the previous code goes back, with
                      Phinx's message, the snapshot and the command that restores it
-                     printed. The database itself is never put back automatically;
-           frontend  swaps dist in by renames (the previous kept as dist.old);
-           plugin    refuses a version not higher than the published one, then swaps the
-                     plugin folder in (the previous kept as plugin.old).
-      3. Fetch the site from here, through Cloudflare: /api/decks must list a deck (the API
-         and the database answer), the page must answer (with the frontend: name this
-         build's entry script, which must load), and repo.json must carry this release's
-         ?v=. If any check fails, what this run changed goes back, plugin and frontend
-         first, then the code; the database stays as the migrations left it.
+                     printed. The database itself is never put back automatically. Then
+                     SharedDeploy's Install-HostConfig installs /etc/cron.d/tarotgen from
+                     deploy/tarotgen.cron where it differs (retention alone, at 10:30 UTC,
+                     only once that day's backup exists), keeping the previous copy;
+           frontend  swaps public/dist in by renames (the previous kept as dist.old);
+           plugin    refuses a version not higher than the published one, then swaps
+                     public/plugin in (the previous kept as plugin.old).
+      3. Fetch the site from here, through Cloudflare, each request with SharedDeploy's own
+         ?deploy= token: /api/decks must list a deck (the API and the database answer),
+         the page must answer (with the frontend: name this build's entry script, which
+         must load), and repo.json must carry this release's ?v=. If any check fails, what
+         this run changed goes back, plugin and frontend first, then the code and the cron
+         file; the database stays as the migrations left it.
       4. With the backend, once that passes:
            - the daily backup, SharedDeploy's Install-BackupTimer: tarotgen-backup.timer runs
              as www-data at 10:00 UTC (up to 15 minutes' spread) and keeps a checked, gzip'd
-             copy, /var/lib/tarotgen/db/backups/tarotgen-YYYY-MM-DD.db.gz, for 28 days;
-           - the old backup retired: /etc/cron.d/tarotgen becomes scripts/server/tarotgen.cron
-             where it differs (retention alone, at 10:30 UTC, only once that day's backup
-             exists) and /usr/local/sbin/tarotgen-backup is removed. The old copies in
-             /var/backups/tarotgen/nightly stay until they are removed by hand;
+             copy, <DataDir>/db/backups/tarotgen-YYYY-MM-DD.db.gz, for 28 days;
            - a copy of the live database pulled into backend/db/tarotdb.db, the one the app
-             opens locally, keeping the three previous local copies (skip with -NoDbPull).
+             opens locally, keeping the three previous local copies, and the images,
+             public/assets, brought up to date in backend/public/assets, fetching only what
+             is new or changed and leaving out the WebP copies the site derives (SharedDeploy's
+             Sync-LiveFolder); skip both with -NoDbPull.
 
     The snapshot before the migrations is SharedDeploy's Backup-RemoteDatabase:
-    /var/lib/tarotgen/db/tarotdb.db.pre-<yyyyMMdd-HHmmss, UTC>.gz, written as www-data, as
+    <DataDir>/db/tarotdb.db.pre-<yyyyMMdd-HHmmss, UTC>.gz, written as www-data, as
     everything in the database's folder must be: sqlite3 .backup to a partial file, PRAGMA
     integrity_check, gzip, gzip -t, then the rename; the newest three are kept. It is taken
     before the swap, so a snapshot that fails changes nothing. The daily backup's pruning
@@ -119,8 +128,13 @@
     then $DeployKeyPath.
 
 .PARAMETER WebRoot
-    Apache DocumentRoot on the host (holds dist, api, includes, plugin and the rest). If
-    omitted, resolved from $env:DEPLOY_WEB_ROOT, then $DeployWebRoot.
+    The site's folder on the host, holding the code, vendor, the scripts and public, Apache's
+    document root. If omitted, resolved from $env:DEPLOY_WEB_ROOT, then $DeployWebRoot.
+
+.PARAMETER DataDir
+    The site's private data folder on the host, TAROT_DATA_DIR: the .env and db/tarotdb.db.
+    The vhost, the cron file and the migrations name it. If omitted, resolved from
+    $env:DEPLOY_DATA_DIR, then $DeployDataDir. It has no default.
 
 .PARAMETER SiteUrl
     The site's public address, fetched after the deploy as visitors reach it. If omitted,
@@ -157,14 +171,16 @@
     Deploy the backend and the frontend even when the host already runs this release.
 
 .PARAMETER NoBackup
-    Remove the rollback copies (dist.old, WebRoot/.deploy/backend-prev, plugin.old) once
+    Remove the rollback copies (public/dist.old, WebRoot/.deploy/backend-prev,
+    public/plugin.old, the cron file's previous copy) once
     the run succeeds on the host. A step that fails on the host still puts its previous
     copy back, but the smoke check then has nothing to go back to, so a failure only stops
     the run. The database snapshot is still taken.
 
 .PARAMETER NoDbPull
-    Don't refresh the local database (backend/db/tarotdb.db) from the live one after a
-    deploy that includes the backend.
+    Don't refresh the local database (backend/db/tarotdb.db) from the live one, nor the
+    local copy of the images (backend/public/assets), after a deploy that includes the
+    backend.
 
 .PARAMETER Preview
     Deploy the working tree as it is, uncommitted changes included, stamped
@@ -193,6 +209,7 @@ param(
     [string]$VpsUser,
     [string]$KeyPath,
     [string]$WebRoot,
+    [string]$DataDir,
     [string]$SiteUrl,
     [string]$ServerName,
     [string]$ServerAlias,
@@ -218,12 +235,13 @@ $settings = Resolve-DeploySetting -ConfigPath $ConfigPath -Value @{
     VpsUser     = $VpsUser
     KeyPath     = $KeyPath
     WebRoot     = $WebRoot
+    DataDir     = $DataDir
     SiteUrl     = $SiteUrl
     ServerName  = $ServerName
     ServerAlias = $ServerAlias
     ServerAdmin = $ServerAdmin
     CertName    = $CertName
-} -Required (@('VpsHost', 'VpsUser', 'KeyPath', 'WebRoot') + @(if ($Target -ne 'plugin') { 'ServerAdmin', 'CertName' })) -Default @{
+} -Required (@('VpsHost', 'VpsUser', 'KeyPath', 'WebRoot') + @(if ($Target -ne 'plugin') { 'DataDir', 'ServerAdmin', 'CertName' })) -Default @{
     # Public already (frontend/index.html's canonical link, the plugin's IconUrl), so not a host secret.
     SiteUrl = 'https://tarotgen.io'
 }
@@ -247,6 +265,7 @@ if ($Target -ne 'plugin') {
     if ($settings.CertName -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$') { throw 'CertName must be a folder name of letters, digits and . _ - only, not a path.' }
     if ($settings.ServerAdmin -notmatch '^[^\s@]+@[^\s@]+$') { throw 'ServerAdmin must be an email address.' }
     if ($web -notmatch '^/[A-Za-z0-9._/-]+$') { throw "WebRoot must be an absolute path of plain names, not '$web'." }
+    if ("$($settings.DataDir)".TrimEnd('/') -notmatch '^/[A-Za-z0-9._/-]+$') { throw 'DataDir must be an absolute path of plain names.' }
 }
 
 $withBackend = $Target -in 'backend', 'both'
@@ -268,9 +287,9 @@ $records = @(
     if ($withFrontend) { 'tarotgen-frontend' }
 )
 
-# The host's data, fixed by the site rather than by this machine's settings: TAROT_DATA_DIR is
-# set in the vhost, /etc/environment and scripts/server/tarotgen.cron.
-$dataDir = '/var/lib/tarotgen'
+# The host's private data folder, TAROT_DATA_DIR: the vhost, /etc/environment and the cron file
+# set it to this.
+$dataDir = "$($settings.DataDir)".TrimEnd('/')
 $liveDb = "$dataDir/db/tarotdb.db"
 $dbOwner = 'www-data'
 # The snapshot before the migrations, SharedDeploy's Backup-RemoteDatabase: <Database>.pre-<UTC
@@ -280,19 +299,21 @@ $dbOwner = 'www-data'
 $snapshotBlock = Backup-RemoteDatabase -Database $liveDb -Owner $dbOwner -Umask '077'
 $snapshot = $snapshotBlock.Snapshot
 $restoreDb = $snapshotBlock.Restore
-# The migration command, run from the web root.
+# The migration command, run from the site's folder.
 $migrate = "runuser -u $dbOwner -- env TAROT_DATA_DIR=$dataDir php vendor/bin/phinx migrate"
 
-# The backend's code, by its top-level entries in the web root: what the archive carries (under
-# backend/ in it), and vendor, which the host builds beside it. The .htaccess goes first, so the
-# new rules refuse db, phinx.php and the rest before the new files land. Its staging and backup
-# folders sit inside .deploy, which the .htaccess refuses too.
-$backendShipped = '.htaccess', 'api', 'includes', 'scripts', 'db/migrations', 'og.php', 'openapi.json', 'phinx.php', 'composer.json', 'composer.lock'
-$backendCode = @($backendShipped | ForEach-Object { ($_ -split '/')[0] }) + 'vendor'
+# The backend's code, by its top-level entries in the site's folder: what the archive carries
+# (under backend/ in it), and vendor, which the host builds beside it. Of public/, only the
+# tracked entry points ship; its other folders are carried over on the host (the step's Prepare).
+# The staging and backup folders sit in .deploy, outside public/, so no URL reaches them.
+$backendShipped = 'public/.htaccess', 'public/og.php', 'public/api', 'api', 'includes', 'scripts', 'db/migrations', 'openapi.json', 'phinx.php', 'composer.json', 'composer.lock'
+$backendCode = @($backendShipped | ForEach-Object { ($_ -split '/')[0] } | Select-Object -Unique) + 'vendor'
 $codeStaging = '.deploy/next'
 $codeBackup = '.deploy/backend-prev'
 
-# Every check after the deploy asks with this, so no edge-cached answer can stand in for the origin's.
+# This run's id: the published plugin index is read with it before a build, so no edge-cached
+# copy answers, and the host's steps mark what this run made with it. (The smoke check's
+# requests carry SharedDeploy's own token.)
 $token = [guid]::NewGuid().ToString('N').Substring(0, 12)
 
 # Only a release ships: the newest tag CI made for frontend/package.json's version, the plugin
@@ -320,13 +341,14 @@ function ConvertTo-PluginVersion {
 }
 
 # -- The host's steps -----------------------------------------------------------
-# Switch-RemoteItemSet runs these from the web root, with $stage (.deploy/next), $backup
+# Switch-RemoteItemSet runs these from the site's folder, with $stage (.deploy/next), $backup
 # (.deploy/backend-prev) and $bundle set, under set -e and its own EXIT trap, which puts the
 # previous code back if anything after the swap fails. So they set no trap of their own.
 $prepare = Format-RemoteScript -Value @{
     DB       = $liveDb
     DATA_DIR = $dataDir
     SNAPSHOT = $snapshotBlock
+    RUN      = $token
 } -Template @'
 db='__DB__'
 if [ ! -f "$db" ]; then echo "There is no database at $db (is TAROT_DATA_DIR still __DATA_DIR__?), so nothing was changed." >&2; exit 3; fi
@@ -347,6 +369,18 @@ export COMPOSER_ALLOW_SUPERUSER=1
 if [ -d vendor ]; then cp -a vendor "$stage/vendor"; fi
 composer install --working-dir="$stage" --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader
 if [ ! -f "$stage/vendor/bin/phinx" ]; then echo 'composer install left no vendor/bin/phinx, so the migrations could not run; nothing was changed.' >&2; exit 3; fi
+# public/ ships only its entry points. Its other folders (the SPA, the plugin repository, the
+# images) come over from the live public/ as hard links: nothing is copied, and the live ones
+# stay as they are until the swap. A site still on the flat layout, where they sat in the
+# site's folder itself, has them taken from there, and this run is written down as the one
+# that made public/, so its rollback removes public/ again (the old vhost serves the flat
+# folders, which a later deploy then carries over).
+mkdir -p .deploy
+if [ -e public ]; then rm -f .deploy/public-made-by; else printf '%s' '__RUN__' > .deploy/public-made-by; fi
+for d in dist plugin assets; do
+  if [ -d "public/$d" ]; then src="public/$d"; elif [ -d "$d" ]; then src="$d"; else continue; fi
+  cp -al "$src" "$stage/public/$d"
+done
 # The database before the migrations (Backup-RemoteDatabase): sqlite3 .backup to a partial file,
 # PRAGMA integrity_check, gzip to another partial file, gzip -t, and only then the rename, with
 # no uncompressed copy left; the newest three kept. Whatever it writes in the database's folder
@@ -383,38 +417,31 @@ else
   exit 6
 fi
 # <<< migrate
-# Leftover rollback archive and staging folder from an earlier deploy script; the rollback
-# copy of the code is .deploy/backend-prev.
-rm -f .deploy/backend-prev.tgz
-rm -rf .deploy.new
 '@
 
-# After the daily backup is in place: the cron file runs retention alone, and the old nightly
-# backup goes. Its copies stay until they are removed by hand. __CRON__ is the build's
-# scripts/server/tarotgen.cron, filled in once it is read.
-$retireTemplate = @'
-set -e
-cron=/etc/cron.d/tarotgen
-next=/etc/cron.d/.tarotgen.next
-old_job=/usr/local/sbin/tarotgen-backup
-nightly=/var/backups/tarotgen/nightly
-work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
-printf '%s' '__CRON__' | base64 -d > "$work/cron"
-if cmp -s "$work/cron" "$cron"; then
-  echo "$cron is already scripts/server/tarotgen.cron."
-else
-  # Under a name with dots, which cron ignores, until the rename puts it in place whole.
-  install -m 644 -o root -g root "$work/cron" "$next"
-  mv -f "$next" "$cron"
-  echo "Installed $cron from scripts/server/tarotgen.cron: retention alone, once the day's backup exists."
+# After this run's code is put back, the public/ it made on a site still on the flat layout
+# goes too: everything in it is either shipped or a hard link to a flat folder that is still
+# there. Only this run's own record counts, so no other run's rollback can remove it.
+$onRestore = Format-RemoteScript -Value @{ RUN = $token } -Template @'
+if [ "$(cat .deploy/public-made-by 2>/dev/null)" = '__RUN__' ]; then
+  rm -rf public
+  rm -f .deploy/public-made-by
+  echo 'Removed public/, which this deploy made; the site is on its flat layout again.'
 fi
-if [ -e "$old_job" ]; then
-  rm -f "$old_job"
-  echo "Removed $old_job, the old nightly backup."
-fi
-if [ -d "$nightly" ]; then
-  echo "The old nightly copies stay in $nightly ($(find "$nightly" -maxdepth 1 -type f -name 'tarotdb-*.db.gz' | wc -l) of them) until they are removed by hand."
+'@
+
+# The cron file goes in after the migrations, on the same step: where it differs from the live
+# /etc/cron.d/tarotgen, its previous copy kept for a rollback. A failure puts it back and the
+# code with it.
+$cronArchivePath = 'host/tarotgen.cron'
+$afterSwap += "`n" + (Install-HostConfig -AsStep -Name 'tarotgen' -CronFile $cronArchivePath -NoBackup:$NoBackup)
+
+# A frontend or plugin run swaps a folder inside public/, which the backend's step makes; on a
+# site still on the flat layout it refuses before anything changes.
+$needPublic = Format-RemoteScript -Value @{ WEB = $web } -Template @'
+if [ ! -d '__WEB__/public' ]; then
+  echo 'The site has no public/ folder yet: deploy the backend first (task deploy does), which moves it onto that layout. Nothing was changed.' >&2
+  exit 3
 fi
 '@
 
@@ -427,7 +454,7 @@ $frontendVhost = if ($withBackend) { @{} } else { $vhostArgs }
 $frontendRestore = if ($withBackend) { @{} } else { @{ ServerName = $serverName } }
 
 # One archive, laid out as the host's steps want it: the code under backend/, the SPA as dist,
-# the plugin repository as plugin, and the rendered vhost under host/.
+# the plugin repository as plugin, and the rendered vhost and cron file under host/.
 $content = [ordered]@{}
 $vhostFile = $null
 $entryScript = $null
@@ -435,7 +462,6 @@ $repo = $null
 $archive = $null
 $connection = $null
 $tree = $null
-$retire = $null
 
 try {
     # -- The release: what the host runs, then its own checkout -----------------------
@@ -461,7 +487,7 @@ try {
     $distDir = Join-Path $frontendDir 'dist'
     $pluginDir = Join-Path $build 'plugin\TarotGen.Plugin'
     $pluginProject = Join-Path $pluginDir 'TarotGen.Plugin.csproj'
-    $cronFile = Join-Path $build 'scripts\server\tarotgen.cron'
+    $devAssets = Join-Path $repoRoot 'backend\public\assets'
 
     # The plugin's version must be higher than the published one, since Dalamud updates to
     # nothing else. The host refuses a lower one too, but the published index is read here
@@ -492,14 +518,15 @@ try {
             if (-not (Test-Path -LiteralPath $path)) { throw "Backend payload item not found: $path. Nothing was changed." }
             $content["backend/$item"] = $path
         }
-        # The cron file names the web root and the daily backup's folder itself; a mismatch would
-        # stop retention without a word, so it stops the deploy instead, before anything changes.
-        $cron = (Get-Content -LiteralPath $cronFile -Raw) -replace "`r", ''
-        foreach ($needed in "$web/scripts/retention.php", "$dataDir/db/backups/tarotgen-") {
-            if (-not $cron.Contains($needed)) { throw "scripts/server/tarotgen.cron does not name $needed, which this deploy installs; fix one or the other. Nothing was changed." }
+        # The cron file, filled for this host. It must name the script this deploy ships and the
+        # daily backup's folder; a mismatch would stop retention without a word, so it stops the
+        # deploy instead, before anything changes.
+        $cronFile = Expand-DeployTemplate -Path (Join-Path $build 'deploy\tarotgen.cron') -Value @{ WEB_ROOT = $web; DATA_DIR = $dataDir }
+        $cron = Get-Content -LiteralPath $cronFile -Raw
+        foreach ($needed in '/scripts/retention.php', '/db/backups/tarotgen-') {
+            if (-not $cron.Contains($needed)) { throw "deploy/tarotgen.cron does not name $needed, which this deploy installs; fix one or the other. Nothing was changed." }
         }
-        if (-not $cron.EndsWith("`n")) { $cron += "`n" }
-        $retire = Format-RemoteScript -Template $retireTemplate -Value @{ CRON = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($cron)) }
+        $content[$cronArchivePath] = $cronFile
     }
 
     if ($withBackend -or $withFrontend) {
@@ -554,6 +581,9 @@ try {
     Write-Ok ('{0} files, {1:N1} MB, one archive' -f $archive.FileCount, ($archive.Size / 1MB))
 
     if (-not $connection) { $connection = $settings | Open-DeployConnection }
+    if (-not $withBackend -and -not (Invoke-RemoteWithRetry -Script $needPublic)) {
+        throw 'The site is not on the public/ layout yet; deploy the backend first. Nothing was uploaded or changed.'
+    }
 
     Write-Step 'Uploading...'
     $upload = Invoke-Upload -Path $archive.Path -Destination 'tarotgen-deploy.tgz' -Activity "Uploading TarotGen.io ($($targets -join ', '))" -FileCount $archive.FileCount
@@ -566,13 +596,13 @@ try {
     $steps = @(
         if ($withBackend) {
             Switch-RemoteItemSet -AsStep -Root $web -Item $backendCode -Source 'backend' -Staging $codeStaging -Backup $codeBackup `
-                -Prepare $prepare -AfterSwap $afterSwap @vhostArgs -NoBackup:$NoBackup
+                -Prepare $prepare -AfterSwap $afterSwap -OnRestore $onRestore @vhostArgs -NoBackup:$NoBackup
         }
         if ($withFrontend) {
-            Switch-RemoteDirectory -AsStep -Live "$web/dist" @frontendVhost -NoBackup:$NoBackup
+            Switch-RemoteDirectory -AsStep -Live "$web/public/dist" -BeforeSwap $needPublic @frontendVhost -NoBackup:$NoBackup
         }
         if ($withPlugin) {
-            Publish-PluginRepository -AsStep -Live "$web/plugin" -Version $repo.Version -IndexPath 'repo.json' -NoBackup:$NoBackup
+            Publish-PluginRepository -AsStep -Live "$web/public/plugin" -Version $repo.Version -IndexPath 'repo.json' -NoBackup:$NoBackup
         }
     )
     Write-Step "Deploying on the host ($($targets -join ', '))..."
@@ -589,37 +619,46 @@ try {
     }
 
     # -- Smoke check, through Cloudflare ------------------------------------------
+    # Every request carries SharedDeploy's own fresh ?deploy= token, so no edge-cached answer
+    # stands in for the origin's.
     $checks = @(
         if ($withBackend) {
             # A deck from the database through the API: both answer.
-            @{ Url = "$site/api/decks?deploy=$token"; Contains = '"deck_id"' }
+            @{ Url = "$site/api/decks"; Contains = '"deck_id"' }
             # og.php, backend code, serves every page.
-            if (-not $withFrontend) { @{ Url = "$site/?deploy=$token"; Contains = 'id="app"' } }
+            if (-not $withFrontend) { @{ Url = "$site/"; Contains = 'id="app"' } }
         }
         if ($withFrontend) {
             if ($entryScript) {
-                @{ Url = "$site/?deploy=$token"; Contains = $entryScript }
+                # The page names this build's entry script (-EntryScript below), which must load.
                 @{ Url = "$site$entryScript" }
+                # Swagger UI, which /api/docs loads from the build.
+                @{ Url = "$site/swagger-ui/swagger-ui-bundle.js" }
             } else {
-                @{ Url = "$site/?deploy=$token"; Contains = 'id="app"' }
+                @{ Url = "$site/"; Contains = 'id="app"' }
             }
         }
-        if ($withPlugin) { @{ Url = "$site/plugin/repo.json?deploy=$token"; Contains = "latest.zip?v=$($repo.Version)" } }
+        if ($withPlugin) { @{ Url = "$site/plugin/repo.json"; Contains = "latest.zip?v=$($repo.Version)" } }
     )
+    $smoke = @{ Check = $checks; Attempts = 3; DelaySeconds = 2 }
+    if ($withFrontend -and $entryScript) { $smoke += @{ SiteUrl = $site; EntryScript = $entryScript } }
     Write-Step "Checking $site..."
     try {
         if ($NoBackup) {
             # Nothing was kept to go back to.
-            Invoke-SmokeCheck -Check $checks -Attempts 3 -DelaySeconds 2 -NoRollback
+            Invoke-SmokeCheck @smoke -NoRollback
         } else {
             # The reverse of the deploy. The code goes back without the database: the migrations
             # are additive, so the previous code runs on the new schema.
             $rollback = @(
-                if ($withPlugin) { Restore-RemoteDirectory -Live "$web/plugin" -AsScript }
-                if ($withFrontend) { Restore-RemoteDirectory -Live "$web/dist" @frontendRestore -AsScript }
-                if ($withBackend) { Restore-RemoteItemSet -Root $web -Item $backendCode -Backup $codeBackup -ServerName $serverName -AsScript }
+                if ($withPlugin) { Restore-RemoteDirectory -Live "$web/public/plugin" -AsScript }
+                if ($withFrontend) { Restore-RemoteDirectory -Live "$web/public/dist" @frontendRestore -AsScript }
+                if ($withBackend) {
+                    Restore-RemoteItemSet -Root $web -Item $backendCode -Backup $codeBackup -ServerName $serverName -OnRestore $onRestore -AsScript
+                    Restore-HostConfig -Name 'tarotgen' -AsScript
+                }
             )
-            Invoke-SmokeCheck -Check $checks -Attempts 3 -DelaySeconds 2 -Rollback {
+            Invoke-SmokeCheck @smoke -Rollback {
                 Invoke-RemoteStep -Script $rollback -FailureMessage 'Rolling back failed on the host'
             }
         }
@@ -644,15 +683,17 @@ try {
             throw "The site is deployed and live, but its backup is not: $($_.Exception.Message)"
         }
 
-        Write-Step 'Retiring the old nightly backup...'
-        if (-not (Invoke-RemoteWithRetry -Script $retire)) {
-            throw 'The site is deployed and live, and its daily backup is in place, but the old nightly backup was not retired (the lines above say why). Until a deploy replaces /etc/cron.d/tarotgen, it runs the old backup and retention after it, as before.'
-        }
-
         if (-not $NoDbPull) {
             # sqlite3 runs as www-data, under umask 077, so its copy (tarotdb.db.pull, removed
             # after the download) and anything it makes in the database's folder are www-data's.
             $null = Copy-LiveDatabase -Database $liveDb -Destination $devDb -Owner $dbOwner
+
+            # The images are the one folder only the host holds: the card scans and the site's
+            # own pictures, far too large to archive on the host, so this copy is their backup.
+            # Only what is new or changed is fetched; the WebP copies the site derives from the
+            # scans (generate_card_images.php) are left out, and nothing local is deleted.
+            Write-Step 'Bringing the local copy of the images up to date...'
+            Sync-LiveFolder -Folder "$web/public/assets" -Destination $devAssets -Owner $dbOwner -Exclude '*.webp', 'thumbs'
         }
     }
 } finally {
@@ -669,17 +710,17 @@ if ($withBackend) {
         Write-Host "     Previous code kept in $web/$codeBackup." -ForegroundColor DarkGray
     }
     Write-Host "     Database snapshot from before the migrations: $snapshot" -ForegroundColor DarkGray
-    Write-Host '     The .env, assets and the retired db scripts were not touched.' -ForegroundColor DarkGray
+    Write-Host '     The .env, public/assets and the retired db scripts were not touched.' -ForegroundColor DarkGray
 }
 if ($withFrontend) {
     if (-not $NoBackup) {
-        Write-Host "     Previous build kept at $web/dist.old." -ForegroundColor DarkGray
+        Write-Host "     Previous build kept at $web/public/dist.old." -ForegroundColor DarkGray
     }
     Write-Host '     Assets are content-hashed and the PWA auto-updates, so no manual cache bust is needed.' -ForegroundColor DarkGray
 }
 if ($withPlugin) {
     if (-not $NoBackup) {
-        Write-Host "     Previous plugin repo kept at $web/plugin.old." -ForegroundColor DarkGray
+        Write-Host "     Previous plugin repo kept at $web/public/plugin.old." -ForegroundColor DarkGray
     }
     Write-Host "     Custom repo URL to share with testers: $site/plugin/repo.json (v$($repo.Version))." -ForegroundColor DarkGray
 }

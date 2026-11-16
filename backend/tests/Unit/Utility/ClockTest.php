@@ -45,19 +45,34 @@ final class ClockTest extends TestCase
         return abs((int) $stmt->fetchColumn());
     }
 
-    public function testNowMatchesSqliteCurrentTimestamp(): void
+    /** The form a DATETIME column's CHECK holds $timestamp to, which must be $timestamp itself. */
+    private function checkedForm(string $timestamp): mixed
     {
-        $this->assertLessThanOrEqual(2, $this->secondsFromSqliteNow(Clock::now()));
+        $stmt = $this->db->prepare("SELECT strftime('%Y-%m-%dT%H:%M:%SZ', :t)");
+        $stmt->execute([':t' => $timestamp]);
+
+        return $stmt->fetchColumn();
+    }
+
+    public function testNowIsRfc3339InUtcAndMatchesSqlitesClock(): void
+    {
+        $now = Clock::now();
+
+        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $now);
+        $this->assertSame($now, $this->checkedForm($now));
+        $this->assertLessThanOrEqual(2, $this->secondsFromSqliteNow($now));
     }
 
     public function testInIsOffsetFromNowInTheSameZone(): void
     {
-        $later = strtotime(Clock::in(3600) . ' UTC');
-        $now   = strtotime(Clock::now() . ' UTC');
+        $in = Clock::in(3600);
+        $later = strtotime($in);
+        $now   = strtotime(Clock::now());
         $this->assertIsInt($later);
         $this->assertIsInt($now);
 
-        $this->assertSame(3600, $later - $now);
+        $this->assertSame($in, $this->checkedForm($in));
+        $this->assertEqualsWithDelta(3600, $later - $now, 1);
     }
 
     public function testTodayIsTheUtcDate(): void
@@ -74,6 +89,7 @@ final class ClockTest extends TestCase
         $user = new UserData($this->db)->create('clock@example.test', 'Clock', 'not-a-real-hash');
 
         $this->assertNotNull($user);
+        $this->assertSame($user->registered_at, $this->checkedForm($user->registered_at));
         $this->assertLessThanOrEqual(2, $this->secondsFromSqliteNow($user->registered_at));
     }
 }

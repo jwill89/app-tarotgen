@@ -16,7 +16,7 @@ use Tarot\Service\AuthService;
 #[CoversClass(AuthService::class)]
 final class ActivationTest extends HttpTestCase
 {
-    private const array REFUSED = ['error' => 'This activation link is invalid or has expired.'];
+    private const string REFUSED = 'This activation link is invalid or has expired.';
 
     public function testAnActivationLinkWorksOnce(): void
     {
@@ -27,32 +27,32 @@ final class ActivationTest extends HttpTestCase
         $this->assertSame(['success' => true, 'message' => 'Your account is now active. You can log in.'], $activated);
         $this->assertSame([['is_active' => 1]], $this->rows('SELECT is_active FROM users'));
 
-        $this->assertSame(self::REFUSED, $this->assertJsonResponse(400, $this->post('/auth/activate', ['token' => $token])));
+        $this->assertSame(self::REFUSED, $this->assertProblem(422, $this->post('/auth/activate', ['token' => $token])));
     }
 
     public function testActivatingDoesNotSignYouIn(): void
     {
         $this->assertJsonResponse(200, $this->post('/auth/activate', ['token' => $this->signUp()]));
 
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 
     public function testAMissingOrMadeUpTokenIsRefused(): void
     {
         $this->signUp();
 
-        $this->assertSame(self::REFUSED, $this->assertJsonResponse(400, $this->post('/auth/activate')));
-        $this->assertSame(self::REFUSED, $this->assertJsonResponse(400, $this->post('/auth/activate', ['token' => '   '])));
-        $this->assertSame(self::REFUSED, $this->assertJsonResponse(400, $this->post('/auth/activate', ['token' => str_repeat('ab', 32)])));
+        $this->assertSame(self::REFUSED, $this->assertProblem(422, $this->post('/auth/activate')));
+        $this->assertSame(self::REFUSED, $this->assertProblem(422, $this->post('/auth/activate', ['token' => '   '])));
+        $this->assertSame(self::REFUSED, $this->assertProblem(422, $this->post('/auth/activate', ['token' => str_repeat('ab', 32)])));
         $this->assertSame([['is_active' => 0]], $this->rows('SELECT is_active FROM users'));
     }
 
     public function testAnExpiredLinkLeavesTheAccountInactive(): void
     {
         $token = $this->signUp();
-        $this->db->exec("UPDATE user_tokens SET expires_at = '2000-01-01 00:00:00'");
+        $this->db->exec("UPDATE user_tokens SET expires_at = '2000-01-01T00:00:00Z'");
 
-        $this->assertSame(self::REFUSED, $this->assertJsonResponse(400, $this->post('/auth/activate', ['token' => $token])));
+        $this->assertSame(self::REFUSED, $this->assertProblem(422, $this->post('/auth/activate', ['token' => $token])));
         $this->assertSame([['is_active' => 0]], $this->rows('SELECT is_active FROM users'));
     }
 
@@ -62,7 +62,7 @@ final class ActivationTest extends HttpTestCase
         $forgot = $this->assertJsonResponse(200, $this->post('/auth/forgot-password', ['email' => 'reader@example.test']));
 
         $resetToken = $this->tokenFrom($forgot['reset_link'] ?? null);
-        $this->assertSame(self::REFUSED, $this->assertJsonResponse(400, $this->post('/auth/activate', ['token' => $resetToken])));
+        $this->assertSame(self::REFUSED, $this->assertProblem(422, $this->post('/auth/activate', ['token' => $resetToken])));
         $this->assertSame([['is_active' => 0]], $this->rows('SELECT is_active FROM users'));
     }
 

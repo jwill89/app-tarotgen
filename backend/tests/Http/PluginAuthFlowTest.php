@@ -79,11 +79,11 @@ final class PluginAuthFlowTest extends HttpTestCase
     public function testACodeIsOnlyForASignedInBrowser(): void
     {
         $body = ['code_challenge' => $this->challenge, 'redirect_uri' => self::REDIRECT];
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->post('/plugin/authorize', $body)));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->post('/plugin/authorize', $body)));
 
         // A linked plugin can't mint codes (and so more tokens) with its own token.
         $token = $this->service(PluginTokenService::class)->issueToken($this->userId);
-        $this->assertJsonResponse(401, $this->post('/plugin/authorize', $body, ['Authorization' => "Bearer {$token}"]));
+        $this->assertProblem(401, $this->post('/plugin/authorize', $body, ['Authorization' => "Bearer {$token}"]));
 
         $this->assertSame(0, $this->rowCount('plugin_auth_codes'));
     }
@@ -91,10 +91,10 @@ final class PluginAuthFlowTest extends HttpTestCase
     public function testApprovalNeedsAnS256Challenge(): void
     {
         $this->signInAs($this->userId);
-        $required = ['error' => 'A valid S256 code_challenge is required.'];
+        $required = 'A valid S256 code_challenge is required.';
 
-        $this->assertSame($required, $this->assertJsonResponse(400, $this->post('/plugin/authorize', ['redirect_uri' => self::REDIRECT])));
-        $this->assertSame($required, $this->assertJsonResponse(400, $this->post('/plugin/authorize', [
+        $this->assertSame($required, $this->assertProblem(422, $this->post('/plugin/authorize', ['redirect_uri' => self::REDIRECT])));
+        $this->assertSame($required, $this->assertProblem(422, $this->post('/plugin/authorize', [
             'code_challenge' => $this->verifier, 'code_challenge_method' => 'plain', 'redirect_uri' => self::REDIRECT,
         ])));
         $this->assertSame(0, $this->rowCount('plugin_auth_codes'));
@@ -129,7 +129,7 @@ final class PluginAuthFlowTest extends HttpTestCase
 
         $response = $this->post('/plugin/authorize', ['code_challenge' => $this->challenge, 'redirect_uri' => $redirect]);
 
-        $this->assertSame(['error' => 'redirect_uri must be a loopback address.'], $this->assertJsonResponse(400, $response));
+        $this->assertSame('redirect_uri must be a loopback address.', $this->assertProblem(422, $response));
         $this->assertSame(0, $this->rowCount('plugin_auth_codes'));
     }
 
@@ -160,7 +160,7 @@ final class PluginAuthFlowTest extends HttpTestCase
         $code = $this->approve();
 
         $wrong = $this->post('/plugin/token', ['code' => $code, 'code_verifier' => strrev($this->verifier)]);
-        $this->assertSame(['error' => 'Invalid or expired authorization code.'], $this->assertJsonResponse(400, $wrong));
+        $this->assertSame('Invalid or expired authorization code.', $this->assertProblem(400, $wrong, 'InvalidGrant'));
         $this->assertSame(0, $this->rowCount('plugin_tokens'));
 
         // A failed check doesn't spend the code: the real plugin can still finish.
@@ -174,7 +174,7 @@ final class PluginAuthFlowTest extends HttpTestCase
 
         $replayed = $this->post('/plugin/token', ['code' => $code, 'code_verifier' => $this->verifier]);
 
-        $this->assertSame(['error' => 'Invalid or expired authorization code.'], $this->assertJsonResponse(400, $replayed));
+        $this->assertSame('Invalid or expired authorization code.', $this->assertProblem(400, $replayed, 'InvalidGrant'));
         $this->assertSame(1, $this->rowCount('plugin_tokens'));
     }
 
@@ -182,11 +182,11 @@ final class PluginAuthFlowTest extends HttpTestCase
     {
         $code = $this->approve();
         // Codes live five minutes; this one ran out a second ago.
-        $this->db->exec("UPDATE plugin_auth_codes SET expires_at = datetime('now', '-1 second')");
+        $this->db->exec("UPDATE plugin_auth_codes SET expires_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-1 second')");
 
         $response = $this->post('/plugin/token', ['code' => $code, 'code_verifier' => $this->verifier]);
 
-        $this->assertSame(['error' => 'Invalid or expired authorization code.'], $this->assertJsonResponse(400, $response));
+        $this->assertSame('Invalid or expired authorization code.', $this->assertProblem(400, $response, 'InvalidGrant'));
         $this->assertSame(0, $this->rowCount('plugin_tokens'));
     }
 
@@ -201,26 +201,26 @@ final class PluginAuthFlowTest extends HttpTestCase
 
     public function testAMissingOrMadeUpCodeIsRefused(): void
     {
-        $invalid = ['error' => 'Invalid or expired authorization code.'];
+        $invalid = 'Invalid or expired authorization code.';
 
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->post('/plugin/token', [])));
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->post('/plugin/token', ['code' => $this->approve()])));
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->post('/plugin/token', [
+        $this->assertSame($invalid, $this->assertProblem(400, $this->post('/plugin/token', []), 'InvalidGrant'));
+        $this->assertSame($invalid, $this->assertProblem(400, $this->post('/plugin/token', ['code' => $this->approve()]), 'InvalidGrant'));
+        $this->assertSame($invalid, $this->assertProblem(400, $this->post('/plugin/token', [
             'code' => bin2hex(random_bytes(32)), 'code_verifier' => $this->verifier,
-        ])));
+        ]), 'InvalidGrant'));
     }
 
     public function testExchangingCodesIsLimitedToTenAttemptsAMinute(): void
     {
         // Refused attempts count as much as good ones: a run of them is guessing.
         for ($i = 0; $i < 9; $i++) {
-            $this->assertJsonResponse(400, $this->post('/plugin/token', ['code' => bin2hex(random_bytes(32)), 'code_verifier' => $this->verifier]));
+            $this->assertProblem(400, $this->post('/plugin/token', ['code' => bin2hex(random_bytes(32)), 'code_verifier' => $this->verifier]), 'InvalidGrant');
         }
         $this->assertJsonResponse(200, $this->post('/plugin/token', ['code' => $this->approve(), 'code_verifier' => $this->verifier]));
 
         $refused = $this->post('/plugin/token', ['code' => $this->approve(), 'code_verifier' => $this->verifier]);
 
-        $this->assertSame(['error' => 'Too many attempts. Please try again later.'], $this->assertJsonResponse(429, $refused));
+        $this->assertSame('Too many attempts. Please try again later.', $this->assertProblem(429, $refused));
         $this->assertSame(1, $this->rowCount('plugin_tokens'));
     }
 
@@ -235,10 +235,10 @@ final class PluginAuthFlowTest extends HttpTestCase
         $this->assertSame(['mine000001'], array_column($this->assertJsonResponse(200, $this->get('/account/readings', $bearer)), 'reading_id'));
 
         // Anything that changes or deletes account data needs the browser session.
-        $this->assertJsonResponse(401, $this->request('PATCH', '/account/readings/mine000001', ['reading_name' => 'Renamed'], $bearer));
-        $this->assertJsonResponse(401, $this->request('DELETE', '/account/readings/mine000001', null, $bearer));
-        $this->assertJsonResponse(401, $this->post('/account/change-password', ['current_password' => 'x', 'new_password' => 'a brand new passphrase'], $bearer));
-        $this->assertJsonResponse(401, $this->request('DELETE', '/account/tokens/1', null, $bearer));
+        $this->assertProblem(401, $this->request('PATCH', '/account/readings/mine000001', ['reading_name' => 'Renamed'], $bearer));
+        $this->assertProblem(401, $this->request('DELETE', '/account/readings/mine000001', null, $bearer));
+        $this->assertProblem(401, $this->post('/account/change-password', ['current_password' => 'x', 'new_password' => 'a brand new passphrase'], $bearer));
+        $this->assertProblem(401, $this->request('DELETE', '/account/tokens/1', null, $bearer));
         $this->assertSame([['reading_name' => null]], $this->rows("SELECT reading_name FROM readings WHERE reading_id = 'mine000001'"));
         $this->assertSame(2, $this->rowCount('readings'));
         $this->assertSame([['revoked' => 0]], $this->rows('SELECT revoked_at IS NOT NULL AS revoked FROM plugin_tokens'));
@@ -253,7 +253,7 @@ final class PluginAuthFlowTest extends HttpTestCase
 
         // Written in UTC, as SQLite's own clock reads it, so the account page's "last used" is right.
         $this->assertSame([['just_now' => 1]], $this->rows(
-            "SELECT last_used_at BETWEEN datetime('now', '-10 seconds') AND datetime('now') AS just_now FROM plugin_tokens"
+            "SELECT last_used_at BETWEEN strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-10 seconds') AND strftime('%Y-%m-%dT%H:%M:%SZ', 'now') AS just_now FROM plugin_tokens"
         ));
     }
 
@@ -286,10 +286,10 @@ final class PluginAuthFlowTest extends HttpTestCase
         // Still listed, now marked revoked, so the account page can show what was unlinked.
         $listed = array_column($this->assertJsonResponse(200, $this->get('/account/tokens')), 'revoked_at', 'id');
         $this->assertIsString($listed[$id]);
-        $this->assertSame(['error' => 'Token not found.'], $this->assertJsonResponse(404, $this->request('DELETE', "/account/tokens/{$id}")));
+        $this->assertSame('Token not found.', $this->assertProblem(404, $this->request('DELETE', "/account/tokens/{$id}")));
 
         $this->useSessionCookie(null);
-        $this->assertJsonResponse(401, $this->get('/account/readings', ['Authorization' => "Bearer {$revoked}"]));
+        $this->assertProblem(401, $this->get('/account/readings', ['Authorization' => "Bearer {$revoked}"]));
         $this->assertJsonResponse(200, $this->get('/account/readings', ['Authorization' => "Bearer {$kept}"]));
     }
 
@@ -301,8 +301,8 @@ final class PluginAuthFlowTest extends HttpTestCase
 
         $response = $this->request('DELETE', '/account/tokens/' . $this->tokenId($theirs));
 
-        $this->assertSame(['error' => 'Token not found.'], $this->assertJsonResponse(404, $response));
-        $this->assertSame(['error' => 'Token not found.'], $this->assertJsonResponse(404, $this->request('DELETE', '/account/tokens/999')));
+        $this->assertSame('Token not found.', $this->assertProblem(404, $response));
+        $this->assertSame('Token not found.', $this->assertProblem(404, $this->request('DELETE', '/account/tokens/999')));
         $this->useSessionCookie(null);
         $this->assertJsonResponse(200, $this->get('/account/readings', ['Authorization' => "Bearer {$theirs}"]));
     }

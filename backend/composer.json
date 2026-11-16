@@ -72,7 +72,7 @@
             "composer-unused --no-progress",
             "composer-require-checker check composer.json --config-file=composer-require-checker.json"
         ],
-        "dev": "php -S localhost:80 dev-router.php",
+        "dev": "php -S localhost:80 -t public dev-router.php",
         "docs": "@php bin/openapi.php",
         "docs:check": [
             "@docs",

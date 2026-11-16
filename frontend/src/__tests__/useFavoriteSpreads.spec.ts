@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useFavoriteSpreads } from '@/composables/useFavoriteSpreads'
 import { useToasts } from '@/composables/useToasts'
-import { stubApi } from './helpers/app'
+import { stubApi, problem } from './helpers/app'
 
 const toastMessages = () => useToasts().toasts.value.map((t) => t.message)
 
@@ -43,7 +43,7 @@ describe('useFavoriteSpreads', () => {
   })
 
   it('stays quiet about an expired session (the router handles it)', async () => {
-    stubApi({ 'GET /account/favorites': { status: 401, body: { error: 'Not authenticated' } } })
+    stubApi({ 'GET /account/favorites': { status: 401, body: problem('Not authenticated') } })
 
     await useFavoriteSpreads().fetchFavorites()
 
@@ -52,7 +52,7 @@ describe('useFavoriteSpreads', () => {
 
   it("says why the favourites couldn't load", async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
-    stubApi({ 'GET /account/favorites': { status: 500, body: { error: 'Database is locked.' } } })
+    stubApi({ 'GET /account/favorites': { status: 500, body: problem('Database is locked.') } })
 
     await useFavoriteSpreads().fetchFavorites()
 
@@ -99,7 +99,7 @@ describe('useFavoriteSpreads', () => {
   })
 
   it('does not add a star the server never saved', async () => {
-    stubApi({ 'POST /account/favorites': { status: 422, body: { error: 'Unknown spread.' } } })
+    stubApi({ 'POST /account/favorites': { status: 422, body: problem('Unknown spread.') } })
     const { addFavorite, favorites } = useFavoriteSpreads()
 
     expect(await addFavorite('public', 99)).toBe(false)

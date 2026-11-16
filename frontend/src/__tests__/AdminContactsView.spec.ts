@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import ContactsView from '@/views/admin/ContactsView.vue'
 import { useUser } from '@/composables/useUser'
 import { formatDateTime } from '@/utils/datetime'
-import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -28,7 +28,7 @@ const contact = (contact_id: number, name: string, overrides: Partial<Contact> =
   email: `${name.toLowerCase()}@example.test`,
   message: `A message from ${name}.`,
   is_read: 0,
-  submitted_at: `2026-10-0${contact_id} 10:00:00`,
+  submitted_at: `2026-10-0${contact_id}T10:00:00Z`,
   ...overrides,
 })
 
@@ -53,8 +53,8 @@ describe('admin ContactsView', () => {
 
     expect(apiCalls(api)).toEqual([['GET', '/api/admin/contacts?show_read=0']])
     expect(tableRows()).toEqual([
-      ['3', formatDateTime('2026-10-03 10:00:00'), 'Cal', 'cal@example.test', ''],
-      ['1', formatDateTime('2026-10-01 10:00:00'), 'Ann', 'ann@example.test', ''],
+      ['3', formatDateTime('2026-10-03T10:00:00Z'), 'Cal', 'cal@example.test', ''],
+      ['1', formatDateTime('2026-10-01T10:00:00Z'), 'Ann', 'ann@example.test', ''],
     ])
     expect(row('Ann').querySelector('a')?.getAttribute('href')).toBe('mailto:ann@example.test')
   })
@@ -151,7 +151,7 @@ describe('admin ContactsView', () => {
   it("shows the server's reason and keeps the list when marking fails", async () => {
     const api = stubApi({
       'GET /admin/contacts': { body: unread },
-      'PATCH /admin/contacts/1': { status: 400, body: { error: 'Nothing to update.' } },
+      'PATCH /admin/contacts/1': { status: 422, body: problem('Nothing to update.') },
     })
     await mountPage(ContactsView, { path: '/admin/contacts' })
     api.mockClear()
@@ -190,7 +190,7 @@ describe('admin ContactsView', () => {
   })
 
   it('drops to the login page when the session has expired', async () => {
-    stubApi({ 'GET /admin/contacts': { status: 401, body: { error: 'Unauthorized' } } })
+    stubApi({ 'GET /admin/contacts': { status: 401, body: problem('Unauthorized') } })
     const { router } = await mountPage(ContactsView, { path: '/admin/contacts' })
 
     // The login route's component loads lazily, so the navigation lands a beat later.

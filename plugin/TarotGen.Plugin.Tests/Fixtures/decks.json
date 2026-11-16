@@ -1,0 +1,44 @@
+[
+  {
+    "deck_id": 1,
+    "deck_system_id": 1,
+    "name": "Moonlit Path Tarot",
+    "artist": "Ines Calloway",
+    "purchase_url": "https://example.com/moonlit-path",
+    "additional_cards": 0,
+    "card_aspect_w": 5,
+    "card_aspect_h": 8.6,
+    "approved": true,
+    "usable": true,
+    "system_short_name": "RWS",
+    "system_total_cards": 78
+  },
+  {
+    "deck_id": 7,
+    "deck_system_id": 2,
+    "name": "Fern and Feather Lenormand",
+    "artist": "",
+    "purchase_url": "",
+    "additional_cards": 0,
+    "card_aspect_w": 5,
+    "card_aspect_h": 7.5,
+    "approved": true,
+    "usable": true,
+    "system_short_name": "Lenormand",
+    "system_total_cards": 36
+  },
+  {
+    "deck_id": 4,
+    "deck_system_id": 1,
+    "name": "Gilded Hour Tarot",
+    "artist": "Tomas Brierly",
+    "purchase_url": "",
+    "additional_cards": 2,
+    "card_aspect_w": 5,
+    "card_aspect_h": 8.8,
+    "approved": true,
+    "usable": true,
+    "system_short_name": "RWS",
+    "system_total_cards": 78
+  }
+]

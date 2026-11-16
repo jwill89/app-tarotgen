@@ -30,7 +30,7 @@ final class PendingSpreadDataTest extends TestCase
                 card_count INTEGER NOT NULL DEFAULT 1,
                 positions TEXT NOT NULL DEFAULT '[]',
                 submitter TEXT NOT NULL DEFAULT '',
-                submitted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                submitted_at DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
                 user_id INTEGER DEFAULT NULL
             )"
         );

@@ -75,7 +75,10 @@ final class GoogleAuthTest extends HttpTestCase
     {
         $this->setEnv('GOOGLE_CLIENT_SECRET', '');
 
-        $this->assertSame(['error' => 'Google OAuth is not configured.'], $this->assertJsonResponse(503, $this->get('/auth/google')));
+        // The browser navigates here, so it is sent back with the reason, not shown a problem body.
+        $this->assertRedirect('/login', ['oauth_error' => 'Google OAuth is not configured.'], $this->get('/auth/google'));
+        $this->assertRedirect('/register', ['oauth_error' => 'Google OAuth is not configured.'], $this->get('/auth/google?intent=register'));
+        $this->assertRedirect('/account/settings', ['oauth_error' => 'Google OAuth is not configured.'], $this->get('/auth/google?intent=link'));
     }
 
     public function testTheFlowStartsAtGoogleWithAFreshUnguessableState(): void
@@ -96,9 +99,10 @@ final class GoogleAuthTest extends HttpTestCase
 
     public function testLinkingCannotStartWithoutASignedInUser(): void
     {
-        $this->assertSame(
-            ['error' => 'You must be logged in to link a Google account.'],
-            $this->assertJsonResponse(401, $this->get('/auth/google?intent=link'))
+        $this->assertRedirect(
+            '/login',
+            ['oauth_error' => 'You must be logged in to link a Google account.'],
+            $this->get('/auth/google?intent=link')
         );
     }
 
@@ -114,7 +118,7 @@ final class GoogleAuthTest extends HttpTestCase
         $this->assertRedirect('/login', self::BAD_STATE, $this->returnFromGoogle(['code' => self::CODE, 'state' => $state]));
 
         $this->assertSame(0, $this->rowCount('users'));
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 
     public function testAStateBelongsToTheBrowserItWasIssuedTo(): void
@@ -164,7 +168,7 @@ final class GoogleAuthTest extends HttpTestCase
 
         $this->assertFalse($this->user($reader->user_id)->google_linked);
         $this->assertSame(1, $this->rowCount('users'));
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 
     public function testSigningInWithANewEmailCreatesAnActiveRememberedAccount(): void
@@ -185,7 +189,7 @@ final class GoogleAuthTest extends HttpTestCase
         $this->assertGreaterThan(time() + Session::REMEMBER_ME_LIFETIME - 60, $this->sessionExpiry());
 
         // No password was set: a Google-only account can't sign in with an empty one.
-        $this->assertJsonResponse(401, $this->post('/auth/login', ['email' => 'reader@example.test', 'password' => '']));
+        $this->assertProblem(401, $this->post('/auth/login', ['email' => 'reader@example.test', 'password' => '']));
     }
 
     public function testSigningInLinksAndActivatesAnExistingAccountWithThatEmail(): void
@@ -254,7 +258,7 @@ final class GoogleAuthTest extends HttpTestCase
         );
 
         $this->assertFalse($this->user($reader->user_id)->google_linked);
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 
     public function testSigningUpWithAnAlreadyLinkedGoogleAccountSignsIntoIt(): void
@@ -318,7 +322,7 @@ final class GoogleAuthTest extends HttpTestCase
 
     public function testUnlinkingNeedsASignedInUser(): void
     {
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->post('/auth/google/unlink')));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->post('/auth/google/unlink')));
     }
 
     public function testAnAccountThatIsNotActiveCannotUnlink(): void
@@ -327,7 +331,7 @@ final class GoogleAuthTest extends HttpTestCase
         $this->service(UserRepository::class)->setGoogleId($reader->user_id, 'google-sub-1');
         $this->signInAs($reader->user_id);
 
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->post('/auth/google/unlink')));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->post('/auth/google/unlink')));
         $this->assertSame([['google_id' => 'google-sub-1']], $this->rows('SELECT google_id FROM users'));
     }
 
@@ -351,9 +355,12 @@ final class GoogleAuthTest extends HttpTestCase
         $this->assertRedirect('/', [], $this->completeFlow('login'));
         $this->assertFalse($this->signedInUser()['has_password']);
 
-        $refused = $this->assertJsonResponse(409, $this->post('/auth/google/unlink'));
+        $refused = $this->post('/auth/google/unlink');
 
-        $this->assertSame(['error' => 'That would leave you no way to sign in. First set a password or add a passkey.'], $refused);
+        $this->assertSame(
+            'That would leave you no way to sign in. First set a password or add a passkey.',
+            $this->assertDocumentedProblem('post', '/auth/google/unlink', 409, $refused)
+        );
         $this->assertTrue($this->signedInUser()['google_linked']);
     }
 
@@ -366,8 +373,8 @@ final class GoogleAuthTest extends HttpTestCase
         $this->signInAs($reader->user_id);
 
         $this->assertSame(
-            ['error' => 'That would leave you no way to sign in. First turn password login back on or add a passkey.'],
-            $this->assertJsonResponse(409, $this->post('/auth/google/unlink'))
+            'That would leave you no way to sign in. First turn password login back on or add a passkey.',
+            $this->assertProblem(409, $this->post('/auth/google/unlink'))
         );
         $this->assertSame([['google_id' => 'google-sub-1']], $this->rows('SELECT google_id FROM users'));
 
@@ -411,7 +418,7 @@ final class GoogleAuthTest extends HttpTestCase
         $this->signInAs($reader->user_id);
         $this->service(UserRepository::class)->delete($reader->user_id);
 
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->post('/auth/google/unlink')));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->post('/auth/google/unlink')));
     }
 
     /** GET /auth/google; returns the state Google would echo back to the callback. */

@@ -5,15 +5,18 @@ namespace Routes\Middleware;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\RequestHandlerInterface as Handler;
+use Routes\Problem;
 use Slim\Psr7\Response;
 use Tarot\Repository\UserRepository;
+use Tarot\Structure\User;
 use Tarot\Utility\Session;
 
 /**
  * Gate admin routes on a logged-in user account that is active and flagged
- * `is_admin`. The flag is re-checked from the database on every request, so
- * revoking admin (or deleting/deactivating the account) takes effect
- * immediately rather than lingering for the life of a session.
+ * `is_admin`: 401 without one, 403 for a signed-in account that isn't an admin.
+ * The flag is re-checked from the database on every request, so revoking admin
+ * (or deleting/deactivating the account) takes effect immediately rather than
+ * lingering for the life of a session.
  */
 readonly class AdminAuth
 {
@@ -21,15 +24,17 @@ readonly class AdminAuth
 
     public function __invoke(Request $request, Handler $handler): ResponseInterface
     {
-        if ($this->sessionIsAdmin()) {
-            return $handler->handle($request);
+        $user = $this->sessionUser();
+
+        if ($user === null) {
+            return Problem::respond(new Response(), 401, 'Not authenticated');
         }
 
-        $response = new Response();
-        $response->getBody()->write(json_encode(['error' => 'Unauthorized'], JSON_THROW_ON_ERROR));
-        return $response
-            ->withStatus(401)
-            ->withHeader('Content-Type', 'application/json');
+        if (!$user->is_admin) {
+            return Problem::respond(new Response(), 403, 'Only an admin can do that.');
+        }
+
+        return $handler->handle($request);
     }
 
     /**
@@ -40,14 +45,20 @@ readonly class AdminAuth
      */
     public function sessionIsAdmin(): bool
     {
+        return $this->sessionUser()?->is_admin === true;
+    }
+
+    /** The active account this request's session is signed in to, if any. */
+    private function sessionUser(): ?User
+    {
         Session::start();
 
         $userId = Session::userId();
         if ($userId === null) {
-            return false;
+            return null;
         }
 
         $user = $this->users->findById($userId);
-        return $user !== null && $user->is_active && $user->is_admin;
+        return $user !== null && $user->is_active ? $user : null;
     }
 }

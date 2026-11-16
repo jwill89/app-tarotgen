@@ -46,6 +46,21 @@ final class RateLimiterTest extends TestCase
         return sys_get_temp_dir() . '/tarot_rl_' . $safe . '.json';
     }
 
+    public function testRetryAfterIsTheTimeLeftInTheWindow(): void
+    {
+        $limiter = new RateLimiter($this->namespace, 1, 600);
+        $this->assertSame(0, $limiter->retryAfter('1.2.3.4'), 'no window running');
+
+        $limiter->hit('1.2.3.4');
+        $this->assertTrue($limiter->isLimited('1.2.3.4'));
+        $this->assertGreaterThanOrEqual(600, $limiter->retryAfter('1.2.3.4'));
+        $this->assertLessThanOrEqual(601, $limiter->retryAfter('1.2.3.4'));
+
+        // A window that has run out leaves nothing to wait for.
+        file_put_contents($this->backingFile(), json_encode(['1.2.3.4' => ['count' => 1, 'first' => time() - 700]]));
+        $this->assertSame(0, $limiter->retryAfter('1.2.3.4'));
+    }
+
     public function testMalformedEntriesInTheFileAreIgnored(): void
     {
         // The file sits in a shared temp dir: a stray or half-written entry must

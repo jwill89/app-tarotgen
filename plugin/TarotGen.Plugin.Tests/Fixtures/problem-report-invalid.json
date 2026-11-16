@@ -1,0 +1,9 @@
+{
+  "type": "about:blank",
+  "title": "Unprocessable Content",
+  "status": 422,
+  "detail": "Tell us what's wrong with this card.",
+  "errors": [
+    { "message": "Tell us what's wrong with this card.", "location": "body.details" }
+  ]
+}

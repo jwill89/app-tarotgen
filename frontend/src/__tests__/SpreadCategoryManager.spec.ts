@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
 import { flushPromises } from '@vue/test-utils'
 import SpreadCategoryManager from '@/components/admin/SpreadCategoryManager.vue'
-import { cleanup, signIn, stubApi, testUser } from './helpers/app'
+import { cleanup, signIn, stubApi, testUser, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -90,7 +90,7 @@ describe('SpreadCategoryManager', () => {
     stubApi({
       'POST /admin/spread-categories': {
         status: 409,
-        body: { error: 'A spread category with that name already exists.' },
+        body: problem('A spread category with that name already exists.'),
       },
     })
     const { changed } = await mountManager()

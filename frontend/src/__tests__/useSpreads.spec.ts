@@ -3,7 +3,7 @@ import { useSpreads } from '@/composables/useSpreads'
 import { useUserSpreads } from '@/composables/useUserSpreads'
 import { useFavoriteSpreads } from '@/composables/useFavoriteSpreads'
 import { useToasts } from '@/composables/useToasts'
-import { stubApi, signIn, testUser } from './helpers/app'
+import { stubApi, signIn, testUser, problem } from './helpers/app'
 import { apiCalls } from './helpers/page'
 import type { Spread, SpreadPosition, UserSpread } from '@/types'
 
@@ -34,8 +34,8 @@ const personalSpread = (user_spread_id: number, name: string): UserSpread => ({
   description: '',
   card_count: 2,
   positions,
-  created_at: '2026-09-01 10:00:00',
-  updated_at: '2026-09-01 10:00:00',
+  created_at: '2026-09-01T10:00:00Z',
+  updated_at: '2026-09-01T10:00:00Z',
 })
 
 describe('useSpreads', () => {
@@ -136,7 +136,7 @@ describe('useSpreads', () => {
   it("says why the picker is empty when the spreads can't load", async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     stubApi({
-      'GET /spreads': { status: 503, body: { error: 'Down for maintenance.' } },
+      'GET /spreads': { status: 503, body: problem('Down for maintenance.') },
     })
     const { fetchSpreads, spreads } = useSpreads()
     spreads.value = [publicSpread(3, 'Two Paths')]

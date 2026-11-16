@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { usePasskeys } from '@/composables/usePasskeys'
 import { useUser } from '@/composables/useUser'
 import type { User } from '@/types'
+import { problemBody } from './helpers/api'
 
 function fakeResponse(body: unknown, { ok = true, status = 200 } = {}): Response {
   return { ok, status, json: async () => body } as unknown as Response
@@ -11,7 +12,9 @@ function fakeResponse(body: unknown, { ok = true, status = 200 } = {}): Response
 function routes(table: Record<string, Response>) {
   // The init parameter is unused, but typed so specs can read what was sent.
   const fetchMock = vi.fn((url: string, _init?: RequestInit) =>
-    Promise.resolve(table[url] ?? fakeResponse({ error: 'unrouted' }, { ok: false, status: 404 })),
+    Promise.resolve(
+      table[url] ?? fakeResponse(problemBody(404, 'unrouted'), { ok: false, status: 404 }),
+    ),
   )
   vi.stubGlobal('fetch', fetchMock)
   return fetchMock
@@ -76,10 +79,10 @@ describe('usePasskeys.registerPasskey', () => {
 
   it("shows the server's reason when it won't start a registration", async () => {
     routes({
-      '/api/auth/passkeys/register/options': fakeResponse(
-        { error: 'Not authenticated' },
-        { ok: false, status: 401 },
-      ),
+      '/api/auth/passkeys/register/options': fakeResponse(problemBody(401, 'Not authenticated'), {
+        ok: false,
+        status: 401,
+      }),
     })
 
     expect(await usePasskeys().registerPasskey('Laptop')).toEqual({
@@ -145,7 +148,10 @@ describe('usePasskeys management', () => {
   it('renames locally only once the server agrees', async () => {
     routes({
       '/api/auth/passkeys': fakeResponse([{ passkey_id: 3, name: 'Old' }]),
-      '/api/auth/passkeys/3': fakeResponse({ error: 'Name too long.' }, { ok: false, status: 400 }),
+      '/api/auth/passkeys/3': fakeResponse(problemBody(422, 'Name too long.'), {
+        ok: false,
+        status: 422,
+      }),
     })
     const passkeys = usePasskeys()
     await passkeys.listPasskeys()
@@ -192,8 +198,8 @@ describe('usePasskeys.registerPasskey failures', () => {
     routes({
       '/api/auth/passkeys/register/options': creationOptions(),
       '/api/auth/passkeys/register': fakeResponse(
-        { error: 'Attestation could not be verified.' },
-        { ok: false, status: 400 },
+        problemBody(422, 'Attestation could not be verified.'),
+        { ok: false, status: 422 },
       ),
     })
     vi.stubGlobal('navigator', { credentials: { create: vi.fn().mockResolvedValue(attestation) } })
@@ -229,7 +235,7 @@ describe('usePasskeys.loginWithPasskey failures', () => {
   it('asks for options without an email when none was typed (discoverable keys)', async () => {
     const fetchMock = routes({
       '/api/auth/passkeys/login/options': fakeResponse(
-        { error: 'Passkeys are unavailable.' },
+        problemBody(503, 'Passkeys are unavailable.'),
         { ok: false, status: 503 },
       ),
     })
@@ -276,10 +282,10 @@ describe('usePasskeys.loginWithPasskey failures', () => {
   it('stays signed out when the server rejects the assertion', async () => {
     routes({
       '/api/auth/passkeys/login/options': requestOptions(),
-      '/api/auth/passkeys/login': fakeResponse(
-        { error: 'Unknown passkey.' },
-        { ok: false, status: 401 },
-      ),
+      '/api/auth/passkeys/login': fakeResponse(problemBody(401, 'Unknown passkey.'), {
+        ok: false,
+        status: 401,
+      }),
     })
     vi.stubGlobal('navigator', { credentials: { get: vi.fn().mockResolvedValue(assertion) } })
 
@@ -362,7 +368,7 @@ describe('usePasskeys list and settings', () => {
   it('keeps password login as it was when the server refuses', async () => {
     routes({
       '/api/auth/passkeys/password-login': fakeResponse(
-        { error: 'That would leave you no way to sign in. First add a passkey.' },
+        problemBody(409, 'That would leave you no way to sign in. First add a passkey.'),
         { ok: false, status: 409 },
       ),
     })

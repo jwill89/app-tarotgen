@@ -1,0 +1,6 @@
+{
+  "type": "about:blank",
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "This draw key is no longer valid. Get a new one from the plugin."
+}

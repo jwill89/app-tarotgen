@@ -3,12 +3,14 @@
 namespace Routes\Internal;
 
 use lbuchs\WebAuthn\WebAuthn;
+use Routes\Problem;
 use lbuchs\WebAuthn\Binary\ByteBuffer;
 use lbuchs\WebAuthn\WebAuthnException;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Config\Env;
+use Tarot\Exception\ApiException;
 use Tarot\Repository\PasskeyRepository;
 use Tarot\Repository\UserRepository;
 use Tarot\Service\PasskeyDecoys;
@@ -34,6 +36,9 @@ use OpenApi\Spec as OAS;
  */
 class PasskeyController extends AbstractController
 {
+    /** The longest name a passkey can be given. */
+    private const int NAME_MAX = 50;
+
     public function __construct(
         private readonly PasskeyRepository $passkeys,
         private readonly UserRepository $users,
@@ -76,7 +81,7 @@ class PasskeyController extends AbstractController
         $user = $this->users->findById($userId);
         if ($user === null) {
             // UserAuth found the account a moment ago, so it was deleted since.
-            return $response->withJson(['error' => 'Not authenticated'], 401);
+            return Problem::respond($response, 401, 'Not authenticated');
         }
 
         $webAuthn = $this->createWebAuthn();
@@ -117,7 +122,7 @@ class PasskeyController extends AbstractController
                 properties: [
                     new OAS\Property(property: 'clientDataJSON', schema: new OAS\Schema(type: 'string')),
                     new OAS\Property(property: 'attestationObject', schema: new OAS\Schema(type: 'string')),
-                    new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string', maxLength: self::NAME_MAX)),
                 ]
             )
         ),
@@ -133,8 +138,9 @@ class PasskeyController extends AbstractController
                     ]
                 )
             ),
-            new OAS\Response(response: 400, description: 'Missing/invalid attestation'),
             new OAS\Response(response: 401, description: 'Not authenticated'),
+            new OAS\Response(response: 409, description: 'No registration ceremony is pending (ask for options first), or the passkey is already registered'),
+            new OAS\Response(response: 422, description: 'Missing attestation data, an attestation that fails verification, or a name over 50 characters'),
         ]
     )]
     /**
@@ -148,19 +154,26 @@ class PasskeyController extends AbstractController
         unset($_SESSION['webauthn_challenge']);
 
         if ($challenge === null) {
-            return $response->withJson(['error' => 'No pending registration challenge.'], 400);
+            return Problem::respond($response, 409, 'No pending registration challenge.');
         }
 
         $body = $this->parsedBody($request);
         $clientDataJSON   = self::base64UrlDecode((string) ($body['clientDataJSON'] ?? ''));
         $attestationObject = self::base64UrlDecode((string) ($body['attestationObject'] ?? ''));
-        $name = Input::string($body['name'] ?? 'My Passkey', 50);
+        try {
+            $name = Input::text($body['name'] ?? null, self::NAME_MAX, 'body.name');
+        } catch (ApiException $e) {
+            return Problem::fromException($response, $e);
+        }
         if ($name === '') {
             $name = 'My Passkey';
         }
 
-        if ($clientDataJSON === '' || $attestationObject === '') {
-            return $response->withJson(['error' => 'Missing attestation data.'], 400);
+        if ($clientDataJSON === '') {
+            return Problem::invalid($response, 'body.clientDataJSON', 'Missing attestation data.');
+        }
+        if ($attestationObject === '') {
+            return Problem::invalid($response, 'body.attestationObject', 'Missing attestation data.');
         }
 
         try {
@@ -174,7 +187,7 @@ class PasskeyController extends AbstractController
                 false  // failIfRootMismatch
             );
         } catch (\Throwable $e) {
-            return $response->withJson(['error' => 'Registration failed: ' . $e->getMessage()], 400);
+            return Problem::invalid($response, 'body.attestationObject', 'Registration failed: ' . $e->getMessage());
         }
 
         // Store credential.
@@ -188,7 +201,7 @@ class PasskeyController extends AbstractController
         // refused; it would otherwise hit the unique index as a 500. Browsers skip
         // the excluded ones, but a client needn't.
         if ($this->passkeys->findByCredentialId($credentialId) !== null) {
-            return $response->withJson(['error' => 'This passkey is already registered.'], 400);
+            return Problem::respond($response, 409, 'This passkey is already registered.');
         }
 
         $passkeyId = $this->passkeys->create(
@@ -308,9 +321,10 @@ class PasskeyController extends AbstractController
                     new OAS\Property(property: 'user', schema: new OAS\Schema(ref: '#/components/schemas/User')),
                 ])
             ),
-            new OAS\Response(response: 400, description: 'Missing assertion data'),
             new OAS\Response(response: 401, description: 'Authentication failed'),
             new OAS\Response(response: 403, description: 'Account not activated'),
+            new OAS\Response(response: 409, description: 'No sign-in ceremony is pending (ask for options first)'),
+            new OAS\Response(response: 422, description: 'Missing assertion data'),
         ]
     )]
     /**
@@ -324,7 +338,7 @@ class PasskeyController extends AbstractController
         unset($_SESSION['webauthn_challenge']);
 
         if ($challenge === null) {
-            return $response->withJson(['error' => 'No pending authentication challenge.'], 400);
+            return Problem::respond($response, 409, 'No pending authentication challenge.');
         }
 
         $body = $this->parsedBody($request);
@@ -333,14 +347,20 @@ class PasskeyController extends AbstractController
         $authenticatorData = self::base64UrlDecode((string) ($body['authenticatorData'] ?? ''));
         $signature        = self::base64UrlDecode((string) ($body['signature'] ?? ''));
 
-        if ($credentialIdB64 === '' || $clientDataJSON === '' || $authenticatorData === '' || $signature === '') {
-            return $response->withJson(['error' => 'Missing assertion data.'], 400);
+        $missing = array_filter([
+            'body.id'                => $credentialIdB64 === '',
+            'body.clientDataJSON'    => $clientDataJSON === '',
+            'body.authenticatorData' => $authenticatorData === '',
+            'body.signature'         => $signature === '',
+        ]);
+        if ($missing !== []) {
+            return Problem::respond($response, 422, 'Missing assertion data.', array_map(static fn(): string => 'Missing assertion data.', $missing));
         }
 
         // Look up credential in database.
         $passkey = $this->passkeys->findByCredentialId($credentialIdB64);
         if ($passkey === null) {
-            return $response->withJson(['error' => 'Unknown passkey credential.'], 401);
+            return Problem::respond($response, 401, 'Unknown passkey credential.');
         }
 
         try {
@@ -356,7 +376,7 @@ class PasskeyController extends AbstractController
                 true   // requireUserPresent
             );
         } catch (WebAuthnException $e) {
-            return $response->withJson(['error' => 'Passkey authentication failed: ' . $e->getMessage()], 401);
+            return Problem::respond($response, 401, 'Passkey authentication failed: ' . $e->getMessage());
         }
 
         // Update signature counter.
@@ -368,11 +388,11 @@ class PasskeyController extends AbstractController
         // Load user and establish session.
         $user = $this->users->findById($passkey->user_id);
         if ($user === null) {
-            return $response->withJson(['error' => 'Account not found.'], 401);
+            return Problem::respond($response, 401, 'Account not found.');
         }
 
         if (!$user->is_active) {
-            return $response->withJson(['error' => 'Your account is not activated.'], 403);
+            return Problem::respond($response, 403, 'Your account is not activated.');
         }
 
         $this->users->touchLogin($user->user_id);
@@ -426,7 +446,7 @@ class PasskeyController extends AbstractController
         ],
         requestBody: new OAS\RequestBody(
             required: true,
-            content: new OAS\MediaType\Json(required: ['name'], properties: [new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string'))])
+            content: new OAS\MediaType\Json(required: ['name'], properties: [new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string', maxLength: self::NAME_MAX))])
         ),
         responses: [
             new OAS\Response(
@@ -436,7 +456,7 @@ class PasskeyController extends AbstractController
             ),
             new OAS\Response(response: 401, description: 'Not authenticated'),
             new OAS\Response(response: 404, description: 'Passkey not found'),
-            new OAS\Response(response: 422, description: 'Name is required'),
+            new OAS\Response(response: 422, description: 'Name is required, of at most 50 characters'),
         ]
     )]
     public function rename(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -445,14 +465,18 @@ class PasskeyController extends AbstractController
 
         $passkeyId = (int) ($args['id'] ?? 0);
         $body = $this->parsedBody($request);
-        $name = Input::string($body['name'] ?? '', 50);
+        try {
+            $name = Input::text($body['name'] ?? null, self::NAME_MAX, 'body.name');
+        } catch (ApiException $e) {
+            return Problem::fromException($response, $e);
+        }
 
         if ($name === '') {
-            return $response->withJson(['error' => 'Name is required.'], 422);
+            return Problem::invalid($response, 'body.name', 'Name is required.');
         }
 
         if (!$this->passkeys->rename($passkeyId, $userId, $name)) {
-            return $response->withJson(['error' => 'Passkey not found.'], 404);
+            return Problem::respond($response, 404, 'Passkey not found.');
         }
 
         return $response->withJson(['success' => true]);
@@ -488,16 +512,16 @@ class PasskeyController extends AbstractController
         // Ownership first: another account's passkey is simply not found,
         // whatever this account's own settings are.
         if (!in_array($passkeyId, $mine, true)) {
-            return $response->withJson(['error' => 'Passkey not found.'], 404);
+            return Problem::respond($response, 404, 'Passkey not found.');
         }
 
         $refusal = $this->signInMethods->refuseDeletingPasskey($userId);
         if ($refusal !== null) {
-            return $response->withJson(['error' => $refusal], 409);
+            return Problem::respond($response, 409, $refusal);
         }
 
         if (!$this->passkeys->delete($passkeyId, $userId)) {
-            return $response->withJson(['error' => 'Passkey not found.'], 404);
+            return Problem::respond($response, 404, 'Passkey not found.');
         }
 
         return $response->withStatus(204);
@@ -541,7 +565,7 @@ class PasskeyController extends AbstractController
 
         $refusal = $disable ? $this->signInMethods->refuseDisablingPasswordLogin($userId) : null;
         if ($refusal !== null) {
-            return $response->withJson(['error' => $refusal], 409);
+            return Problem::respond($response, 409, $refusal);
         }
 
         $this->users->setPasswordLoginDisabled($userId, $disable);

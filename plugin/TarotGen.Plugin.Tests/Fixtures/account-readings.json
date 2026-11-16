@@ -1,0 +1,98 @@
+[
+  {
+    "reading_id": "b7e01d93c4",
+    "reading_info": {
+      "deck_id": 4,
+      "origin": "generated",
+      "spread": { "spread_id": 1, "name": "Celtic Cross", "description": "", "positions": [] },
+      "draw": [
+        { "card_id": 11, "reversed": false, "card_name": "Wheel of Fortune" }
+      ]
+    },
+    "reading_time": "2026-11-12 08:41:02",
+    "user_id": 12,
+    "hide_user": false,
+    "reading_name": "Before the move",
+    "reading_notes": "Asked the night before signing the lease.",
+    "is_final": true,
+    "password_protected": true,
+    "daily_card_day": null,
+    "question": "Is this the right flat?",
+    "querent": "Mira",
+    "tags": ["home", "move"],
+    "visibility": "password",
+    "expires_at": null
+  },
+  {
+    "reading_id": "e2a94f0b71",
+    "reading_info": {
+      "deck_id": 1,
+      "origin": "generated",
+      "spread": { "spread_id": 9, "name": "Heart to Heart", "description": "", "positions": [] },
+      "draw": [
+        { "card_id": 7, "reversed": false, "card_name": "The Lovers" },
+        { "card_id": 38, "reversed": true, "card_name": "Two of Cups" }
+      ]
+    },
+    "reading_time": "2026-11-10 22:15:48",
+    "user_id": 12,
+    "hide_user": true,
+    "reading_name": null,
+    "reading_notes": null,
+    "is_final": true,
+    "password_protected": false,
+    "daily_card_day": null,
+    "question": null,
+    "querent": null,
+    "tags": [],
+    "visibility": "link",
+    "expires_at": null
+  },
+  {
+    "reading_id": "71d3c09e5a",
+    "reading_info": {
+      "deck_id": 7,
+      "draw": [
+        { "card_id": 1, "reversed": false, "card_name": "Rider" },
+        { "card_id": 2, "reversed": false, "card_name": "Clover" },
+        { "card_id": 3, "reversed": false, "card_name": "Ship" }
+      ]
+    },
+    "reading_time": "2026-11-03 07:02:19",
+    "user_id": 12,
+    "hide_user": false,
+    "reading_name": null,
+    "reading_notes": null,
+    "is_final": true,
+    "password_protected": false,
+    "daily_card_day": "2026-11-03",
+    "question": null,
+    "querent": null,
+    "tags": [],
+    "visibility": "private",
+    "expires_at": null
+  },
+  {
+    "reading_id": "9a0f61be28",
+    "reading_info": {
+      "deck_id": 99,
+      "origin": "generated",
+      "draw": [
+        { "card_id": 44, "reversed": false, "card_name": "Ten of Cups" }
+      ]
+    },
+    "reading_time": "2026-10-29 17:48:30",
+    "user_id": 12,
+    "hide_user": false,
+    "reading_name": null,
+    "reading_notes": null,
+    "is_final": true,
+    "password_protected": false,
+    "daily_card_day": null,
+    "question": null,
+    "querent": null,
+    "tags": [],
+    "visibility": "link",
+    "expires_at": null
+  }
+]

@@ -40,8 +40,8 @@ final class CardReportDataTest extends TestCase
                 card_name         TEXT    NOT NULL DEFAULT '',
                 report_count      INTEGER NOT NULL DEFAULT 1,
                 resolved_at       TEXT    DEFAULT NULL,
-                first_reported_at TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                last_reported_at  TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                first_reported_at DATETIME    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                last_reported_at  DATETIME    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
                 round             INTEGER NOT NULL DEFAULT 1
             )"
         );
@@ -54,7 +54,7 @@ final class CardReportDataTest extends TestCase
                 round         INTEGER NOT NULL,
                 reason        TEXT    NOT NULL,
                 details       TEXT    NOT NULL DEFAULT '',
-                submitted_at  TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+                submitted_at  DATETIME    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
             )"
         );
 

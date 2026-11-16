@@ -10,8 +10,8 @@
  *   system, one usable deck, one spread, a guest's reading drawn from them and
  *   an admin account; e2e.json beside it holds the admin's random password and
  *   the reading's id for the specs to read;
- * - backend/dist: a copy of the built SPA, where og.php looks for the app shell
- *   (in the deployed web root, dist/ sits beside og.php).
+ * - backend/public/dist: a copy of the built SPA, where og.php looks for the app
+ *   shell (on the host, dist/ sits beside og.php in the document root).
  *
  * The data directory is deleted and made again, so a path inside the checkout's
  * backend/db/ (where the local database lives) or one holding it is refused, and
@@ -117,8 +117,8 @@ $users->setAdmin($admin->user_id, true);
 file_put_contents($dataDir . '/e2e.json', json_encode(['email' => $admin->email, 'password' => $password, 'reading' => $reading->reading_id], JSON_THROW_ON_ERROR));
 unset($db);
 
-removeTree($backend . '/dist');
-copyTree($frontend . '/dist', $backend . '/dist');
+removeTree($backend . '/public/dist');
+copyTree($frontend . '/dist', $backend . '/public/dist');
 
 echo "E2E data in {$dataDir}\n";
 

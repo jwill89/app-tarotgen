@@ -4,7 +4,7 @@ import DailyCardView from '@/views/DailyCardView.vue'
 import { useDecks } from '@/composables/useDecks'
 import { useToasts } from '@/composables/useToasts'
 import { STORAGE_KEYS } from '@/constants'
-import { mountWithApp, cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 import type { DailyCard, Deck } from '@/types'
 
 const TODAY = '2026-10-30'
@@ -203,10 +203,9 @@ describe('DailyCardView', () => {
         {
           'POST /account/daily-cards': {
             status: 409,
-            body: {
-              error: 'You have already drawn your daily card for this day.',
+            body: problem('You have already drawn your daily card for this day.', {
               reading_id: 'abc123',
-            },
+            }),
           },
         },
       )
@@ -230,11 +229,10 @@ describe('DailyCardView', () => {
         {
           'POST /account/daily-cards': {
             status: 409,
-            body: {
-              error:
-                'You have already drawn your daily card for this day, and its reading was deleted.',
-              reading_id: null,
-            },
+            body: problem(
+              'You have already drawn your daily card for this day, and its reading was deleted.',
+              { reading_id: null },
+            ),
           },
         },
       )
@@ -258,8 +256,8 @@ describe('DailyCardView', () => {
         {},
         {
           'POST /account/daily-cards': {
-            status: 400,
-            body: { error: "A daily card can only be drawn for today. Check your device's date." },
+            status: 422,
+            body: problem("A daily card can only be drawn for today. Check your device's date."),
           },
         },
       )
@@ -442,7 +440,7 @@ describe('DailyCardView', () => {
   describe('when loading fails', () => {
     it('says so in place of the draw, and tries again', async () => {
       const months: Parameters<typeof serve>[0] = {
-        '2026-10': { status: 500, body: { error: 'The calendar is resting.' } },
+        '2026-10': { status: 500, body: problem('The calendar is resting.') },
       }
       serve(months)
       await mountPage()
@@ -460,7 +458,7 @@ describe('DailyCardView', () => {
 
     it('says which month could not be loaded, and tries it again', async () => {
       const months: Parameters<typeof serve>[0] = {
-        '2026-09': { status: 500, body: { error: 'Try later.' } },
+        '2026-09': { status: 500, body: problem('Try later.') },
       }
       const { asked } = serve(months)
       await mountPage()

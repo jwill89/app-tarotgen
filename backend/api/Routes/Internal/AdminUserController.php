@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Config\Env;
@@ -90,7 +91,7 @@ class AdminUserController extends AbstractController
         $user_id = (int) ($args['user_id'] ?? 0);
 
         if ($user_id < 1 || $this->users->findById($user_id) === null) {
-            return $response->withJson(['error' => 'User not found'], 404);
+            return Problem::respond($response, 404, 'User not found');
         }
 
         $this->users->activate($user_id);
@@ -137,7 +138,7 @@ class AdminUserController extends AbstractController
         $target  = $user_id < 1 ? null : $this->users->findById($user_id);
 
         if ($target === null) {
-            return $response->withJson(['error' => 'User not found'], 404);
+            return Problem::respond($response, 404, 'User not found');
         }
 
         $params = $this->parsedBody($request);
@@ -147,7 +148,7 @@ class AdminUserController extends AbstractController
 
             $refusal = $target->is_admin && !$isAdmin ? $this->protection->refuseDemotion($this->adminId(), $target) : null;
             if ($refusal !== null) {
-                return $response->withJson(['error' => $refusal], 403);
+                return Problem::respond($response, 403, $refusal);
             }
 
             $this->users->setAdmin($user_id, $isAdmin);
@@ -181,7 +182,8 @@ class AdminUserController extends AbstractController
                     ]
                 )
             ),
-            new OAS\Response(response: 400, description: 'Could not resend activation'),
+            new OAS\Response(response: 404, description: 'User not found'),
+            new OAS\Response(response: 409, description: 'The account is already active'),
         ]
     )]
     public function resendActivation(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -191,7 +193,11 @@ class AdminUserController extends AbstractController
         $result = $this->auth->resendActivation($user_id);
 
         if (!$result['ok']) {
-            return $response->withJson(['error' => $result['error'] ?? 'Could not resend activation.'], 400);
+            return Problem::respond(
+                $response,
+                ($result['reason'] ?? null) === 'active' ? 409 : 404,
+                $result['error'] ?? 'Could not resend activation.'
+            );
         }
 
         $payload = ['success' => true, 'emailed' => $result['emailed'] ?? false];
@@ -228,12 +234,12 @@ class AdminUserController extends AbstractController
         $target  = $user_id < 1 ? null : $this->users->findById($user_id);
 
         if ($target === null) {
-            return $response->withJson(['error' => 'User not found'], 404);
+            return Problem::respond($response, 404, 'User not found');
         }
 
         $refusal = $this->protection->refuseAdminDeletion($this->adminId(), $target);
         if ($refusal !== null) {
-            return $response->withJson(['error' => $refusal], 403);
+            return Problem::respond($response, 403, $refusal);
         }
 
         $this->auth->removeAccount($user_id);
@@ -246,7 +252,7 @@ class AdminUserController extends AbstractController
     {
         $user = $this->users->findById($userId);
         if ($user === null) {
-            return $response->withJson(['error' => 'User not found'], 404);
+            return Problem::respond($response, 404, 'User not found');
         }
 
         return $response->withJson($this->adminView($user));

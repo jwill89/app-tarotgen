@@ -11,7 +11,7 @@ import { useRecentReadings } from '@/composables/useRecentReadings'
 import { useToasts } from '@/composables/useToasts'
 import { STORAGE_KEYS } from '@/constants'
 import { cardImageUrls } from '@/utils/cardImages'
-import { mountWithApp, cleanup, signIn, stubApi, testUser, lazyLoad } from './helpers/app'
+import { mountWithApp, cleanup, signIn, stubApi, testUser, lazyLoad, problem } from './helpers/app'
 import type { AccountReading, Deck, DeckCard, Spread } from '@/types'
 
 function deck(deck_id: number, name: string): Deck {
@@ -58,7 +58,7 @@ const threeCard: Spread = {
 const saved: AccountReading = {
   reading_id: 'cus123',
   reading_info: { deck_id: 1, origin: 'custom', draw: [] },
-  reading_time: '2026-10-28 10:00:00',
+  reading_time: '2026-10-28T10:00:00Z',
   user_id: null,
   hide_user: false,
   reading_name: null,
@@ -290,7 +290,7 @@ describe('CustomReadingView', () => {
         id: 'cus123',
         deckName: 'Rider-Waite Tarot',
         summary: 'Morning pull',
-        at: '2026-10-28 10:00:00',
+        at: '2026-10-28T10:00:00Z',
       },
     ])
   })
@@ -323,7 +323,7 @@ describe('CustomReadingView', () => {
   })
 
   it("shows the server's error and stays on the form", async () => {
-    loads({ 'POST /readings': { status: 422, body: { error: 'That card is not in this deck.' } } })
+    loads({ 'POST /readings': { status: 422, body: problem('That card is not in this deck.') } })
     const { router } = await openPage()
     await placeWithCard(1, 'The Fool')
 
@@ -352,7 +352,7 @@ describe('CustomReadingView', () => {
   })
 
   it("says so when the deck's cards can't be loaded", async () => {
-    loads({ 'GET /decks/1/cards': { status: 500, body: { error: 'Boom' } } })
+    loads({ 'GET /decks/1/cards': { status: 500, body: problem('Boom') } })
     await openPage()
 
     expect(toastMessages()).toEqual([
@@ -423,8 +423,8 @@ describe('CustomReadingView', () => {
       loads({
         ...siteKey,
         'POST /readings': {
-          status: 400,
-          body: { error: 'Captcha verification failed. Please try again.' },
+          status: 422,
+          body: problem('Captcha verification failed. Please try again.'),
         },
       })
       const { router } = await openPage()

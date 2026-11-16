@@ -34,13 +34,13 @@ class CardReport extends AbstractStructure
     #[OAS\Property(schema: new OAS\Schema(type: 'integer', description: 'How many times this card has been reported.'))]
     public private(set) int $report_count = 0;
 
-    #[OAS\Property(schema: new OAS\Schema(type: 'string', nullable: true, description: 'When an admin marked it handled; null = open.'))]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string', format: 'date-time', nullable: true, description: 'When an admin marked it handled; null = open.', examples: ['2026-11-07T09:18:09Z']))]
     public private(set) ?string $resolved_at = null;
 
-    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string', format: 'date-time', examples: ['2026-11-07T09:18:09Z']))]
     public private(set) string $first_reported_at = '';
 
-    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string', format: 'date-time', examples: ['2026-11-07T09:18:09Z']))]
     public private(set) string $last_reported_at = '';
 
     /**

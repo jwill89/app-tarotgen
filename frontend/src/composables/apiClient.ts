@@ -3,22 +3,45 @@
  * by any composable (incl. useUser) without creating an import cycle. The
  * Vue-aware `useAdminApi` lives in useApi.ts and builds on these.
  */
+import type { ProblemDetails, ProblemFieldError } from '@/types'
 
 /** Shown for transport-level failures (fetch rejected: offline, DNS, CORS, …). */
 export const NETWORK_ERROR_MESSAGE = 'Network error. Please check your connection and try again.'
 
+/** Whether an already-parsed body is one of the API's problem details bodies. */
+function isProblem(body: unknown): body is ProblemDetails {
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    typeof (body as { detail?: unknown }).detail === 'string'
+  )
+}
+
 /**
- * Pull a human-readable message out of an already-parsed response body. The
- * backend returns `{ "error": "..." }` bodies; fall back when it's missing.
+ * Pull the message a user reads out of an already-parsed response body: every
+ * API error is RFC 9457 problem details, which says why in `detail`. Falls back
+ * when there is none (an empty or non-JSON body).
  */
 function messageFromBody(body: unknown, fallback: string): string {
-  if (body && typeof body === 'object') {
-    const err = (body as { error?: unknown }).error
-    if (typeof err === 'string' && err.trim() !== '') {
-      return err
-    }
+  return isProblem(body) && body.detail.trim() !== '' ? body.detail : fallback
+}
+
+/**
+ * The fields a failed validation (422) refused, from its problem body's
+ * `errors`: each with the message to show beside it and where it was sent
+ * (`body.email`). Empty when the body lists none.
+ *
+ * @param body - A failed {@link ApiResult}'s `data`.
+ */
+export function fieldErrors(body: unknown): ProblemFieldError[] {
+  if (!isProblem(body) || !Array.isArray(body.errors)) {
+    return []
   }
-  return fallback
+  return body.errors.filter(
+    (error): error is ProblemFieldError =>
+      typeof (error as Partial<ProblemFieldError> | null)?.message === 'string' &&
+      typeof (error as Partial<ProblemFieldError> | null)?.location === 'string',
+  )
 }
 
 /**
@@ -36,9 +59,10 @@ export async function readApiError(res: Response, fallback: string): Promise<str
 
 /**
  * Result of an API call. Unlike {@link apiFetch}, this preserves *why* a call
- * failed — the HTTP status, the server's error message, the parsed body (so
- * callers can read structured fields like a validation `errors` array), and
- * whether the failure was a transport error vs. an error response.
+ * failed — the HTTP status, the server's message (the problem's `detail`), the
+ * parsed body (so callers can read a validation's field errors with
+ * {@link fieldErrors}, or a problem's own members), and whether the failure was
+ * a transport error vs. an error response.
  */
 export type ApiResult<T> =
   // `headers` carries metadata such as X-Total-Count on paged lists (optional

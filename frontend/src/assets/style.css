@@ -1124,7 +1124,7 @@ body {
 
 .myst-iconbtn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 .myst-iconbtn:disabled {
@@ -1332,7 +1332,7 @@ body {
   min-height: 2.5em;
   padding: 0.45rem 0.75rem;
   background: var(--myst-surface-2);
-  border: 1px solid var(--myst-border-strong);
+  border: 1px solid var(--myst-control-border);
   border-radius: var(--bulma-radius);
   color: var(--myst-text);
   font-size: 1rem;
@@ -1344,13 +1344,13 @@ body {
 }
 
 .myst-select:hover {
-  border-color: var(--myst-hair-gold);
+  border-color: var(--myst-gold);
 }
 
 .myst-select:focus-visible {
   outline: none;
-  border-color: var(--myst-hair-gold);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 12%, transparent);
+  border-color: var(--myst-focus-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-focus-ring) 12%, transparent);
 }
 
 .myst-select[data-placeholder] {
@@ -1501,13 +1501,13 @@ body {
 
 .myst-menu-item--danger,
 .myst-menu-item--danger .mi-icon {
-  color: var(--myst-danger);
+  color: var(--myst-danger-text);
 }
 
 .myst-menu-item--danger[data-highlighted],
 .myst-menu-item--danger:hover {
   background: color-mix(in srgb, var(--myst-danger) 12%, transparent);
-  color: var(--myst-danger);
+  color: var(--myst-danger-text);
 }
 
 .myst-menu-sep {
@@ -1633,7 +1633,7 @@ body {
 
 .myst-dialog-close:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 /* reading-code dialog form */
@@ -1651,7 +1651,7 @@ body {
   flex: 1;
   min-width: 0;
   background: var(--myst-surface);
-  border: 1px solid var(--myst-border-strong);
+  border: 1px solid var(--myst-control-border);
   color: var(--myst-text);
   border-radius: 10px;
   font-size: 1rem;
@@ -1664,8 +1664,8 @@ body {
 
 .code-dialog-form .code-dialog-input:focus {
   outline: none;
-  border-color: var(--myst-hair-gold);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 12%, transparent);
+  border-color: var(--myst-focus-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-focus-ring) 12%, transparent);
 }
 
 .btn-view {
@@ -1700,7 +1700,7 @@ body {
 
 .btn-view:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-aqua) 40%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 /* ── BaseModal on Reka Dialog (portaled; header/body/footer layout) ───────── */
@@ -1797,7 +1797,7 @@ body {
 
 .myst-modal-close:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 .myst-modal-body {

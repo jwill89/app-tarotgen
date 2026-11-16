@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Service\DrawKeyService;
@@ -59,8 +60,8 @@ class DrawKeyController extends AbstractController
                 description: 'Loopback redirect target carrying the code (valid 5 minutes, once)',
                 content: new OAS\MediaType\Json(required: ['redirect_uri'], properties: [new OAS\Property(property: 'redirect_uri', schema: new OAS\Schema(type: 'string'))])
             ),
-            new OAS\Response(response: 400, description: 'Invalid challenge, non-loopback redirect_uri, or captcha failed'),
-            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
+            new OAS\Response(response: 422, description: 'Invalid challenge, non-loopback redirect_uri, or captcha failed'),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded: 10 attempts/IP/hour'),
         ]
     )]
     public function authorize(Request $request, Response $response): Response|ResponseInterface
@@ -69,7 +70,7 @@ class DrawKeyController extends AbstractController
         $ip      = $this->clientIp($request);
 
         if ($limiter->isLimited($ip)) {
-            return $response->withJson(['error' => 'Too many attempts. Please try again later.'], 429);
+            return Problem::tooManyRequests($response, 'Too many attempts. Please try again later.', $limiter->retryAfter($ip));
         }
         $limiter->hit($ip);
 
@@ -80,12 +81,12 @@ class DrawKeyController extends AbstractController
         $state       = (string) ($body['state'] ?? '');
 
         if ($challenge === '' || $method !== Pkce::METHOD) {
-            return $response->withJson(['error' => 'A valid S256 code_challenge is required.'], 400);
+            return Problem::invalid($response, 'body.code_challenge', 'A valid S256 code_challenge is required.');
         }
 
         // The code goes only to the listener the plugin opened on this machine.
         if (!LoopbackUri::isLoopback($redirectUri)) {
-            return $response->withJson(['error' => 'redirect_uri must be a loopback address.'], 400);
+            return Problem::invalid($response, 'body.redirect_uri', 'redirect_uri must be a loopback address.');
         }
 
         // The point of the page: a person, not a script, asks for the key. Checked
@@ -93,7 +94,7 @@ class DrawKeyController extends AbstractController
         if ($this->turnstile->isConfigured()) {
             $token = (string) ($body['turnstile_token'] ?? '');
             if (!$this->turnstile->verify($token, $ip)) {
-                return $response->withJson(['error' => 'Captcha verification failed. Please try again.'], 400);
+                return Problem::invalid($response, 'body.turnstile_token', 'Captcha verification failed. Please try again.');
             }
         }
 
@@ -122,8 +123,12 @@ class DrawKeyController extends AbstractController
                 description: 'The key (returned once): sent on draws as `Authorization: Bearer tg_dk_…`',
                 content: new OAS\MediaType\Json(required: ['key'], properties: [new OAS\Property(property: 'key', schema: new OAS\Schema(type: 'string'))])
             ),
-            new OAS\Response(response: 400, description: 'Invalid, expired or already used code, or the wrong verifier'),
-            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
+            new OAS\Response(
+                response: 400,
+                description: 'Invalid, expired or already used code, or the wrong verifier: OAuth\'s invalid_grant, which the problem\'s `error` names',
+                content: new OAS\MediaType(mediaType: 'application/problem+json', schema: new OAS\Schema(ref: '#/components/schemas/InvalidGrant'))
+            ),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded: 10 attempts/IP/minute'),
         ]
     )]
     public function token(Request $request, Response $response): Response|ResponseInterface
@@ -132,14 +137,14 @@ class DrawKeyController extends AbstractController
         $ip      = $this->clientIp($request);
 
         if ($limiter->isLimited($ip)) {
-            return $response->withJson(['error' => 'Too many attempts. Please try again later.'], 429);
+            return Problem::tooManyRequests($response, 'Too many attempts. Please try again later.', $limiter->retryAfter($ip));
         }
         $limiter->hit($ip);
 
         $body = $this->parsedBody($request);
         $key  = $this->drawKeys->exchangeCode((string) ($body['code'] ?? ''), (string) ($body['code_verifier'] ?? ''));
         if ($key === null) {
-            return $response->withJson(['error' => 'Invalid or expired authorization code.'], 400);
+            return Problem::respond($response, 400, 'Invalid or expired authorization code.', extensions: ['error' => 'invalid_grant']);
         }
 
         return $response->withJson(['key' => $key]);

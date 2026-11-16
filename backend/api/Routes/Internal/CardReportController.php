@@ -3,6 +3,8 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
+use Tarot\Exception\ApiException;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\CardReportRepository;
@@ -30,8 +32,11 @@ class CardReportController extends AbstractController
 
     private const int WINDOW_SECONDS = 3600;
 
-    /** Longest description a reporter can attach; longer input is truncated. */
+    /** Longest description a reporter can attach. */
     private const int DETAILS_MAX_LENGTH = 500;
+
+    /** Longest card name a report keeps. */
+    private const int CARD_NAME_MAX_LENGTH = 120;
 
     public function __construct(
         private readonly CardReportRepository $reports,
@@ -49,7 +54,7 @@ class CardReportController extends AbstractController
                 properties: [
                     new OAS\Property(property: 'deck_id', schema: new OAS\Schema(type: 'integer')),
                     new OAS\Property(property: 'card_id', schema: new OAS\Schema(type: 'integer')),
-                    new OAS\Property(property: 'card_name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'card_name', schema: new OAS\Schema(type: 'string', maxLength: self::CARD_NAME_MAX_LENGTH)),
                     new OAS\Property(
                         property: 'reason',
                         schema: new OAS\Schema(ref: CardReportReason::class, description: 'Sent by the site and current plugin builds. Older plugin builds omit it; '
@@ -74,10 +79,10 @@ class CardReportController extends AbstractController
                 content: new OAS\MediaType\Json(required: ['status'], properties: [new OAS\Property(property: 'status', schema: new OAS\Schema(type: 'string'))])
             ),
             new OAS\Response(
-                response: 400,
-                description: 'Missing/invalid deck or card id, unknown reason, or `other` without details'
+                response: 422,
+                description: 'Missing/invalid deck or card id, unknown reason, `other` without details, or a card name or details over the limit'
             ),
-            new OAS\Response(response: 429, description: 'Too many reports from this IP'),
+            new OAS\Response(response: 429, description: 'Too many reports from this IP: 20/hour'),
         ]
     )]
     public function report(Request $request, Response $response): Response|ResponseInterface
@@ -86,34 +91,43 @@ class CardReportController extends AbstractController
 
         $overall = new RateLimiter('card_report_ip', self::REPORT_MAX_PER_WINDOW, self::WINDOW_SECONDS);
         if ($overall->isLimited($ip)) {
-            return $response->withJson(
-                ['error' => 'You have reported too many cards recently. Please try again later.'],
-                429
+            return Problem::tooManyRequests(
+                $response,
+                'You have reported too many cards recently. Please try again later.',
+                $overall->retryAfter($ip)
             );
         }
 
-        $body      = $this->parsedBody($request);
-        $deckId    = (int) ($body['deck_id'] ?? 0);
-        $cardId    = (int) ($body['card_id'] ?? -1);
-        $cardName  = Input::string($body['card_name'] ?? null, 120);
-        $reasonKey = Input::string($body['reason'] ?? null, 32);
-        $reason    = CardReportReason::tryFrom($reasonKey);
-        $details   = Input::string($body['details'] ?? null, self::DETAILS_MAX_LENGTH);
+        $body   = $this->parsedBody($request);
+        $deckId = (int) ($body['deck_id'] ?? 0);
+        $cardId = (int) ($body['card_id'] ?? -1);
+
+        try {
+            $cardName  = Input::text($body['card_name'] ?? null, self::CARD_NAME_MAX_LENGTH, 'body.card_name');
+            $reasonKey = Input::text($body['reason'] ?? null, PHP_INT_MAX, 'body.reason');
+            $details   = Input::text($body['details'] ?? null, self::DETAILS_MAX_LENGTH, 'body.details');
+        } catch (ApiException $e) {
+            return Problem::fromException($response, $e);
+        }
+        $reason = CardReportReason::tryFrom($reasonKey);
 
         // A deck deleted since its card was shown (a stale tab, an old plugin
         // build) would otherwise fail the foreign key as a 500.
-        if ($deckId < 1 || $cardId < 0 || !$this->decks->get($deckId) instanceof Deck) {
-            return $response->withJson(['error' => 'A valid deck and card are required.'], 400);
+        if ($deckId < 1 || !$this->decks->get($deckId) instanceof Deck) {
+            return Problem::invalid($response, 'body.deck_id', 'A valid deck and card are required.');
+        }
+        if ($cardId < 0) {
+            return Problem::invalid($response, 'body.card_id', 'A valid deck and card are required.');
         }
 
         // No reason at all is an older plugin build, accepted as a bare count bump;
         // a reason we don't recognise is a client bug worth surfacing.
         if ($reasonKey !== '' && $reason === null) {
-            return $response->withJson(['error' => "Please choose what's wrong with this card."], 400);
+            return Problem::invalid($response, 'body.reason', "Please choose what's wrong with this card.");
         }
 
         if ($reason === CardReportReason::Other && $details === '') {
-            return $response->withJson(['error' => "Please describe what's wrong with this card."], 400);
+            return Problem::invalid($response, 'body.details', "Please describe what's wrong with this card.");
         }
 
         // Per-card cooldown: if this IP already reported this exact card in the

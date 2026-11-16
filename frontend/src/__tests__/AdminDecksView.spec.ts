@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import DecksView from '@/views/admin/DecksView.vue'
 import { useUser } from '@/composables/useUser'
 import { NETWORK_ERROR_MESSAGE } from '@/composables/apiClient'
-import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -179,7 +179,7 @@ describe('admin DecksView', () => {
     })
 
     it('drops to the login page when the session has expired', async () => {
-      const expired = { status: 401, body: { error: 'Unauthorized' } }
+      const expired = { status: 401, body: problem('Unauthorized') }
       stubApi({
         'GET /admin/deck-systems': expired,
         'GET /admin/decks': expired,
@@ -256,7 +256,7 @@ describe('admin DecksView', () => {
     it("keeps the form open and shows the server's reason when creating fails", async () => {
       const api = stubApi({
         ...loads(),
-        'POST /admin/decks': { status: 500, body: { error: 'Could not create the deck.' } },
+        'POST /admin/decks': { status: 500, body: problem('Could not create the deck.') },
       })
       await mountPage(DecksView, { path: '/admin/decks' })
       await click(button('Add Deck'))
@@ -375,7 +375,7 @@ describe('admin DecksView', () => {
     it('keeps the deck listed when the delete fails', async () => {
       stubApi({
         ...loads(),
-        'DELETE /admin/decks/2': { status: 500, body: { error: 'Failed to delete deck.' } },
+        'DELETE /admin/decks/2': { status: 500, body: problem('Failed to delete deck.') },
       })
       await mountPage(DecksView, { path: '/admin/decks' })
       await click(button('Delete', row('Celestial Tarot')))
@@ -481,7 +481,7 @@ describe('admin DecksView', () => {
     it("shows the server's reason when generating fails", async () => {
       stubApi({
         ...loads(),
-        'POST /admin/decks/1/images': { status: 400, body: { error: 'Deck has no scans.' } },
+        'POST /admin/decks/1/images': { status: 422, body: problem('Deck has no scans.') },
       })
       await mountPage(DecksView, { path: '/admin/decks' })
 

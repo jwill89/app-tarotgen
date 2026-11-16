@@ -10,7 +10,7 @@ import { useFavoriteSpreads } from '@/composables/useFavoriteSpreads'
 import { useRecentReadings } from '@/composables/useRecentReadings'
 import { useToasts } from '@/composables/useToasts'
 import { STORAGE_KEYS } from '@/constants'
-import { mountWithApp, cleanup, signIn, stubApi, testUser, lazyLoad } from './helpers/app'
+import { mountWithApp, cleanup, signIn, stubApi, testUser, lazyLoad, problem } from './helpers/app'
 import { choose, labelled } from './helpers/page'
 import type { Deck, Reading, Spread, UserSpread } from '@/types'
 
@@ -71,14 +71,14 @@ const myMorning: UserSpread = {
   description: '',
   card_count: 1,
   positions: [{ order: 1, title: 'Today', x: 50, y: 50, rotation: 0 }],
-  created_at: '2026-01-01 00:00:00',
-  updated_at: '2026-01-01 00:00:00',
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
 }
 
 const drawn: Reading = {
   reading_id: 'new123',
   reading_info: { deck_id: 1, draw: [{ card_id: 1, reversed: false, card_name: 'The Fool' }] },
-  reading_time: '2026-10-28 09:00:00',
+  reading_time: '2026-10-28T09:00:00Z',
   reading_name: null,
   reading_notes: null,
   reader: 'Guest',
@@ -237,7 +237,12 @@ describe('NewReadingView', () => {
     expect(router.currentRoute.value.params.id).toBe('new123')
     expect(useToasts().toasts.value.map((t) => t.message)).toEqual(['Your reading is ready!'])
     expect(useRecentReadings().recent.value).toEqual([
-      { id: 'new123', deckName: 'Rider-Waite Tarot', summary: '1 card', at: '2026-10-28 09:00:00' },
+      {
+        id: 'new123',
+        deckName: 'Rider-Waite Tarot',
+        summary: '1 card',
+        at: '2026-10-28T09:00:00Z',
+      },
     ])
   })
 
@@ -429,7 +434,7 @@ describe('NewReadingView', () => {
   })
 
   it("shows the server's error and stays on the form", async () => {
-    loads({ 'POST /readings/generate': { status: 422, body: { error: 'Too many cards.' } } })
+    loads({ 'POST /readings/generate': { status: 422, body: problem('Too many cards.') } })
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const { wrapper, router } = await openPage()
 
@@ -528,8 +533,8 @@ describe('NewReadingView', () => {
       loads({
         ...siteKey,
         'POST /readings/generate': {
-          status: 400,
-          body: { error: 'Captcha verification failed. Please try again.' },
+          status: 422,
+          body: problem('Captcha verification failed. Please try again.'),
         },
       })
       const { wrapper, router } = await openPage()

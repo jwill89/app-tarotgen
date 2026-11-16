@@ -5,7 +5,7 @@ import { routes } from '@/router/routes'
 import { useUser } from '@/composables/useUser'
 import type { User } from '@/types'
 
-export { stubApi } from './api'
+export { problem, problemBody, stubApi } from './api'
 
 /** A router on the app's real route table (names, meta), without its guards. */
 export function testRouter(): Router {
@@ -90,7 +90,7 @@ export function testUser(overrides: Partial<User> = {}): User {
     display_name: 'Reader',
     is_active: true,
     is_admin: false,
-    registered_at: '2026-01-01 00:00:00',
+    registered_at: '2026-01-01T00:00:00Z',
     last_login_at: null,
     google_linked: false,
     has_password: true,

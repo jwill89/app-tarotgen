@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Random\RandomException;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -43,31 +44,41 @@ class GoogleAuthController extends AbstractController
             ),
         ],
         responses: [
-            new OAS\Response(response: 302, description: 'Redirect to Google'),
-            new OAS\Response(response: 401, description: 'The link intent requires a session'),
-            new OAS\Response(response: 503, description: 'Google OAuth is not configured'),
+            new OAS\Response(
+                response: 302,
+                description: "To Google's consent screen; or, when the flow can't start (Google OAuth isn't configured, or linking without a session), back to the page the intent came from (/login, /register or /account/settings) with the reason in `oauth_error`",
+                headers: [new OAS\Header(header: 'Location', description: 'Where the browser goes next.', schema: new OAS\Schema(type: 'string'))]
+            ),
         ]
     )]
     /**
      * Initiate the OAuth flow. Accepts an optional ?intent query param
-     * ('login', 'register', or 'link') so the callback knows what to do.
+     * ('login', 'register', or 'link') so the callback knows what to do. The
+     * browser navigates here, so a flow that can't start sends it back to the
+     * page it came from with the reason, as the callback does.
      */
     public function redirect(Request $request, Response $response): Response|ResponseInterface
     {
-        if (!$this->google->isConfigured()) {
-            return $response->withJson(['error' => 'Google OAuth is not configured.'], 503);
-        }
-
-        $this->startSession();
-
         $intent = $request->getQueryParams()['intent'] ?? 'login';
         if (!in_array($intent, ['login', 'register', 'link'], true)) {
             $intent = 'login';
         }
 
+        if (!$this->google->isConfigured()) {
+            $from = match ($intent) {
+                'register' => '/register',
+                'link'     => '/account/settings',
+                default    => '/login',
+            };
+
+            return $this->redirectToFrontend($response, $from, 'Google OAuth is not configured.');
+        }
+
+        $this->startSession();
+
         // For 'link', the user must already be logged in.
         if ($intent === 'link' && Session::userId() === null) {
-            return $response->withJson(['error' => 'You must be logged in to link a Google account.'], 401);
+            return $this->redirectToFrontend($response, '/login', 'You must be logged in to link a Google account.');
         }
 
         $state = bin2hex(random_bytes(16));
@@ -87,7 +98,13 @@ class GoogleAuthController extends AbstractController
             new OAS\Parameter(name: 'code', in: 'query', required: false, schema: new OAS\Schema(type: 'string')),
             new OAS\Parameter(name: 'state', in: 'query', required: false, schema: new OAS\Schema(type: 'string')),
         ],
-        responses: [new OAS\Response(response: 302, description: 'Redirect into the SPA')]
+        responses: [
+            new OAS\Response(
+                response: 302,
+                description: 'Into the SPA: on success, the home page or (linking) /account/settings with `oauth_success`; on any failure, /login, /register or /login again with the reason in `oauth_error`',
+                headers: [new OAS\Header(header: 'Location', description: 'Where the browser goes next.', schema: new OAS\Schema(type: 'string'))]
+            ),
+        ]
     )]
     /**
      * Handle the OAuth callback from Google.
@@ -182,7 +199,7 @@ class GoogleAuthController extends AbstractController
 
         $refusal = $this->signInMethods->refuseUnlinkingGoogle($userId);
         if ($refusal !== null) {
-            return $response->withJson(['error' => $refusal], 409);
+            return Problem::respond($response, 409, $refusal);
         }
 
         $this->users->setGoogleId($userId, null);

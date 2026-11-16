@@ -1,0 +1,64 @@
+[
+  {
+    "spread_id": 1,
+    "name": "Celtic Cross",
+    "description": "The classic ten-card spread: the heart of the matter, what crosses it, and where it leads.",
+    "card_count": 10,
+    "category_id": 1,
+    "category_name": "General",
+    "category_sort_order": 1,
+    "positions": [
+      { "order": 1, "title": "Present", "x": 35, "y": 50, "rotation": 0, "description": "The heart of the matter" },
+      { "order": 2, "title": "Challenge", "x": 35, "y": 50, "rotation": 90, "description": "What crosses you" },
+      { "order": 3, "title": "Foundation", "x": 35, "y": 78, "rotation": 0 },
+      { "order": 4, "title": "Recent past", "x": 15, "y": 50, "rotation": 0 },
+      { "order": 5, "title": "Crown", "x": 35, "y": 22, "rotation": 0 },
+      { "order": 6, "title": "Near future", "x": 55, "y": 50, "rotation": 0 },
+      { "order": 7, "title": "Self", "x": 80, "y": 86, "rotation": 0 },
+      { "order": 8, "title": "Surroundings", "x": 80, "y": 62, "rotation": 0 },
+      { "order": 9, "title": "Hopes and fears", "x": 80, "y": 38, "rotation": 0 },
+      { "order": 10, "title": "Outcome", "x": 80, "y": 14, "rotation": 0 }
+    ]
+  },
+  {
+    "spread_id": 9,
+    "name": "Heart to Heart",
+    "description": "Two cards, one for each of you.",
+    "card_count": 2,
+    "category_id": 2,
+    "category_name": "Love & relationships",
+    "category_sort_order": 2,
+    "positions": [
+      { "order": 1, "title": "You", "x": 38, "y": 50, "rotation": 0 },
+      { "order": 2, "title": "Them", "x": 62, "y": 50, "rotation": 0 }
+    ]
+  },
+  {
+    "spread_id": 6,
+    "name": "Two Paths",
+    "description": "For a choice between two ways forward.",
+    "card_count": 3,
+    "category_id": 4,
+    "category_name": "Decisions",
+    "category_sort_order": 4,
+    "positions": [
+      { "order": 1, "title": "Where you stand", "x": 50, "y": 72, "rotation": 0 },
+      { "order": 2, "title": "The first path", "x": 32, "y": 34, "rotation": 345, "description": "Where it leads if you take it" },
+      { "order": 3, "title": "The second path", "x": 68, "y": 34, "rotation": 15, "description": "Where it leads if you take it" }
+    ]
+  },
+  {
+    "spread_id": 3,
+    "name": "Past, Present, Future",
+    "description": "Where things have come from, where they stand, and where they lead.",
+    "card_count": 3,
+    "category_id": 1,
+    "category_name": "General",
+    "category_sort_order": 1,
+    "positions": [
+      { "order": 1, "title": "Past", "x": 25, "y": 50, "rotation": 0, "description": "What has led here" },
+      { "order": 2, "title": "Present", "x": 50, "y": 50, "rotation": 0, "description": "Where things stand now" },
+      { "order": 3, "title": "Future", "x": 75, "y": 50, "rotation": 0 }
+    ]
+  }
+]

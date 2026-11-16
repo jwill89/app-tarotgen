@@ -94,7 +94,7 @@ final class JournalExportTest extends TestCase
         $journal = $this->journal();
 
         $this->assertSame([], $journal['readings']);
-        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $journal['exported_at']);
+        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $journal['exported_at']);
         $this->assertSame("\u{FEFF}" . '"Reading ID","Reading Time (UTC)","Reading Name","Question","Querent","Tags","Privacy","Deck","Spread","Position","Position Title","Card","Reversed","Notes"' . "\r\n", implode('', iterator_to_array($this->export->csv(1), false)));
     }
 
@@ -103,7 +103,7 @@ final class JournalExportTest extends TestCase
         $this->insertReading('journal001', ['deck_id' => 1, 'draw' => [['card_id' => 1, 'reversed' => false, 'card_name' => 'The Fool']]]);
         $this->db->exec("UPDATE readings SET question = 'Should I move?', querent = 'Sam', is_private = 1 WHERE reading_id = 'journal001'");
         $this->db->exec("INSERT INTO reading_tags (reading_id, tag) VALUES ('journal001', 'move'), ('journal001', 'career')");
-        $this->insertReading('locked0002', ['deck_id' => 1, 'draw' => []], '2026-01-02 09:00:00');
+        $this->insertReading('locked0002', ['deck_id' => 1, 'draw' => []], '2026-01-02T09:00:00Z');
         $this->db->exec("UPDATE readings SET password_hash = 'x' WHERE reading_id = 'locked0002'");
 
         $readings = array_column($this->journal()['readings'], null, 'reading_id');
@@ -123,8 +123,8 @@ final class JournalExportTest extends TestCase
 
     public function testTheJsonIsPrettyPrintedForReading(): void
     {
-        $this->insertReading('first00001', ['deck_id' => 1, 'draw' => [['card_id' => 1, 'reversed' => false]]], '2026-01-01 09:00:00');
-        $this->insertReading('second0002', ['deck_id' => 1, 'draw' => [['card_id' => 2, 'reversed' => false]]], '2026-01-02 09:00:00');
+        $this->insertReading('first00001', ['deck_id' => 1, 'draw' => [['card_id' => 1, 'reversed' => false]]], '2026-01-01T09:00:00Z');
+        $this->insertReading('second0002', ['deck_id' => 1, 'draw' => [['card_id' => 2, 'reversed' => false]]], '2026-01-02T09:00:00Z');
 
         $json = implode('', iterator_to_array($this->export->json(1), false));
 
@@ -174,7 +174,7 @@ final class JournalExportTest extends TestCase
     /**
      * @param array<string,mixed> $info
      */
-    private function insertReading(string $id, array $info, string $time = '2026-01-01 09:00:00'): void
+    private function insertReading(string $id, array $info, string $time = '2026-01-01T09:00:00Z'): void
     {
         $this->db->prepare('INSERT INTO readings (reading_id, reading_info, reading_time, user_id) VALUES (?, ?, ?, 1)')
             ->execute([$id, json_encode($info, JSON_THROW_ON_ERROR), $time]);

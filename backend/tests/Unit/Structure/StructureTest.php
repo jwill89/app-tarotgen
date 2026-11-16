@@ -112,11 +112,11 @@ final class StructureTest extends TestCase
         $reading = new Reading();
         $reading->setReadingId('abc123');
         $reading->setReadingInfo('{"draw":[]}');
-        $reading->setReadingTime('2026-05-29 12:00:00');
+        $reading->setReadingTime('2026-05-29T12:00:00Z');
 
         $this->assertSame('abc123', $reading->reading_id);
         $this->assertSame('{"draw":[]}', $reading->reading_info);
-        $this->assertSame('2026-05-29 12:00:00', $reading->reading_time);
+        $this->assertSame('2026-05-29T12:00:00Z', $reading->reading_time);
     }
 
     public function testContactConstructorAndAccessors(): void
@@ -128,7 +128,7 @@ final class StructureTest extends TestCase
             'email'        => 'alice@example.com',
             'message'      => 'Hello world',
             'is_read'      => 1,
-            'submitted_at' => '2026-06-01 10:00:00',
+            'submitted_at' => '2026-06-01T10:00:00Z',
         ]);
 
         $this->assertSame(42, $contact->contact_id);
@@ -137,7 +137,7 @@ final class StructureTest extends TestCase
         $this->assertSame('alice@example.com', $contact->email);
         $this->assertSame('Hello world', $contact->message);
         $this->assertTrue($contact->isRead());
-        $this->assertSame('2026-06-01 10:00:00', $contact->submitted_at);
+        $this->assertSame('2026-06-01T10:00:00Z', $contact->submitted_at);
     }
 
     public function testContactDefaults(): void

@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import ResetPasswordView from '@/views/ResetPasswordView.vue'
-import { mountWithApp, cleanup, stubApi } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, problem } from './helpers/app'
 
 const text = (el: Element) => el.textContent.replace(/\s+/g, ' ').trim()
 const pageText = () => text(document.body)
@@ -93,8 +93,8 @@ describe('ResetPasswordView', () => {
   it("shows the server's reason and keeps the form for another try", async () => {
     stubApi({
       'POST /auth/reset-password': {
-        status: 400,
-        body: { error: 'This reset link is invalid or has expired.' },
+        status: 422,
+        body: problem('This reset link is invalid or has expired.'),
       },
     })
     await mountWithApp(ResetPasswordView, { path: '/reset-password?token=old' })

@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { defineComponent } from 'vue'
 import { useAdminDeckSystems } from '@/composables/useAdminDeckSystems'
-import { cleanup, mountWithApp, signIn, stubApi, testUser } from './helpers/app'
+import { cleanup, mountWithApp, signIn, stubApi, testUser, problem } from './helpers/app'
 import { apiCalls } from './helpers/page'
 import { pending, systems } from './helpers/deckSystems'
 
@@ -50,7 +50,7 @@ describe('useAdminDeckSystems', () => {
 
   it('keeps the last list when a reload fails', async () => {
     let failing = false
-    const busy = { status: 500, body: { error: 'Busy' } }
+    const busy = { status: 500, body: problem('Busy') }
     stubApi({
       'GET /admin/deck-systems': () => (failing ? busy : { body: systems }),
       'GET /admin/deck-systems/pending': () => (failing ? busy : { body: pending }),

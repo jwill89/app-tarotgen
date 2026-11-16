@@ -678,7 +678,7 @@ defineExpose({ resetHistory, clearSelection, setSelection })
 .spread-tools :deep(.button:focus-visible) {
   background: var(--myst-surface-3);
   color: var(--myst-gold-bright);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--myst-gold) 45%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 .spread-tools :deep(.button[disabled]) {

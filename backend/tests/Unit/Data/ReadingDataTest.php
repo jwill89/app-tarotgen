@@ -26,10 +26,10 @@ final class ReadingDataTest extends TestCase
         $this->pdo = new PDO('sqlite::memory:');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->pdo->exec(
-            'CREATE TABLE readings (
+            "CREATE TABLE readings (
                 reading_id TEXT PRIMARY KEY,
                 reading_info TEXT NOT NULL,
-                reading_time TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                reading_time DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
                 user_id INTEGER DEFAULT NULL,
                 hide_user INTEGER NOT NULL DEFAULT 0,
                 reading_name TEXT DEFAULT NULL,
@@ -39,8 +39,8 @@ final class ReadingDataTest extends TestCase
                 question TEXT DEFAULT NULL,
                 querent TEXT DEFAULT NULL,
                 is_private INTEGER NOT NULL DEFAULT 0,
-                expires_at TEXT DEFAULT NULL
-            )'
+                expires_at DATETIME DEFAULT NULL
+            )"
         );
         // A reading's tags (as in db/schema.sql), cascading with it.
         $this->pdo->exec(
@@ -87,7 +87,7 @@ final class ReadingDataTest extends TestCase
     {
         $insert = $this->pdo->prepare(
             "INSERT INTO readings (reading_id, reading_info, reading_time, user_id)
-             VALUES (:id, '{}', datetime('now', :age), :uid)"
+             VALUES (:id, '{}', strftime('%Y-%m-%dT%H:%M:%SZ', 'now', :age), :uid)"
         );
         foreach (['r1' => '-3 days', 'r2' => '-2 days', 'r3' => '-1 days'] as $id => $age) {
             $insert->execute([':id' => $id, ':age' => $age, ':uid' => 7]);
@@ -109,7 +109,7 @@ final class ReadingDataTest extends TestCase
         // readings past the window go; account readings never do.
         $insert = $this->pdo->prepare(
             "INSERT INTO readings (reading_id, reading_info, reading_time, user_id)
-             VALUES (:id, '{}', datetime('now', :age), :uid)"
+             VALUES (:id, '{}', strftime('%Y-%m-%dT%H:%M:%SZ', 'now', :age), :uid)"
         );
         $insert->execute([':id' => 'old-guest', ':age' => '-366 days', ':uid' => null]);
         $insert->execute([':id' => 'recent-guest', ':age' => '-364 days', ':uid' => null]);
@@ -440,7 +440,7 @@ final class ReadingDataTest extends TestCase
     public function testPurgeGuestsReportsWhatItDeletesAndADryRunKeepsIt(): void
     {
         $this->data->store($this->make('expired', null)->setExpiresAt(Clock::in(-60)));
-        $this->pdo->exec("INSERT INTO readings (reading_id, reading_info, reading_time) VALUES ('aged', '{}', datetime('now', '-400 days'))");
+        $this->pdo->exec("INSERT INTO readings (reading_id, reading_info, reading_time) VALUES ('aged', '{}', strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-400 days'))");
         $this->data->store($this->make('kept', null));
 
         $this->assertSame(['expired' => 1, 'aged' => 1], $this->data->purgeGuests(365, true));
@@ -455,7 +455,7 @@ final class ReadingDataTest extends TestCase
         // A database without the expiry column: the purge's first DELETE fails.
         $old = new PDO('sqlite::memory:');
         $old->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $old->exec("CREATE TABLE readings (reading_id TEXT PRIMARY KEY, reading_info TEXT NOT NULL, reading_time TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, user_id INTEGER)");
+        $old->exec("CREATE TABLE readings (reading_id TEXT PRIMARY KEY, reading_info TEXT NOT NULL, reading_time DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')), user_id INTEGER)");
 
         try {
             new ReadingData($old)->purgeGuests(365, false);
@@ -474,12 +474,12 @@ final class ReadingDataTest extends TestCase
              VALUES (:id, :info, :time, :uid, :name, :notes, :question, :querent)'
         );
         $rows = [
-            ['celtic', ['deck_id' => 1, 'spread' => ['name' => 'Celtic Cross'], 'draw' => []], '2026-03-01 10:00:00', 1, 'Career check', null, null, null],
-            ['mine', ['deck_id' => 2, 'spread' => ['name' => 'My Own Spread', 'spread_id' => 0], 'draw' => []], '2026-03-05 23:30:00', 1, null, 'Felt 100% sure', null, 'Alex'],
-            ['free', ['deck_id' => 1, 'draw' => []], '2026-03-10 08:00:00', 1, null, null, 'Will it rain?', null],
-            ['placed', ['deck_id' => 2, 'spread' => ['name' => 'Free Draw Placement'], 'draw' => []], '2026-03-20 08:00:00', 1, null, null, null, null],
+            ['celtic', ['deck_id' => 1, 'spread' => ['name' => 'Celtic Cross'], 'draw' => []], '2026-03-01T10:00:00Z', 1, 'Career check', null, null, null],
+            ['mine', ['deck_id' => 2, 'spread' => ['name' => 'My Own Spread', 'spread_id' => 0], 'draw' => []], '2026-03-05T23:30:00Z', 1, null, 'Felt 100% sure', null, 'Alex'],
+            ['free', ['deck_id' => 1, 'draw' => []], '2026-03-10T08:00:00Z', 1, null, null, 'Will it rain?', null],
+            ['placed', ['deck_id' => 2, 'spread' => ['name' => 'Free Draw Placement'], 'draw' => []], '2026-03-20T08:00:00Z', 1, null, null, null, null],
             // Another user's reading matches most filters but is never in this user's list.
-            ['theirs', ['deck_id' => 1, 'draw' => []], '2026-03-10 09:00:00', 2, 'Career', null, null, null],
+            ['theirs', ['deck_id' => 1, 'draw' => []], '2026-03-10T09:00:00Z', 2, 'Career', null, null, null],
         ];
         foreach ($rows as [$id, $info, $time, $uid, $name, $notes, $question, $querent]) {
             $insert->execute([
@@ -505,9 +505,9 @@ final class ReadingDataTest extends TestCase
         $this->assertSame(['free'], $ids(new ReadingFilter(spread: 'Free Draw')));
         $this->assertSame(['placed'], $ids(new ReadingFilter(spread: 'Free Draw Placement')));
         $this->assertSame(['free', 'celtic'], $ids(new ReadingFilter(tag: 'career')));
-        $this->assertSame(['free', 'mine'], $ids(new ReadingFilter(from: '2026-03-05 00:00:00', until: '2026-03-11 00:00:00')));
-        $this->assertSame(['placed', 'free'], $ids(new ReadingFilter(from: '2026-03-06 00:00:00')));
-        $this->assertSame(['mine', 'celtic'], $ids(new ReadingFilter(until: '2026-03-06 00:00:00')));
+        $this->assertSame(['free', 'mine'], $ids(new ReadingFilter(from: '2026-03-05T00:00:00Z', until: '2026-03-11T00:00:00Z')));
+        $this->assertSame(['placed', 'free'], $ids(new ReadingFilter(from: '2026-03-06T00:00:00Z')));
+        $this->assertSame(['mine', 'celtic'], $ids(new ReadingFilter(until: '2026-03-06T00:00:00Z')));
         $this->assertSame(['free'], $ids(new ReadingFilter(daily: true)));
         $this->assertSame(['placed', 'mine', 'celtic'], $ids(new ReadingFilter(daily: false)));
         // Combined: every one must hold.

@@ -17,6 +17,11 @@
          failOnPhpunitNotice="true"
          failOnPhpunitWarning="true"
          displayDetailsOnPhpunitDeprecations="true">
+    <!-- The suite runs fourteen hours ahead of UTC, so code that leans on the
+         machine's zone instead of writing UTC fails here, on any machine. -->
+    <php>
+        <ini name="date.timezone" value="Pacific/Kiritimati"/>
+    </php>
     <testsuites>
         <testsuite name="unit">
             <directory>tests/Unit</directory>

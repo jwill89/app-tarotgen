@@ -2,6 +2,8 @@ using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using Dalamud.Utility;
+using TarotGen.Plugin.Core;
 using TarotGen.Plugin.Services;
 using TarotGen.Plugin.Windows;
 
@@ -49,17 +51,21 @@ public sealed class Plugin : IDalamudPlugin
         var version = typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "0.0.0";
         this.http.DefaultRequestHeaders.UserAgent.ParseAdd($"TarotGenPlugin/{version} (+https://tarotgen.io)");
 
+        void Warn(string message) => log.Warning(message);
+        void OpenBrowser(string url) => Util.OpenLink(url);
+
         this.tokenStore = new TokenStore(this.config, pluginInterface, log);
-        this.api = new TarotApiClient(this.http, this.tokenStore, log);
-        this.linkService = new LinkService(this.http, this.tokenStore, log);
-        this.drawKeys = new DrawKeyService(this.http, this.tokenStore, log);
+        this.api = new TarotApiClient(this.http, this.tokenStore, Configuration.SiteUrl, Warn);
+        this.linkService = new LinkService(this.api, this.tokenStore, OpenBrowser, Warn);
+        this.drawKeys = new DrawKeyService(this.api, this.tokenStore, OpenBrowser, Warn);
 
         var cacheDir = Path.Combine(pluginInterface.GetPluginConfigDirectory(), "cards");
         this.textures = new CardTextureCache(this.http, textureProvider, log, cacheDir);
 
+        Ui.IconFont = pluginInterface.UiBuilder.IconFontHandle.Push;
         this.readingPanel = new ReadingPanel(this.api, this.textures);
         this.mainWindow = new MainWindow(
-            this.api, this.readingPanel, this.linkService, this.drawKeys, this.config, this.pluginInterface);
+            this.api, this.readingPanel, this.linkService, this.drawKeys, this.config, () => this.config.Save(this.pluginInterface));
 
         this.windowSystem.AddWindow(this.mainWindow);
 
@@ -83,6 +89,7 @@ public sealed class Plugin : IDalamudPlugin
         this.windowSystem.RemoveAllWindows();
 
         this.mainWindow.Dispose();
+        Ui.IconFont = null;
 
         this.linkService.Dispose();
         this.drawKeys.Dispose();

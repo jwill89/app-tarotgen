@@ -100,10 +100,10 @@ final class AdminUsersTest extends HttpTestCase
         $active = $this->createUser('active@example.test');
 
         $this->assertSame(
-            ['error' => 'That account is already active.'],
-            $this->assertJsonResponse(400, $this->post("/admin/users/{$active->user_id}/resend-activation"))
+            'That account is already active.',
+            $this->assertDocumentedProblem('post', '/admin/users/{user_id}/resend-activation', 409, $this->post("/admin/users/{$active->user_id}/resend-activation"))
         );
-        $this->assertSame(['error' => 'User not found.'], $this->assertJsonResponse(400, $this->post('/admin/users/999/resend-activation')));
+        $this->assertSame('User not found.', $this->assertDocumentedProblem('post', '/admin/users/{user_id}/resend-activation', 404, $this->post('/admin/users/999/resend-activation')));
         $this->assertSame(0, $this->rowCount('user_tokens'));
     }
 
@@ -127,7 +127,7 @@ final class AdminUsersTest extends HttpTestCase
 
         $this->assertFalse($revoked['is_admin']);
         $this->signInAs($helper->user_id);
-        $this->assertJsonResponse(401, $this->get('/admin/users'));
+        $this->assertProblem(403, $this->get('/admin/users'));
     }
 
     public function testAnUpdateWithoutTheAdminFlagChangesNothing(): void
@@ -141,12 +141,12 @@ final class AdminUsersTest extends HttpTestCase
 
     public function testAnAccountThatDoesNotExistIsNotFound(): void
     {
-        $notFound = ['error' => 'User not found'];
+        $notFound = 'User not found';
 
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->post('/admin/users/999/activate')));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->post('/admin/users/0/activate')));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('PATCH', '/admin/users/999', ['is_admin' => true])));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('DELETE', '/admin/users/999')));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->post('/admin/users/999/activate')));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->post('/admin/users/0/activate')));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->request('PATCH', '/admin/users/999', ['is_admin' => true])));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->request('DELETE', '/admin/users/999')));
         $this->assertSame(1, $this->rowCount('users'));
     }
 
@@ -201,12 +201,12 @@ final class AdminUsersTest extends HttpTestCase
         $self = $this->admin->user_id;
 
         $this->assertSame(
-            ['error' => "You can't remove your own admin access. Another admin can."],
-            $this->assertJsonResponse(403, $this->request('PATCH', "/admin/users/{$self}", ['is_admin' => false]))
+            "You can't remove your own admin access. Another admin can.",
+            $this->assertProblem(403, $this->request('PATCH', "/admin/users/{$self}", ['is_admin' => false]))
         );
         $this->assertSame(
-            ['error' => "You can't delete your own account here. Use Account Settings to delete it."],
-            $this->assertJsonResponse(403, $this->request('DELETE', "/admin/users/{$self}"))
+            "You can't delete your own account here. Use Account Settings to delete it.",
+            $this->assertProblem(403, $this->request('DELETE', "/admin/users/{$self}"))
         );
         $this->assertSame([['is_admin' => 1]], $this->rows("SELECT is_admin FROM users WHERE user_id = {$self}"));
         $this->assertJsonResponse(200, $this->get('/admin/users'));
@@ -224,12 +224,12 @@ final class AdminUsersTest extends HttpTestCase
         $owner = $this->createUser('owner@example.test', admin: true);
 
         $this->assertSame(
-            ['error' => "This account is protected: its admin access can't be removed."],
-            $this->assertJsonResponse(403, $this->request('PATCH', "/admin/users/{$owner->user_id}", ['is_admin' => false]))
+            "This account is protected: its admin access can't be removed.",
+            $this->assertProblem(403, $this->request('PATCH', "/admin/users/{$owner->user_id}", ['is_admin' => false]))
         );
         $this->assertSame(
-            ['error' => "This account is protected and can't be deleted."],
-            $this->assertJsonResponse(403, $this->request('DELETE', "/admin/users/{$owner->user_id}"))
+            "This account is protected and can't be deleted.",
+            $this->assertProblem(403, $this->request('DELETE', "/admin/users/{$owner->user_id}"))
         );
         $this->assertSame([['is_admin' => 1]], $this->rows("SELECT is_admin FROM users WHERE user_id = {$owner->user_id}"));
 
@@ -267,6 +267,6 @@ final class AdminUsersTest extends HttpTestCase
 
         $this->assertSame([['user_id' => $this->admin->user_id]], $this->rows('SELECT user_id FROM sessions'));
         $this->useSessionCookie($theirBrowser);
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 }

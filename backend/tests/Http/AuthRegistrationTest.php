@@ -35,31 +35,34 @@ final class AuthRegistrationTest extends HttpTestCase
 
     public function testEveryProblemWithTheFormIsReportedAtOnce(): void
     {
-        $refused = $this->assertJsonResponse(422, $this->post('/auth/register', [
+        $refused = $this->post('/auth/register', [
             'email' => 'not-an-email', 'display_name' => 'ab', 'password' => 'short',
-        ]));
+        ]);
 
-        $this->assertSame(['errors' => [
-            'Please enter a valid email address.',
-            'Display name must be between 3 and 30 characters.',
-            'Password must be at least 12 characters long. A memorable passphrase works well.',
-        ]], $refused);
+        $errors = [
+            'body.email'        => 'Please enter a valid email address.',
+            'body.display_name' => 'Display name must be between 3 and 30 characters.',
+            'body.password'     => 'Password must be at least 12 characters long. A memorable passphrase works well.',
+        ];
+        $this->assertSame(implode(' ', $errors), $this->assertDocumentedProblem('post', '/auth/register', 422, $refused));
+        $this->assertSame($errors, $this->problemErrors($refused));
         $this->assertSame(0, $this->rowCount('users'));
     }
 
     public function testAMissingFieldIsAProblemWithTheFormNotAnError(): void
     {
-        $refused = $this->assertJsonResponse(422, $this->post('/auth/register', []));
+        $refused = $this->post('/auth/register', []);
 
-        $this->assertIsArray($refused['errors']);
-        $this->assertCount(3, $refused['errors']);
+        $this->assertProblem(422, $refused);
+        $this->assertSame(['body.email', 'body.display_name', 'body.password'], array_keys($this->problemErrors($refused)));
     }
 
     public function testADisplayNameIsLettersNumbersSpacesAndDotsDashesUnderscores(): void
     {
+        $refused = $this->register('reader@example.test', 'Reader<script>');
         $this->assertSame(
-            ['errors' => ['Display name may only contain letters, numbers, spaces, and . _ -']],
-            $this->assertJsonResponse(422, $this->register('reader@example.test', 'Reader<script>'))
+            ['body.display_name' => 'Display name may only contain letters, numbers, spaces, and . _ -'],
+            $this->problemErrors($refused)
         );
 
         // Letters from any alphabet count.
@@ -72,9 +75,9 @@ final class AuthRegistrationTest extends HttpTestCase
         $this->assertSame([['email' => 'reader@example.test']], $this->rows('SELECT email FROM users'));
 
         // Names are public, so saying one is taken gives nothing away.
-        $taken = ['errors' => ['That display name is already taken.']];
-        $this->assertSame($taken, $this->assertJsonResponse(422, $this->register('someone@example.test', 'READER')));
-        $this->assertSame($taken, $this->assertJsonResponse(422, $this->register('READER@example.test', 'reader')));
+        $taken = 'That display name is already taken.';
+        $this->assertSame($taken, $this->assertDocumentedProblem('post', '/auth/register', 409, $this->register('someone@example.test', 'READER')));
+        $this->assertSame($taken, $this->assertProblem(409, $this->register('READER@example.test', 'reader')));
         $this->assertSame(1, $this->rowCount('users'));
     }
 
@@ -114,7 +117,7 @@ final class AuthRegistrationTest extends HttpTestCase
         $this->assertJsonResponse(201, $this->register('reader@example.test', 'Reader'));
 
         $this->assertSame([['is_active' => 0, 'is_admin' => 0]], $this->rows('SELECT is_active, is_admin FROM users'));
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 
     public function testTheActivationLinkPointsAtTheConfiguredSite(): void
@@ -214,8 +217,8 @@ final class AuthRegistrationTest extends HttpTestCase
         }
 
         $this->assertSame(
-            ['error' => 'Too many sign-up attempts. Please try again later.'],
-            $this->assertJsonResponse(429, $this->register('reader6@example.test', 'Reader 6'))
+            'Too many sign-up attempts. Please try again later.',
+            $this->assertProblem(429, $this->register('reader6@example.test', 'Reader 6'))
         );
         $this->assertSame(5, $this->rowCount('users'));
     }
@@ -223,10 +226,10 @@ final class AuthRegistrationTest extends HttpTestCase
     public function testRefusedSignUpsCountTowardsTheLimitToo(): void
     {
         for ($i = 0; $i < 5; $i++) {
-            $this->assertJsonResponse(422, $this->post('/auth/register', ['email' => 'not-an-email']));
+            $this->assertProblem(422, $this->post('/auth/register', ['email' => 'not-an-email']));
         }
 
-        $this->assertJsonResponse(429, $this->register('reader@example.test', 'Reader'));
+        $this->assertProblem(429, $this->register('reader@example.test', 'Reader'));
         $this->assertSame(0, $this->rowCount('users'));
     }
 

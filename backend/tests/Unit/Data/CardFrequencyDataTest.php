@@ -32,7 +32,7 @@ final class CardFrequencyDataTest extends TestCase
     }
 
     /** @param list<mixed> $draw */
-    private function reading(string $id, ?int $userId, int $deckId, array $draw, string $time = '2026-10-01 12:00:00'): void
+    private function reading(string $id, ?int $userId, int $deckId, array $draw, string $time = '2026-10-01T12:00:00Z'): void
     {
         $this->db->prepare('INSERT INTO readings (reading_id, reading_info, reading_time, user_id) VALUES (?, ?, ?, ?)')
             ->execute([$id, json_encode(['deck_id' => $deckId, 'draw' => $draw], JSON_THROW_ON_ERROR), $time, $userId]);
@@ -93,13 +93,13 @@ final class CardFrequencyDataTest extends TestCase
 
     public function testAWindowCountsReadingsFromItsStart(): void
     {
-        $this->reading('old', 1, 1, [self::card(1, 'The Fool')], '2026-09-30 23:59:59');
-        $this->reading('new', 1, 1, [self::card(2, 'The Magician')], '2026-10-01 00:00:00');
+        $this->reading('old', 1, 1, [self::card(1, 'The Fool')], '2026-09-30T23:59:59Z');
+        $this->reading('new', 1, 1, [self::card(2, 'The Magician')], '2026-10-01T00:00:00Z');
 
-        $names = array_map(static fn(CardCount $c): string => $c->card_name, $this->data->cardCounts(1, null, '2026-10-01 00:00:00'));
+        $names = array_map(static fn(CardCount $c): string => $c->card_name, $this->data->cardCounts(1, null, '2026-10-01T00:00:00Z'));
 
         $this->assertSame(['The Magician'], $names);
-        $this->assertSame(1, $this->data->countReadings(1, 1, '2026-10-01 00:00:00'));
+        $this->assertSame(1, $this->data->countReadings(1, 1, '2026-10-01T00:00:00Z'));
     }
 
     public function testAReadingItCannotReadIsLeftOut(): void

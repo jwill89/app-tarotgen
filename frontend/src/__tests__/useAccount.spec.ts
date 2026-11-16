@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useAccount } from '@/composables/useAccount'
 import { useUser } from '@/composables/useUser'
 import type { User } from '@/types'
-import { stubApi, signIn, testUser } from './helpers/app'
+import { stubApi, signIn, testUser, problem, problemBody } from './helpers/app'
 
 function pageResponse(body: unknown, total: string | null, { ok = true, status = 200 } = {}) {
   return {
@@ -75,7 +75,7 @@ describe('useAccount.listTags', () => {
   })
 
   it('has none to offer when they cannot be fetched', async () => {
-    stubApi({ 'GET /account/tags': { status: 401, body: { error: 'Not authenticated' } } })
+    stubApi({ 'GET /account/tags': { status: 401, body: problem('Not authenticated') } })
 
     expect(await useAccount().listTags()).toEqual([])
   })
@@ -94,7 +94,7 @@ describe('useAccount.listReadingSpreads', () => {
 
   it('has none to offer when they cannot be fetched', async () => {
     stubApi({
-      'GET /account/reading-spreads': { status: 401, body: { error: 'Not authenticated' } },
+      'GET /account/reading-spreads': { status: 401, body: problem('Not authenticated') },
     })
 
     expect(await useAccount().listReadingSpreads()).toEqual([])
@@ -130,7 +130,7 @@ describe('useAccount changes', () => {
       vi
         .fn()
         .mockResolvedValue(
-          jsonResponse({ error: 'Incorrect password.' }, { ok: false, status: 403 }),
+          jsonResponse(problemBody(403, 'Incorrect password.'), { ok: false, status: 403 }),
         ),
     )
     useUser().currentUser.value = { user_id: 1 } as User
@@ -147,7 +147,7 @@ describe('useAccount changes', () => {
       'Cannot unlink Google — your account has no password set. Please set a password first.'
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(jsonResponse({ error: reason }, { ok: false, status: 400 })),
+      vi.fn().mockResolvedValue(jsonResponse(problemBody(422, reason), { ok: false, status: 422 })),
     )
 
     expect(await useAccount().unlinkGoogle()).toEqual({ ok: false, error: reason })
@@ -159,7 +159,7 @@ describe('useAccount readings', () => {
     stubApi({
       'PATCH /account/readings/a': {
         status: 422,
-        body: { error: 'Password must be at least 4 characters.' },
+        body: problem('Password must be at least 4 characters.'),
       },
     })
 
@@ -201,7 +201,7 @@ describe('useAccount profile', () => {
   })
 
   it('keeps the old name when the new one is refused', async () => {
-    stubApi({ 'PATCH /account': { status: 422, body: { error: 'Display name is taken.' } } })
+    stubApi({ 'PATCH /account': { status: 422, body: problem('Display name is taken.') } })
 
     expect(await useAccount().changeDisplayName('Admin')).toEqual({
       ok: false,
@@ -224,7 +224,7 @@ describe('useAccount profile', () => {
     stubApi({
       'POST /account/change-password': {
         status: 403,
-        body: { error: 'Current password is incorrect.' },
+        body: problem('Current password is incorrect.'),
       },
     })
 
@@ -251,7 +251,7 @@ describe('useAccount profile', () => {
 
   it("passes on the server's reason when the other devices can't be signed out", async () => {
     stubApi({
-      'POST /account/sessions/end-others': { status: 401, body: { error: 'Not authenticated' } },
+      'POST /account/sessions/end-others': { status: 401, body: problem('Not authenticated') },
     })
 
     expect(await useAccount().endOtherSessions()).toEqual({ ok: false, error: 'Not authenticated' })

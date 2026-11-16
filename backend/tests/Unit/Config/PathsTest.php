@@ -34,11 +34,11 @@ final class PathsTest extends TestCase
 
     public function testUsesTheProcessEnvironmentAndTrimsTrailingSlashes(): void
     {
-        putenv(self::VARIABLE . '=/var/lib/tarotgen/');
+        putenv(self::VARIABLE . '=/srv/example-data/');
 
-        $this->assertSame('/var/lib/tarotgen', Paths::dataDir());
-        $this->assertSame('/var/lib/tarotgen/.env', Paths::envFile());
-        $this->assertSame('/var/lib/tarotgen/db/tarotdb.db', Paths::database());
+        $this->assertSame('/srv/example-data', Paths::dataDir());
+        $this->assertSame('/srv/example-data/.env', Paths::envFile());
+        $this->assertSame('/srv/example-data/db/tarotdb.db', Paths::database());
     }
 
     public function testApacheSetEnvInServerWinsOverTheProcessEnvironment(): void

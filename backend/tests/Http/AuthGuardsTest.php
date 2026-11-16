@@ -12,8 +12,9 @@ use Tarot\Repository\UserRepository;
 use Tarot\Service\PluginTokenService;
 
 /**
- * The three auth middleware, through the routes they guard: who gets in, and
- * the 401 body everyone else gets.
+ * The three auth middleware, through the routes they guard: who gets in, the
+ * 401 a visitor who isn't signed in gets, and the 403 a signed-in account that
+ * isn't an admin gets from the admin routes.
  */
 #[CoversClass(AdminAuth::class)]
 #[CoversClass(UserAuth::class)]
@@ -22,11 +23,11 @@ final class AuthGuardsTest extends HttpTestCase
 {
     public function testAdminRoutesNeedAnActiveAdminAccount(): void
     {
-        $this->assertSame(['error' => 'Unauthorized'], $this->assertJsonResponse(401, $this->get('/admin/auth-check')));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->get('/admin/auth-check')));
 
         $reader = $this->createUser('reader@example.test');
         $this->signInAs($reader->user_id);
-        $this->assertSame(['error' => 'Unauthorized'], $this->assertJsonResponse(401, $this->get('/admin/auth-check')));
+        $this->assertSame('Only an admin can do that.', $this->assertProblem(403, $this->get('/admin/auth-check')));
 
         $admin = $this->createUser('admin@example.test', admin: true);
         $this->signInAs($admin->user_id);
@@ -41,7 +42,7 @@ final class AuthGuardsTest extends HttpTestCase
 
         $this->service(UserRepository::class)->setAdmin($admin->user_id, false);
 
-        $this->assertJsonResponse(401, $this->get('/admin/auth-check'));
+        $this->assertProblem(403, $this->get('/admin/auth-check'));
     }
 
     public function testAnInactiveAccountIsNotSignedIn(): void
@@ -49,14 +50,14 @@ final class AuthGuardsTest extends HttpTestCase
         $pending = $this->createUser('pending@example.test', admin: true, active: false);
         $this->signInAs($pending->user_id);
 
-        $this->assertJsonResponse(401, $this->get('/admin/auth-check'));
-        $this->assertJsonResponse(401, $this->get('/account/spreads'));
-        $this->assertJsonResponse(401, $this->get('/account/readings'));
+        $this->assertProblem(401, $this->get('/admin/auth-check'));
+        $this->assertProblem(401, $this->get('/account/spreads'));
+        $this->assertProblem(401, $this->get('/account/readings'));
     }
 
     public function testSessionOnlyRoutesNeedASignedInUser(): void
     {
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->get('/account/spreads')));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->get('/account/spreads')));
 
         $reader = $this->createUser('reader@example.test');
         $this->signInAs($reader->user_id);
@@ -69,7 +70,7 @@ final class AuthGuardsTest extends HttpTestCase
         $this->signInAs($reader->user_id);
         $this->service(UserRepository::class)->delete($reader->user_id);
 
-        $this->assertJsonResponse(401, $this->get('/account/spreads'));
+        $this->assertProblem(401, $this->get('/account/spreads'));
     }
 
     public function testSigningInInOneBrowserDoesNotSignInAnother(): void
@@ -80,12 +81,12 @@ final class AuthGuardsTest extends HttpTestCase
 
         $this->useSessionCookie(null);
 
-        $this->assertJsonResponse(401, $this->get('/account/spreads'));
+        $this->assertProblem(401, $this->get('/account/spreads'));
     }
 
     public function testAPluginTokenOpensTheAccountReadRoutes(): void
     {
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->get('/account/readings')));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->get('/account/readings')));
 
         $reader = $this->createUser('reader@example.test');
         $token = $this->service(PluginTokenService::class)->issueToken($reader->user_id);
@@ -103,15 +104,15 @@ final class AuthGuardsTest extends HttpTestCase
         $bearer = ['Authorization' => "Bearer {$token}"];
 
         // Least privilege: a leaked token can't manage the account or its tokens.
-        $this->assertJsonResponse(401, $this->get('/account/spreads', $bearer));
-        $this->assertJsonResponse(401, $this->get('/account/tokens', $bearer));
-        $this->assertJsonResponse(401, $this->request('DELETE', '/account', null, $bearer));
-        $this->assertJsonResponse(401, $this->get('/admin/auth-check', $bearer));
+        $this->assertProblem(401, $this->get('/account/spreads', $bearer));
+        $this->assertProblem(401, $this->get('/account/tokens', $bearer));
+        $this->assertProblem(401, $this->request('DELETE', '/account', null, $bearer));
+        $this->assertProblem(401, $this->get('/admin/auth-check', $bearer));
     }
 
     public function testUnknownAndRevokedTokensAreRejected(): void
     {
-        $this->assertJsonResponse(401, $this->get('/account/readings', ['Authorization' => 'Bearer tg_not-a-real-token']));
+        $this->assertProblem(401, $this->get('/account/readings', ['Authorization' => 'Bearer tg_not-a-real-token']));
 
         $reader = $this->createUser('reader@example.test');
         $token = $this->service(PluginTokenService::class)->issueToken($reader->user_id);
@@ -125,6 +126,6 @@ final class AuthGuardsTest extends HttpTestCase
         $this->assertSame(204, $response->getStatusCode());
 
         $this->useSessionCookie(null);
-        $this->assertJsonResponse(401, $this->get('/account/readings', ['Authorization' => "Bearer {$token}"]));
+        $this->assertProblem(401, $this->get('/account/readings', ['Authorization' => "Bearer {$token}"]));
     }
 }

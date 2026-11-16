@@ -651,7 +651,7 @@ async function clearAll() {
 
 .btn-primary:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-aqua) 40%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 .btn-primary .arrow {
@@ -664,7 +664,9 @@ async function clearAll() {
   display: flex;
   align-items: stretch;
   background: var(--surface-2);
-  border: 1px solid var(--hair-gold);
+
+  /* The field's edge: the gold that reads at 3:1 against the page and the field. */
+  border: 1px solid color-mix(in srgb, var(--myst-gold) 52%, transparent);
   border-radius: 12px;
   overflow: hidden;
   max-width: 100%;
@@ -674,8 +676,8 @@ async function clearAll() {
 }
 
 .panel-code:focus-within {
-  border-color: color-mix(in srgb, var(--myst-gold) 70%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 12%, transparent);
+  border-color: var(--myst-focus-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-focus-ring) 12%, transparent);
 }
 
 .panel-code input {
@@ -774,7 +776,7 @@ async function clearAll() {
 .quiet-item:focus-visible {
   outline: none;
   background: color-mix(in srgb, var(--myst-surface-3) 55%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--myst-gold) 30%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 .quiet-item .q-icon {
@@ -879,7 +881,7 @@ async function clearAll() {
 
 .recent-head .recent-clear:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 20%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 .table-wrap {
@@ -1022,7 +1024,7 @@ async function clearAll() {
 
 .t-remove:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 20%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 /* ============ RESPONSIVE ============ */

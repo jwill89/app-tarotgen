@@ -41,23 +41,23 @@ final class AuthLoginTest extends HttpTestCase
     {
         $this->createUserWithPassword(self::EMAIL);
 
-        $unknown = $this->assertJsonResponse(401, $this->signIn('nobody@example.test', $this->password));
-        $wrong = $this->assertJsonResponse(401, $this->signIn(self::EMAIL, 'not-' . $this->password));
+        $unknown = $this->signIn('nobody@example.test', $this->password);
+        $wrong = $this->signIn(self::EMAIL, 'not-' . $this->password);
 
-        $this->assertSame(['error' => self::INVALID], $unknown);
-        $this->assertSame($unknown, $wrong);
+        $this->assertSame(self::INVALID, $this->assertDocumentedProblem('post', '/auth/login', 401, $unknown));
+        $this->assertSame((string) $unknown->getBody(), (string) $wrong->getBody());
     }
 
     public function testAnUnactivatedAccountIsOnlyNamedAsSuchToSomeoneWithItsPassword(): void
     {
         $this->createUserWithPassword(self::EMAIL, active: false);
 
-        $this->assertSame(['error' => self::INVALID], $this->assertJsonResponse(401, $this->signIn(self::EMAIL, 'not-' . $this->password)));
+        $this->assertSame(self::INVALID, $this->assertProblem(401, $this->signIn(self::EMAIL, 'not-' . $this->password)));
         $this->assertSame(
-            ['error' => 'Your account is not activated yet. Please use the activation link sent to your email.'],
-            $this->assertJsonResponse(403, $this->signIn(self::EMAIL, $this->password))
+            'Your account is not activated yet. Please use the activation link sent to your email.',
+            $this->assertProblem(403, $this->signIn(self::EMAIL, $this->password))
         );
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 
     public function testTheEmailIsMatchedWhateverItsCaseAndSurroundingSpaces(): void
@@ -88,12 +88,12 @@ final class AuthLoginTest extends HttpTestCase
         $user = $this->createUserWithPassword(self::EMAIL);
         $this->service(UserRepository::class)->setPasswordLoginDisabled($user->user_id, true);
 
-        $this->assertSame(['error' => self::INVALID], $this->assertJsonResponse(401, $this->signIn(self::EMAIL, 'not-' . $this->password)));
+        $this->assertSame(self::INVALID, $this->assertProblem(401, $this->signIn(self::EMAIL, 'not-' . $this->password)));
         $this->assertSame(
-            ['error' => 'Password login is disabled for this account. Please sign in with your passkey or Google.'],
-            $this->assertJsonResponse(403, $this->signIn(self::EMAIL, $this->password))
+            'Password login is disabled for this account. Please sign in with your passkey or Google.',
+            $this->assertProblem(403, $this->signIn(self::EMAIL, $this->password))
         );
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 
     public function testAPasswordHashedWithOlderSettingsIsUpgradedOnSignIn(): void
@@ -114,14 +114,14 @@ final class AuthLoginTest extends HttpTestCase
         $this->createUserWithPassword(self::EMAIL);
 
         for ($i = 0; $i < 10; $i++) {
-            $this->assertJsonResponse(401, $this->signIn("guess{$i}@example.test", $this->password));
+            $this->assertProblem(401, $this->signIn("guess{$i}@example.test", $this->password));
         }
 
         $this->assertSame(
-            ['error' => 'Too many attempts. Please try again later.'],
-            $this->assertJsonResponse(429, $this->signIn(self::EMAIL, $this->password))
+            'Too many attempts. Please try again later.',
+            $this->assertProblem(429, $this->signIn(self::EMAIL, $this->password))
         );
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 
     public function testASuccessfulSignInResetsTheFailureCount(): void
@@ -135,7 +135,7 @@ final class AuthLoginTest extends HttpTestCase
 
         // Without the reset this would be the 19th failure, well past the limit.
         for ($i = 0; $i < 10; $i++) {
-            $this->assertJsonResponse(401, $this->signIn("guess{$i}@example.test", $this->password));
+            $this->assertProblem(401, $this->signIn("guess{$i}@example.test", $this->password));
         }
     }
 
@@ -170,7 +170,7 @@ final class AuthLoginTest extends HttpTestCase
 
         // A copy of the old cookie (say, a stolen one) doesn't come back to life.
         $this->useSessionCookie($signedIn);
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->get('/auth/me')));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->get('/auth/me')));
     }
 
     public function testSigningOutWithoutASessionStillSucceeds(): void
@@ -184,7 +184,7 @@ final class AuthLoginTest extends HttpTestCase
         $this->signInAs($user->user_id);
         $this->service(UserRepository::class)->delete($user->user_id);
 
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->get('/auth/me')));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->get('/auth/me')));
     }
 
     public function testMeDescribesTheSignedInUserWithoutSecrets(): void
@@ -205,12 +205,12 @@ final class AuthLoginTest extends HttpTestCase
         $this->createUserWithPassword(self::EMAIL);
         $this->configureTurnstile(passes: false);
 
-        $refused = ['error' => 'Captcha verification failed. Please try again.'];
-        $this->assertSame($refused, $this->assertJsonResponse(400, $this->signIn(self::EMAIL, $this->password)));
-        $this->assertSame($refused, $this->assertJsonResponse(400, $this->post('/auth/login', [
+        $refused = 'Captcha verification failed. Please try again.';
+        $this->assertSame($refused, $this->assertProblem(422, $this->signIn(self::EMAIL, $this->password)));
+        $this->assertSame($refused, $this->assertProblem(422, $this->post('/auth/login', [
             'email' => self::EMAIL, 'password' => $this->password, 'turnstile_token' => 'rejected-by-cloudflare',
         ])));
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 
     public function testWithTurnstileConfiguredAPassedChallengeSignsIn(): void
@@ -230,10 +230,10 @@ final class AuthLoginTest extends HttpTestCase
         $this->configureTurnstile(passes: false);
 
         for ($i = 0; $i < 10; $i++) {
-            $this->assertJsonResponse(400, $this->signIn(self::EMAIL, $this->password));
+            $this->assertProblem(422, $this->signIn(self::EMAIL, $this->password));
         }
 
-        $this->assertJsonResponse(429, $this->signIn(self::EMAIL, $this->password));
+        $this->assertProblem(429, $this->signIn(self::EMAIL, $this->password));
     }
 
     private function createUserWithPassword(string $email, bool $active = true): User

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest'
-import { stubApi, testUser } from './helpers/app'
+import { stubApi, testUser, problem } from './helpers/app'
 import type { User } from '@/types'
 
 /*
@@ -163,7 +163,7 @@ describe('router session revalidation', () => {
   })
 
   it('sends a user whose session expired to login instead of a broken account page', async () => {
-    stubApi({ [ME]: { status: 401, body: { error: 'Not authenticated' } } })
+    stubApi({ [ME]: { status: 401, body: problem('Not authenticated') } })
     const { router, useUser } = await freshApp(testUser())
 
     await router.push('/account/spreads')

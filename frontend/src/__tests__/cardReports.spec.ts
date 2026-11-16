@@ -19,7 +19,7 @@ function submission(reason: CardReportReason, round = 1, details = ''): CardRepo
     round,
     reason,
     details,
-    submitted_at: '2026-10-01 12:00:00',
+    submitted_at: '2026-10-01T12:00:00Z',
   }
 }
 
@@ -32,8 +32,8 @@ function report(overrides: Partial<CardReport> = {}): CardReport {
     card_name: 'The Star',
     report_count: 0,
     resolved_at: null,
-    first_reported_at: '2026-10-01 12:00:00',
-    last_reported_at: '2026-10-01 12:00:00',
+    first_reported_at: '2026-10-01T12:00:00Z',
+    last_reported_at: '2026-10-01T12:00:00Z',
     round: 1,
     submissions: [],
     ...overrides,

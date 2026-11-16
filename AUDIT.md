@@ -172,14 +172,14 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
   - **Durable fix — DONE 2026-10-28 05:21 UTC** (commit `2a44c27` + droplet
     change): `Tarot\Config\Paths` resolves `.env` and the DB from
     `TAROT_DATA_DIR` (fallback `backend/` for dev); `Connection` refuses to
-    create a missing DB. On the droplet: `/var/lib/tarotgen/{.env, db/tarotdb.db}`
+    create a missing DB. On the droplet: `<data folder>/{.env, db/tarotdb.db}`
     (root:www-data 640 / www-data 640, dirs 750); `SetEnv TAROT_DATA_DIR` in both
     tarotgen.io vhosts; `TAROT_DATA_DIR` in `/etc/environment`. Old files archived
-    (root-only) in `/var/backups/tarotgen/web-root-data-20261028-052131/`; the web
+    (root-only) in `<old backups>/web-root-data-20261028-052131/`; the web
     root's `db/` now holds only migration scripts. Verified: real reading served
     from the new copy after the old one was gone; Apache session writes land in
     it; a fresh SSH session's PHP CLI resolves and opens it.
-  - **Follow-ups:** rotated secrets go in **`/var/lib/tarotgen/.env`** (read per
+  - **Follow-ups:** rotated secrets go in **`<data folder>/.env`** (read per
     request — no reload needed). Delete the archive
     `web-root-data-20261028-052027/` (a rolled-back first attempt) once §1.1
     backups exist. Long term, give the vhost a `public/` document root so code,
@@ -195,7 +195,7 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
     `sqlite3 db/tarotdb.db ".backup '<dir>/tarotdb-$(date +%F).db'"`
     (online-safe under WAL), `PRAGMA integrity_check` on the copy, gzips, and
     keeps the newest 14. Put the backup directory **outside the web root** (e.g.
-    `/var/backups/tarotgen/`) so a backup can never be served over HTTP. Nightly
+    `<old backups>/`) so a backup can never be served over HTTP. Nightly
     entry in `/etc/cron.d/tarotgen`. Document in `AGENTS.md` §Deployment. Once
     it runs, the ad-hoc `pre-*.db` copies can go. Note this protects against bad
     migrations and corruption, **not** droplet loss — revisit off-site later.
@@ -203,10 +203,10 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
     `SELECT COUNT(*) FROM readings` matches prod within the day. Do the restore
     drill once, for real.
   - **DONE 2026-10-28 05:27 UTC.** `scripts/server/tarotgen-backup.sh` →
-    `/usr/local/sbin/tarotgen-backup`; `scripts/server/tarotgen.cron` →
+    the old nightly job; `scripts/server/tarotgen.cron` →
     `/etc/cron.d/tarotgen` (03:17 UTC nightly). Each run: `.backup` as www-data,
     switched to a self-contained rollback-journal file, `integrity_check`,
-    gzipped root-only (600) into `/var/backups/tarotgen/nightly/`, newest 14 kept
+    gzipped root-only (600) into `<old backups>/nightly/`, newest 14 kept
     (~199 KB each); logs to `journalctl -t tarotgen-backup`. First run + restore
     drill passed: gunzipped copy integrity ok and **all 24 tables matched the live
     DB row-for-row** (2,044 readings). Still open: off-site copy (droplet loss),
@@ -444,7 +444,7 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
   - **Cron installed 2026-10-28 06:46 UTC** (after the `ANALYZE` deploy, confirmed
     on the droplet): `/etc/cron.d/tarotgen` root:root 644, LF, trailing newline
     checked; previous file kept as
-    `/var/backups/tarotgen/tarotgen.cron.prev-20261028-064618`; cron logged
+    `<old backups>/tarotgen.cron.prev-20261028-064618`; cron logged
     `RELOAD (/etc/cron.d/tarotgen)` at 06:47. Rehearsal of the exact installed
     command (`true` for the backup, `--dry-run` added) under cron's environment
     logged `dry run: 210 …` to `journalctl -t tarotgen-retention`; readings
@@ -523,7 +523,7 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
     scheme in `OpenApiSpec.php` (`openapi.json` −5 lines; generated TS unchanged).
     253 tests / PHPStan / phpcs pass. **Prod:** `sudo tarotgen-backup`, upload the
     migration to `<WebRoot>/db/`, run as www-data, verify `.tables`; then delete
-    the dead `PLUGIN_IDENTITY_SALT=` line from `/var/lib/tarotgen/.env`.
+    the dead `PLUGIN_IDENTITY_SALT=` line from `<data folder>/.env`.
   - **DONE on prod 2026-10-28 06:56 UTC** (after the backend deploy): backup
     `tarotdb-20261028-065605.db.gz` first; dropped `plugin_messages` (0 rows),
     `plugin_blocks` (0), `plugin_client_identities` (7), `plugin_clients` (7) —

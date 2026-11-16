@@ -1,6 +1,7 @@
 # Backend (PHP) — generated deps, server-side data, local config
 /backend/vendor/
-/backend/assets/
+# What the host alone holds under the document root: the card scans and the site's images.
+/backend/public/assets/
 # Ignore the live DB and the retired one-off scripts, but keep the Phinx
 # migrations and the schema generated from them.
 /backend/db/*
@@ -16,8 +17,8 @@
 /frontend/coverage/
 /frontend/test-results/
 /frontend/playwright-report/
-# The Playwright smoke run copies the built SPA here, where og.php reads it.
-/backend/dist/
+# The Playwright suite copies the built SPA here, where og.php reads it.
+/backend/public/dist/
 
 # Local deploy settings (server IP, SSH key path, web root) — never commit.
 # Copy scripts/deploy.config.example.ps1 to create it.
@@ -27,7 +28,6 @@
 /.idea/
 /.vscode/
 /.claude/
-/AGENTS.md
 
 # Catch any stray .env anywhere
 .env

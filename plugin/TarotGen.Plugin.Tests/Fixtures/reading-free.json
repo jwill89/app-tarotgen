@@ -1,0 +1,24 @@
+{
+  "reading_id": "0c55e8a2d6",
+  "reading_info": {
+    "deck_id": 4,
+    "origin": "generated",
+    "draw": [
+      { "card_id": 13, "reversed": false, "card_name": "The Hanged Man" },
+      { "card_id": 37, "reversed": false, "card_name": "Ace of Cups" },
+      { "card_id": 71, "reversed": true, "card_name": "Seven of Pentacles" },
+      { "card_id": 7, "reversed": false, "card_name": "The Lovers" },
+      { "card_id": 51, "reversed": false, "card_name": "Ace of Swords" }
+    ]
+  },
+  "reading_time": "2026-11-13 19:22:10",
+  "reading_name": null,
+  "reading_notes": null,
+  "reader": "Guest",
+  "is_owner": false,
+  "is_final": false,
+  "can_draw_more": false,
+  "locked": false,
+  "visibility": "link",
+  "expires_at": "2026-12-13 19:22:10"
+}

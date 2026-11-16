@@ -38,14 +38,14 @@ final class CardFrequencyTest extends HttpTestCase
 
     public function testAVisitorWhoIsNotSignedInIsTurnedAway(): void
     {
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->get('/account/card-frequency')));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->get('/account/card-frequency')));
     }
 
     public function testAPluginTokenCannotReachIt(): void
     {
         $token = $this->service(PluginTokenService::class)->issueToken($this->userId);
 
-        $this->assertJsonResponse(401, $this->get('/account/card-frequency', ['Authorization' => "Bearer {$token}"]));
+        $this->assertProblem(401, $this->get('/account/card-frequency', ['Authorization' => "Bearer {$token}"]));
     }
 
     public function testNothingDrawnYetCountsNothing(): void
@@ -133,7 +133,7 @@ final class CardFrequencyTest extends HttpTestCase
     {
         $this->signInAs($this->userId);
 
-        $this->assertSame(['error' => $error], $this->assertJsonResponse(400, $this->get("/account/card-frequency?{$query}")));
+        $this->assertSame($error, $this->assertProblem(422, $this->get("/account/card-frequency?{$query}")));
     }
 
     public function testEmptyParametersMeanEverything(): void

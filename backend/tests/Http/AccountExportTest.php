@@ -54,11 +54,11 @@ final class AccountExportTest extends HttpTestCase
                 ['card_id' => 17, 'reversed' => false, 'card_name' => 'The Star'],
                 ['card_id' => 18, 'reversed' => true, 'card_name' => 'The Moon'],
             ],
-        ], '2026-01-01 09:00:00', name: 'New moon', notes: "## Notes\n\nKept as typed.", final: true, password: 'secret');
+        ], '2026-01-01T09:00:00Z', name: 'New moon', notes: "## Notes\n\nKept as typed.", final: true, password: 'secret');
         $this->journal('spread0001', 'Will it last?', 'Robin', ['moon', 'monthly']);
-        $this->insertReading('freedraw02', $this->userId, ['deck_id' => 2, 'draw' => [['card_id' => 5, 'reversed' => false]]], '2026-01-02 09:00:00');
-        $this->insertReading('theirs0003', $other->user_id, ['deck_id' => 1, 'draw' => []], '2026-01-03 09:00:00');
-        $this->insertReading('guest00004', null, ['deck_id' => 1, 'draw' => []], '2026-01-04 09:00:00');
+        $this->insertReading('freedraw02', $this->userId, ['deck_id' => 2, 'draw' => [['card_id' => 5, 'reversed' => false]]], '2026-01-02T09:00:00Z');
+        $this->insertReading('theirs0003', $other->user_id, ['deck_id' => 1, 'draw' => []], '2026-01-03T09:00:00Z');
+        $this->insertReading('guest00004', null, ['deck_id' => 1, 'draw' => []], '2026-01-04T09:00:00Z');
         $this->signInAs($this->userId);
 
         $response = $this->get('/account/readings/export?format=json');
@@ -71,7 +71,7 @@ final class AccountExportTest extends HttpTestCase
         $this->assertSame([
             'reading_id'         => 'spread0001',
             'link'               => 'https://tarotgen.io/reading/spread0001',
-            'reading_time'       => '2026-01-01 09:00:00',
+            'reading_time'       => '2026-01-01T09:00:00Z',
             'reading_name'       => 'New moon',
             'reading_notes'      => "## Notes\n\nKept as typed.",
             'question'           => 'Will it last?',
@@ -117,11 +117,11 @@ final class AccountExportTest extends HttpTestCase
                 ['card_id' => 17, 'reversed' => false, 'card_name' => 'The Star'],
                 ['card_id' => 18, 'reversed' => true, 'card_name' => 'The Moon'],
             ],
-        ], '2026-01-01 09:00:00', name: 'New moon', notes: "Line one, with a comma\nand \"quotes\"");
+        ], '2026-01-01T09:00:00Z', name: 'New moon', notes: "Line one, with a comma\nand \"quotes\"");
         $this->journal('spread0001', 'Will it last?', 'Robin', ['moon', 'monthly']);
-        $this->insertReading('freedraw02', $this->userId, ['deck_id' => 1, 'draw' => [['card_id' => 79, 'reversed' => false]]], '2026-01-02 09:00:00');
+        $this->insertReading('freedraw02', $this->userId, ['deck_id' => 1, 'draw' => [['card_id' => 79, 'reversed' => false]]], '2026-01-02T09:00:00Z');
         $this->db->exec("UPDATE readings SET is_private = 1 WHERE reading_id = 'freedraw02'");
-        $this->insertReading('nocards03', $this->userId, ['deck_id' => 9, 'draw' => []], '2026-01-03 09:00:00', notes: 'Only notes');
+        $this->insertReading('nocards03', $this->userId, ['deck_id' => 9, 'draw' => []], '2026-01-03T09:00:00Z', notes: 'Only notes');
         $this->insertReading('theirs0004', $this->createUser('other@example.test')->user_id, ['deck_id' => 1, 'draw' => [['card_id' => 1, 'reversed' => false]]]);
         $this->signInAs($this->userId);
 
@@ -134,10 +134,10 @@ final class AccountExportTest extends HttpTestCase
         $this->assertStringStartsWith("\u{FEFF}\"Reading ID\",", $body);
         $this->assertSame([
             ['Reading ID', 'Reading Time (UTC)', 'Reading Name', 'Question', 'Querent', 'Tags', 'Privacy', 'Deck', 'Spread', 'Position', 'Position Title', 'Card', 'Reversed', 'Notes'],
-            ['nocards03', '2026-01-03 09:00:00', '', '', '', '', 'Anyone with the link', 'Deck #9', 'Free Draw', '', '', '', '', 'Only notes'],
-            ['freedraw02', '2026-01-02 09:00:00', '', '', '', '', 'Private', 'Rider-Waite', 'Free Draw', '1', '', 'Card #79', 'No', ''],
-            ['spread0001', '2026-01-01 09:00:00', 'New moon', 'Will it last?', 'Robin', 'monthly, moon', 'Anyone with the link', 'Rider-Waite', 'Past, Present, Future', '1', 'Past', 'The Star', 'No', "Line one, with a comma\nand \"quotes\""],
-            ['spread0001', '2026-01-01 09:00:00', 'New moon', 'Will it last?', 'Robin', 'monthly, moon', 'Anyone with the link', 'Rider-Waite', 'Past, Present, Future', '2', 'Present', 'The Moon', 'Yes', "Line one, with a comma\nand \"quotes\""],
+            ['nocards03', '2026-01-03T09:00:00Z', '', '', '', '', 'Anyone with the link', 'Deck #9', 'Free Draw', '', '', '', '', 'Only notes'],
+            ['freedraw02', '2026-01-02T09:00:00Z', '', '', '', '', 'Private', 'Rider-Waite', 'Free Draw', '1', '', 'Card #79', 'No', ''],
+            ['spread0001', '2026-01-01T09:00:00Z', 'New moon', 'Will it last?', 'Robin', 'monthly, moon', 'Anyone with the link', 'Rider-Waite', 'Past, Present, Future', '1', 'Past', 'The Star', 'No', "Line one, with a comma\nand \"quotes\""],
+            ['spread0001', '2026-01-01T09:00:00Z', 'New moon', 'Will it last?', 'Robin', 'monthly, moon', 'Anyone with the link', 'Rider-Waite', 'Past, Present, Future', '2', 'Present', 'The Moon', 'Yes', "Line one, with a comma\nand \"quotes\""],
         ], $this->csvRows($body));
     }
 
@@ -165,7 +165,7 @@ final class AccountExportTest extends HttpTestCase
 
         $response = $this->get('/account/readings/export?format=xlsx');
 
-        $this->assertSame(['error' => 'Choose an export format: json or csv.'], $this->assertJsonResponse(400, $response));
+        $this->assertSame('Choose an export format: json or csv.', $this->assertProblem(422, $response));
         $this->assertFalse($response->hasHeader('Content-Disposition'));
     }
 
@@ -180,7 +180,7 @@ final class AccountExportTest extends HttpTestCase
         // ...but the whole journal is for a signed-in browser only.
         foreach (['json', 'csv'] as $format) {
             $refused = $this->get("/account/readings/export?format={$format}", $bearer);
-            $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $refused));
+            $this->assertSame('Not authenticated', $this->assertProblem(401, $refused));
         }
     }
 
@@ -233,7 +233,7 @@ final class AccountExportTest extends HttpTestCase
         string $id,
         ?int $userId,
         array $info,
-        string $time = '2026-01-01 09:00:00',
+        string $time = '2026-01-01T09:00:00Z',
         ?string $name = null,
         ?string $notes = null,
         bool $final = false,

@@ -41,7 +41,7 @@ final class DeckSystemsTest extends HttpTestCase
 
     public function testAnUnknownSystemIsNotFound(): void
     {
-        $this->assertSame(['error' => 'Deck system not found'], $this->assertJsonResponse(404, $this->get('/deck-systems/999')));
+        $this->assertSame('Deck system not found', $this->assertProblem(404, $this->get('/deck-systems/999')));
     }
 
     public function testAPendingSystemLooksToAVisitorExactlyLikeOneThatDoesNotExist(): void
@@ -49,13 +49,13 @@ final class DeckSystemsTest extends HttpTestCase
         $pending = $this->storeSystem('Lenormand', approved: false);
 
         $unknown = $this->asSeenByANewBrowser('/deck-systems/999');
-        $this->assertSame([404, '{"error":"Deck system not found"}', ''], array_slice($unknown, 0, 3));
+        $this->assertSame([404, '{"type":"about:blank","title":"Not Found","status":404,"detail":"Deck system not found"}', ''], array_slice($unknown, 0, 3));
         // Down to the session: the admin check starts one for both, or a cookie
         // would tell a pending id from a free one.
         $this->assertSame($unknown, $this->asSeenByANewBrowser("/deck-systems/{$pending}"));
 
         $this->signInAs($this->createUser('reader@example.test')->user_id);
-        $this->assertSame(['error' => 'Deck system not found'], $this->assertJsonResponse(404, $this->get("/deck-systems/{$pending}")));
+        $this->assertSame('Deck system not found', $this->assertProblem(404, $this->get("/deck-systems/{$pending}")));
     }
 
     public function testAnApprovedSystemIsServedToAnyoneWithoutStartingASession(): void
@@ -83,17 +83,17 @@ final class DeckSystemsTest extends HttpTestCase
 
         // The check is the admin routes' own, read from the database each time.
         $this->service(UserRepository::class)->setAdmin($admin->user_id, false);
-        $this->assertJsonResponse(404, $this->get("/deck-systems/{$pending}"));
+        $this->assertProblem(404, $this->get("/deck-systems/{$pending}"));
     }
 
     public function testSubmittingASystemNeedsASignedInAccount(): void
     {
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->post('/deck-systems', $this->submission('Lenormand', 2))));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->post('/deck-systems', $this->submission('Lenormand', 2))));
 
         $gone = $this->createUser('gone@example.test');
         $this->signInAs($gone->user_id);
         $this->service(UserRepository::class)->delete($gone->user_id);
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->post('/deck-systems', $this->submission('Lenormand', 2))));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->post('/deck-systems', $this->submission('Lenormand', 2))));
 
         $this->assertSame(0, $this->rowCount('deck_systems'));
     }
@@ -158,11 +158,11 @@ final class DeckSystemsTest extends HttpTestCase
             'Card #2 requires a name.' => ['cards' => [['name' => 'Rider'], ['name' => ' ']]] + $valid,
         ];
         foreach ($cases as $error => $submission) {
-            $this->assertSame(['error' => $error], $this->assertJsonResponse(400, $this->post('/deck-systems', $submission)));
+            $this->assertSame($error, $this->assertProblem(422, $this->post('/deck-systems', $submission)));
         }
         $this->assertSame(
-            ['error' => 'At least 2 card entries are required (name is mandatory for each).'],
-            $this->assertJsonResponse(400, $this->post('/deck-systems', ['cards' => 'not json'] + $valid))
+            'At least 2 card entries are required (name is mandatory for each).',
+            $this->assertProblem(422, $this->post('/deck-systems', ['cards' => 'not json'] + $valid))
         );
 
         $this->assertSame(0, $this->rowCount('deck_systems'));
@@ -175,8 +175,8 @@ final class DeckSystemsTest extends HttpTestCase
         $this->signInAs($this->createUser('maker@example.test')->user_id);
 
         $this->assertSame(
-            ['error' => 'A deck system with that name already exists.'],
-            $this->assertJsonResponse(409, $this->post('/deck-systems', $this->submission('Lenormand', 2)))
+            'A deck system with that name already exists.',
+            $this->assertProblem(409, $this->post('/deck-systems', $this->submission('Lenormand', 2)))
         );
         $this->assertSame(1, $this->rowCount('deck_systems'));
         $this->assertSame(0, $this->rowCount('deck_system_cards'));

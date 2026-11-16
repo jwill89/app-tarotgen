@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Exception\NameTakenException;
@@ -84,7 +85,7 @@ class AdminDeckSystemController extends AbstractController
         $system = $this->deckSystems->get($id);
 
         if (!($system instanceof DeckSystem)) {
-            return $response->withJson(['error' => 'Deck system not found'], 404);
+            return Problem::respond($response, 404, 'Deck system not found');
         }
 
         $cards = $this->deckSystems->getCards($id);
@@ -122,7 +123,7 @@ class AdminDeckSystemController extends AbstractController
         $system = $this->deckSystems->update($id, ['approved' => true]);
 
         if ($system === null) {
-            return $response->withJson(['error' => 'Deck system not found'], 404);
+            return Problem::respond($response, 404, 'Deck system not found');
         }
 
         return $response->withJson($system);
@@ -156,9 +157,9 @@ class AdminDeckSystemController extends AbstractController
                 description: 'Updated deck system',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/DeckSystem')
             ),
-            new OAS\Response(response: 400, description: 'Name or short name is required (one sent blank)'),
             new OAS\Response(response: 404, description: 'Deck system not found'),
             new OAS\Response(response: 409, description: 'Another deck system already has that name'),
+            new OAS\Response(response: 422, description: 'Name or short name is required (one sent blank)'),
         ]
     )]
     public function updateDeckSystem(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -171,13 +172,13 @@ class AdminDeckSystemController extends AbstractController
         // null from update() is not on its own a 404.
         $existing = $this->deckSystems->get($id);
         if (!($existing instanceof DeckSystem)) {
-            return $response->withJson(['error' => 'Deck system not found'], 404);
+            return Problem::respond($response, 404, 'Deck system not found');
         }
 
         // A rename may not blank either name, any more than a submission may leave it out.
         foreach (['name' => 'Name', 'short_name' => 'Short name'] as $field => $label) {
             if (array_key_exists($field, $params) && trim((string) $params[$field]) === '') {
-                return $response->withJson(['error' => "{$label} is required"], 400);
+                return Problem::invalid($response, "body.{$field}", "{$label} is required");
             }
         }
 
@@ -185,7 +186,7 @@ class AdminDeckSystemController extends AbstractController
         try {
             $system = $this->deckSystems->update($id, $params) ?? $existing;
         } catch (NameTakenException) {
-            return $response->withJson(['error' => self::NAME_TAKEN], 409);
+            return Problem::respond($response, 409, self::NAME_TAKEN);
         }
 
         // If cards were supplied, update them
@@ -239,7 +240,7 @@ class AdminDeckSystemController extends AbstractController
         $result = $this->deckSystems->delete($id);
 
         if (!$result) {
-            return $response->withJson(['error' => 'Deck system not found'], 404);
+            return Problem::respond($response, 404, 'Deck system not found');
         }
 
         return $response->withStatus(204);

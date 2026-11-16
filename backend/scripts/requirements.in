@@ -1,0 +1,4 @@
+# What scripts/clean_deck_images.py (card scan cleanup) needs. requirements.txt is compiled
+# from this file with the command in its header.
+opencv-python>=4.8
+numpy>=1.24

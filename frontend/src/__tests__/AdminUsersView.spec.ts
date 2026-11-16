@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import UsersView from '@/views/admin/UsersView.vue'
 import { useUser } from '@/composables/useUser'
 import { formatDateTime } from '@/utils/datetime'
-import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -28,21 +28,21 @@ const ada = testUser({
   is_admin: true,
   google_linked: true,
   has_passkeys: true,
-  registered_at: '2026-01-05 09:00:00',
-  last_login_at: '2026-10-20 18:30:00',
+  registered_at: '2026-01-05T09:00:00Z',
+  last_login_at: '2026-10-20T18:30:00Z',
 })
 const bea = testUser({
   user_id: 2,
   email: 'bea@example.test',
   display_name: 'Bea',
   is_active: false,
-  registered_at: '2026-10-01 12:00:00',
+  registered_at: '2026-10-01T12:00:00Z',
 })
 const cy = testUser({
   user_id: 3,
   email: 'cy@example.test',
   display_name: 'Cy',
-  registered_at: '2026-03-15 08:00:00',
+  registered_at: '2026-03-15T08:00:00Z',
 })
 const users = [ada, bea, cy]
 
@@ -133,7 +133,7 @@ describe('admin UsersView', () => {
     })
 
     it('drops to the login page when the session has expired', async () => {
-      stubApi({ 'GET /admin/users': { status: 401, body: { error: 'Unauthorized' } } })
+      stubApi({ 'GET /admin/users': { status: 401, body: problem('Unauthorized') } })
       const { router } = await mountPage(UsersView, { path: '/admin/users' })
 
       // The login route's component loads lazily, so the navigation lands a beat later.
@@ -170,7 +170,7 @@ describe('admin UsersView', () => {
     it("shows the server's reason when activating fails", async () => {
       const api = stubApi({
         'GET /admin/users': { body: users },
-        'POST /admin/users/2/activate': { status: 404, body: { error: 'User not found.' } },
+        'POST /admin/users/2/activate': { status: 404, body: problem('User not found.') },
       })
       await mountPage(UsersView, { path: '/admin/users' })
       api.mockClear()
@@ -226,8 +226,8 @@ describe('admin UsersView', () => {
       stubApi({
         'GET /admin/users': { body: users },
         'POST /admin/users/2/resend-activation': {
-          status: 400,
-          body: { error: 'Account is already active.' },
+          status: 422,
+          body: problem('Account is already active.'),
         },
       })
       await mountPage(UsersView, { path: '/admin/users' })
@@ -293,7 +293,7 @@ describe('admin UsersView', () => {
       const refusal = "This account is protected: its admin access can't be removed."
       const api = stubApi({
         'GET /admin/users': { body: users },
-        'PATCH /admin/users/1': { status: 403, body: { error: refusal } },
+        'PATCH /admin/users/1': { status: 403, body: problem(refusal) },
       })
       await mountPage(UsersView, { path: '/admin/users' })
       await click(button('Revoke Admin', row('Ada')))
@@ -373,7 +373,7 @@ describe('admin UsersView', () => {
     it('keeps the account listed when the delete fails', async () => {
       stubApi({
         'GET /admin/users': { body: users },
-        'DELETE /admin/users/3': { status: 404, body: { error: 'User not found.' } },
+        'DELETE /admin/users/3': { status: 404, body: problem('User not found.') },
       })
       await mountPage(UsersView, { path: '/admin/users' })
       await click(button('Delete', row('Cy')))

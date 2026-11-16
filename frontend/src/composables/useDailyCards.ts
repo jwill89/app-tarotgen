@@ -1,6 +1,6 @@
 import { endpoints } from '@/api/endpoints'
 import { apiRequest, sendJson, type ApiResult } from './apiClient'
-import type { DailyCard } from '@/types'
+import type { DailyCard, DailyCardTaken } from '@/types'
 
 /** What a draw was made with: the user's local day and the deck/reversals chosen for it. */
 export interface DailyCardChoice {
@@ -44,7 +44,7 @@ export function useDailyCards() {
     }
 
     const taken = res.status === 409
-    const existing = taken ? (res.data as { reading_id?: unknown } | null) : null
+    const existing = taken ? (res.data as Partial<DailyCardTaken> | null) : null
     return {
       ok: false,
       error: res.error,

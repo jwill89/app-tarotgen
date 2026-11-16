@@ -53,7 +53,7 @@ const model = defineModel<number>()
   height: 2.5em;
   max-width: 100%;
   background: var(--myst-surface-2);
-  border: 1px solid var(--myst-border-strong);
+  border: 1px solid var(--myst-control-border);
   border-radius: var(--bulma-radius);
   overflow: hidden;
   transition:
@@ -62,8 +62,8 @@ const model = defineModel<number>()
 }
 
 .myst-number:focus-within {
-  border-color: var(--myst-hair-gold);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 12%, transparent);
+  border-color: var(--myst-focus-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-focus-ring) 12%, transparent);
 }
 
 .myst-number[data-disabled] {

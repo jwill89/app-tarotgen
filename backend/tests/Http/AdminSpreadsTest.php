@@ -43,9 +43,8 @@ final class AdminSpreadsTest extends HttpTestCase
             'name' => 'Three Card',
             'description' => 'Past, present, future',
             'positions' => [
-                ['order' => 1, 'title' => ' Past ', 'x' => -10, 'y' => 50, 'rotation' => -90, 'description' => ' What led here '],
-                ['order' => 2, 'title' => 'Present', 'x' => 50, 'y' => 150, 'rotation' => 450, 'description' => ''],
-                'not a position',
+                ['order' => 1, 'title' => ' Past ', 'x' => 0, 'y' => 50, 'rotation' => -90, 'description' => ' What led here '],
+                ['order' => 2, 'title' => 'Present', 'x' => 50, 'y' => 100, 'rotation' => 450, 'description' => ''],
             ],
         ]);
 
@@ -65,6 +64,27 @@ final class AdminSpreadsTest extends HttpTestCase
         $this->assertSame(['Three Card'], array_column($this->assertJsonResponse(200, $this->get('/spreads')), 'name'));
     }
 
+    public function testAPositionPastALimitOrNotAnObjectIsRefusedNotMovedOrDropped(): void
+    {
+        $spread = $this->spread('Three Card', 3);
+        $cases = [
+            'body.positions[0].x' => [['order' => 1, 'title' => 'Past', 'x' => -10]],
+            'body.positions[1].y' => [['order' => 1, 'title' => 'Past'], ['order' => 2, 'title' => 'Present', 'y' => 150]],
+            'body.positions[1]'   => [['order' => 1, 'title' => 'Past'], 'not a position'],
+        ];
+
+        foreach ($cases as $location => $positions) {
+            $created = $this->post('/admin/spreads', ['name' => 'Odd', 'positions' => $positions]);
+            $this->assertDocumentedProblem('post', '/admin/spreads', 422, $created);
+            $this->assertSame([$location], array_keys($this->problemErrors($created)), $location);
+
+            $updated = $this->request('PUT', "/admin/spreads/{$spread->spread_id}", ['positions' => $positions]);
+            $this->assertDocumentedProblem('put', '/admin/spreads/{spread_id}', 422, $updated);
+        }
+
+        $this->assertSame([['name' => 'Three Card', 'card_count' => 3]], $this->rows('SELECT name, card_count FROM spreads'));
+    }
+
     public function testOneSpreadIsReadForTheEditorWithoutACache(): void
     {
         $this->spread('Celtic Cross', 10);
@@ -81,10 +101,10 @@ final class AdminSpreadsTest extends HttpTestCase
 
     public function testReadingASpreadThatIsGoneIsNotFound(): void
     {
-        $notFound = ['error' => 'Spread not found'];
+        $notFound = 'Spread not found';
 
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->get('/admin/spreads/999')));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->get('/admin/spreads/three-card')));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->get('/admin/spreads/999')));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->get('/admin/spreads/three-card')));
     }
 
     public function testNewPositionsBringTheCardCountAlongUnlessItIsGiven(): void
@@ -103,13 +123,14 @@ final class AdminSpreadsTest extends HttpTestCase
         $this->assertSame(5, $explicit['card_count']);
     }
 
-    public function testAnUpdateWithNothingToChangeOrForNoSpreadIsNotFound(): void
+    public function testAnUpdateWithNothingToChangeIsRefusedAndOneForNoSpreadIsNotFound(): void
     {
         $spread = $this->spread('Three Card', 3);
-        $notFound = ['error' => 'Spread not found or no valid fields'];
 
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('PUT', "/admin/spreads/{$spread->spread_id}", ['spread_id' => 9])));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('PUT', '/admin/spreads/999', ['name' => 'Ghost'])));
+        $nothing = $this->request('PUT', "/admin/spreads/{$spread->spread_id}", ['spread_id' => 9]);
+        $this->assertSame('No changes provided.', $this->assertDocumentedProblem('put', '/admin/spreads/{spread_id}', 422, $nothing));
+        $ghost = $this->request('PUT', '/admin/spreads/999', ['name' => 'Ghost']);
+        $this->assertSame('Spread not found', $this->assertDocumentedProblem('put', '/admin/spreads/{spread_id}', 404, $ghost));
         $this->assertSame([['spread_id' => $spread->spread_id, 'name' => 'Three Card']], $this->rows('SELECT spread_id, name FROM spreads'));
     }
 
@@ -157,27 +178,27 @@ final class AdminSpreadsTest extends HttpTestCase
 
     public function testApprovingASubmissionThatIsGoneIsNotFound(): void
     {
-        $this->assertSame(['error' => 'Pending spread not found'], $this->assertJsonResponse(404, $this->post('/admin/pending-spreads/999/approve')));
+        $this->assertSame('Pending spread not found', $this->assertProblem(404, $this->post('/admin/pending-spreads/999/approve')));
         $this->assertSame(0, $this->rowCount('spreads'));
     }
 
     public function testASpreadNeedsAName(): void
     {
-        $required = ['error' => 'Name is required'];
+        $required = 'Name is required';
 
-        $this->assertSame($required, $this->assertJsonResponse(400, $this->post('/admin/spreads', ['positions' => [self::POSITION]])));
-        $this->assertSame($required, $this->assertJsonResponse(400, $this->post('/admin/spreads', ['name' => '  ', 'positions' => [self::POSITION]])));
+        $this->assertSame($required, $this->assertProblem(422, $this->post('/admin/spreads', ['positions' => [self::POSITION]])));
+        $this->assertSame($required, $this->assertProblem(422, $this->post('/admin/spreads', ['name' => '  ', 'positions' => [self::POSITION]])));
         $this->assertSame(0, $this->rowCount('spreads'));
     }
 
     public function testARenameCannotBlankTheName(): void
     {
         $spread = $this->spread('Three Card', 3);
-        $required = ['error' => 'Name is required'];
+        $required = 'Name is required';
 
         foreach (['', '  ', null] as $blank) {
             $response = $this->request('PUT', "/admin/spreads/{$spread->spread_id}", ['name' => $blank, 'positions' => [self::POSITION]]);
-            $this->assertSame($required, $this->assertJsonResponse(400, $response), var_export($blank, true));
+            $this->assertSame($required, $this->assertProblem(422, $response), var_export($blank, true));
         }
 
         $this->assertSame([['name' => 'Three Card', 'card_count' => 3]], $this->rows('SELECT name, card_count FROM spreads'));
@@ -202,9 +223,9 @@ final class AdminSpreadsTest extends HttpTestCase
         $this->assertNotNull($pending);
         $this->signInAs($this->createUser('reader@example.test')->user_id);
 
-        $this->assertJsonResponse(401, $this->get('/admin/pending-spreads'));
-        $this->assertJsonResponse(401, $this->post("/admin/pending-spreads/{$pending->pending_id}/approve"));
-        $this->assertJsonResponse(401, $this->post('/admin/spreads', ['name' => 'Mine', 'positions' => [self::POSITION]]));
+        $this->assertProblem(403, $this->get('/admin/pending-spreads'));
+        $this->assertProblem(403, $this->post("/admin/pending-spreads/{$pending->pending_id}/approve"));
+        $this->assertProblem(403, $this->post('/admin/spreads', ['name' => 'Mine', 'positions' => [self::POSITION]]));
 
         $this->assertSame(1, $this->rowCount('pending_spreads'));
         $this->assertSame(0, $this->rowCount('spreads'));
@@ -226,12 +247,12 @@ final class AdminSpreadsTest extends HttpTestCase
     public function testAnUnknownCategoryIsRefused(): void
     {
         $spread = $this->spread('Three Card', 3);
-        $unknown = ['error' => 'Unknown spread category.'];
+        $unknown = 'Unknown spread category.';
 
         foreach ([99, 0, 'Career', ''] as $categoryId) {
             $label = var_export($categoryId, true);
-            $this->assertSame($unknown, $this->assertJsonResponse(400, $this->post('/admin/spreads', ['name' => 'New', 'category_id' => $categoryId])), "create {$label}");
-            $this->assertSame($unknown, $this->assertJsonResponse(400, $this->request('PUT', "/admin/spreads/{$spread->spread_id}", ['category_id' => $categoryId])), "update {$label}");
+            $this->assertSame($unknown, $this->assertProblem(422, $this->post('/admin/spreads', ['name' => 'New', 'category_id' => $categoryId])), "create {$label}");
+            $this->assertSame($unknown, $this->assertProblem(422, $this->request('PUT', "/admin/spreads/{$spread->spread_id}", ['category_id' => $categoryId])), "update {$label}");
         }
 
         $this->assertSame([['name' => 'Three Card', 'category_id' => 1]], $this->rows('SELECT name, category_id FROM spreads'));
@@ -254,8 +275,8 @@ final class AdminSpreadsTest extends HttpTestCase
         $this->assertNotNull($pending);
 
         $this->assertSame(
-            ['error' => 'Unknown spread category.'],
-            $this->assertJsonResponse(400, $this->post("/admin/pending-spreads/{$pending->pending_id}/approve", ['category_id' => 99]))
+            'Unknown spread category.',
+            $this->assertProblem(422, $this->post("/admin/pending-spreads/{$pending->pending_id}/approve", ['category_id' => 99]))
         );
 
         $this->assertSame(1, $this->rowCount('pending_spreads'));

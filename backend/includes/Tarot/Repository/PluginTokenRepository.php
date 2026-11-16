@@ -34,4 +34,10 @@ readonly class PluginTokenRepository
     {
         return $this->data->revoke($id, $userId);
     }
+
+    /** Revoke every live token of a user; returns how many were revoked. */
+    public function revokeAllForUser(int $userId): int
+    {
+        return $this->data->revokeAllForUser($userId);
+    }
 }

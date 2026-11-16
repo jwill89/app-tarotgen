@@ -28,7 +28,7 @@ use Tarot\Data\UserData;
 #[CoversClass(UserData::class)]
 final class PasskeyManagementTest extends HttpTestCase
 {
-    private const array SIGNED_OUT = ['error' => 'Not authenticated'];
+    private const string SIGNED_OUT = 'Not authenticated';
 
     private PasskeyRepository $passkeys;
 
@@ -56,12 +56,12 @@ final class PasskeyManagementTest extends HttpTestCase
         $reader = $this->createUser('reader@example.test');
         $passkeyId = $this->addPasskey($reader, 'Laptop');
 
-        $this->assertSame(self::SIGNED_OUT, $this->assertJsonResponse(401, $this->post('/auth/passkeys/register/options')));
-        $this->assertSame(self::SIGNED_OUT, $this->assertJsonResponse(401, $this->post('/auth/passkeys/register', ['clientDataJSON' => 'e30', 'attestationObject' => 'oA'])));
-        $this->assertSame(self::SIGNED_OUT, $this->assertJsonResponse(401, $this->get('/auth/passkeys')));
-        $this->assertSame(self::SIGNED_OUT, $this->assertJsonResponse(401, $this->request('PATCH', "/auth/passkeys/{$passkeyId}", ['name' => 'Mine now'])));
-        $this->assertSame(self::SIGNED_OUT, $this->assertJsonResponse(401, $this->request('DELETE', "/auth/passkeys/{$passkeyId}")));
-        $this->assertSame(self::SIGNED_OUT, $this->assertJsonResponse(401, $this->request('PATCH', '/auth/passkeys/password-login', ['disable' => true])));
+        $this->assertSame(self::SIGNED_OUT, $this->assertProblem(401, $this->post('/auth/passkeys/register/options')));
+        $this->assertSame(self::SIGNED_OUT, $this->assertProblem(401, $this->post('/auth/passkeys/register', ['clientDataJSON' => 'e30', 'attestationObject' => 'oA'])));
+        $this->assertSame(self::SIGNED_OUT, $this->assertProblem(401, $this->get('/auth/passkeys')));
+        $this->assertSame(self::SIGNED_OUT, $this->assertProblem(401, $this->request('PATCH', "/auth/passkeys/{$passkeyId}", ['name' => 'Mine now'])));
+        $this->assertSame(self::SIGNED_OUT, $this->assertProblem(401, $this->request('DELETE', "/auth/passkeys/{$passkeyId}")));
+        $this->assertSame(self::SIGNED_OUT, $this->assertProblem(401, $this->request('PATCH', '/auth/passkeys/password-login', ['disable' => true])));
 
         $this->assertSame([['name' => 'Laptop']], $this->rows('SELECT name FROM user_passkeys'));
         $this->assertSame([['password_login_disabled' => 0]], $this->rows('SELECT password_login_disabled FROM users'));
@@ -75,12 +75,12 @@ final class PasskeyManagementTest extends HttpTestCase
         $passkeyId = $this->addPasskey($reader, 'Laptop');
         $this->signInAs($reader->user_id);
 
-        $this->assertSame(self::SIGNED_OUT, $this->assertJsonResponse(401, $this->post('/auth/passkeys/register/options')));
-        $this->assertSame(self::SIGNED_OUT, $this->assertJsonResponse(401, $this->post('/auth/passkeys/register', ['clientDataJSON' => 'e30', 'attestationObject' => 'oA'])));
-        $this->assertSame(self::SIGNED_OUT, $this->assertJsonResponse(401, $this->get('/auth/passkeys')));
-        $this->assertSame(self::SIGNED_OUT, $this->assertJsonResponse(401, $this->request('PATCH', "/auth/passkeys/{$passkeyId}", ['name' => 'Renamed'])));
-        $this->assertSame(self::SIGNED_OUT, $this->assertJsonResponse(401, $this->request('DELETE', "/auth/passkeys/{$passkeyId}")));
-        $this->assertSame(self::SIGNED_OUT, $this->assertJsonResponse(401, $this->request('PATCH', '/auth/passkeys/password-login', ['disable' => true])));
+        $this->assertSame(self::SIGNED_OUT, $this->assertProblem(401, $this->post('/auth/passkeys/register/options')));
+        $this->assertSame(self::SIGNED_OUT, $this->assertProblem(401, $this->post('/auth/passkeys/register', ['clientDataJSON' => 'e30', 'attestationObject' => 'oA'])));
+        $this->assertSame(self::SIGNED_OUT, $this->assertProblem(401, $this->get('/auth/passkeys')));
+        $this->assertSame(self::SIGNED_OUT, $this->assertProblem(401, $this->request('PATCH', "/auth/passkeys/{$passkeyId}", ['name' => 'Renamed'])));
+        $this->assertSame(self::SIGNED_OUT, $this->assertProblem(401, $this->request('DELETE', "/auth/passkeys/{$passkeyId}")));
+        $this->assertSame(self::SIGNED_OUT, $this->assertProblem(401, $this->request('PATCH', '/auth/passkeys/password-login', ['disable' => true])));
 
         $this->assertSame([['name' => 'Laptop']], $this->rows('SELECT name FROM user_passkeys'));
         $this->assertSame([['password_login_disabled' => 0]], $this->rows('SELECT password_login_disabled FROM users'));
@@ -114,8 +114,8 @@ final class PasskeyManagementTest extends HttpTestCase
         $this->signInAs($reader->user_id);
 
         $this->assertSame(
-            ['error' => 'Passkey not found.'],
-            $this->assertJsonResponse(404, $this->request('PATCH', "/auth/passkeys/{$theirs}", ['name' => 'Mine now']))
+            'Passkey not found.',
+            $this->assertProblem(404, $this->request('PATCH', "/auth/passkeys/{$theirs}", ['name' => 'Mine now']))
         );
         $renamed = $this->assertJsonResponse(200, $this->request('PATCH', "/auth/passkeys/{$mine}", ['name' => '  Work laptop  ']));
         $this->assertDocumented('patch', '/auth/passkeys/{id}', 200, $renamed);
@@ -127,17 +127,20 @@ final class PasskeyManagementTest extends HttpTestCase
         );
     }
 
-    public function testANewNameIsRequiredAndCappedAtFiftyCharacters(): void
+    public function testANewNameIsRequiredAndAtMostFiftyCharacters(): void
     {
         $reader = $this->createUser('reader@example.test');
         $mine = $this->addPasskey($reader, 'Laptop');
         $this->signInAs($reader->user_id);
 
         $this->assertSame(
-            ['error' => 'Name is required.'],
-            $this->assertJsonResponse(422, $this->request('PATCH', "/auth/passkeys/{$mine}", ['name' => '   ']))
+            'Name is required.',
+            $this->assertProblem(422, $this->request('PATCH', "/auth/passkeys/{$mine}", ['name' => '   ']))
         );
-        $this->assertJsonResponse(200, $this->request('PATCH', "/auth/passkeys/{$mine}", ['name' => str_repeat('k', 60)]));
+        $long = $this->request('PATCH', "/auth/passkeys/{$mine}", ['name' => str_repeat('k', 51)]);
+        $this->assertSame('name can be at most 50 characters.', $this->assertDocumentedProblem('patch', '/auth/passkeys/{id}', 422, $long));
+        $this->assertSame(['body.name'], array_keys($this->problemErrors($long)));
+        $this->assertJsonResponse(200, $this->request('PATCH', "/auth/passkeys/{$mine}", ['name' => str_repeat('k', 50)]));
 
         $this->assertSame([['name' => str_repeat('k', 50)]], $this->rows('SELECT name FROM user_passkeys'));
     }
@@ -150,8 +153,8 @@ final class PasskeyManagementTest extends HttpTestCase
         $theirs = $this->addPasskey($other, 'Phone');
         $this->signInAs($reader->user_id);
 
-        $this->assertSame(['error' => 'Passkey not found.'], $this->assertJsonResponse(404, $this->request('DELETE', "/auth/passkeys/{$theirs}")));
-        $this->assertSame(['error' => 'Passkey not found.'], $this->assertJsonResponse(404, $this->request('DELETE', '/auth/passkeys/999')));
+        $this->assertSame('Passkey not found.', $this->assertProblem(404, $this->request('DELETE', "/auth/passkeys/{$theirs}")));
+        $this->assertSame('Passkey not found.', $this->assertProblem(404, $this->request('DELETE', '/auth/passkeys/999')));
 
         $deleted = $this->request('DELETE', "/auth/passkeys/{$mine}");
         $this->assertSame(204, $deleted->getStatusCode());
@@ -170,7 +173,7 @@ final class PasskeyManagementTest extends HttpTestCase
         $this->signInAs($reader->user_id);
 
         // Not "your last passkey": the passkey isn't this account's at all.
-        $this->assertSame(['error' => 'Passkey not found.'], $this->assertJsonResponse(404, $this->request('DELETE', "/auth/passkeys/{$theirs}")));
+        $this->assertSame('Passkey not found.', $this->assertProblem(404, $this->request('DELETE', "/auth/passkeys/{$theirs}")));
         $this->assertSame(2, $this->rowCount('user_passkeys'));
     }
 
@@ -180,8 +183,8 @@ final class PasskeyManagementTest extends HttpTestCase
         $this->signInAs($reader->user_id);
 
         $this->assertSame(
-            ['error' => 'That would leave you no way to sign in. First add a passkey or link your Google account.'],
-            $this->assertJsonResponse(409, $this->request('PATCH', '/auth/passkeys/password-login', ['disable' => true]))
+            'That would leave you no way to sign in. First add a passkey or link your Google account.',
+            $this->assertProblem(409, $this->request('PATCH', '/auth/passkeys/password-login', ['disable' => true]))
         );
         $this->assertSame([['password_login_disabled' => 0]], $this->rows('SELECT password_login_disabled FROM users'));
     }
@@ -214,7 +217,7 @@ final class PasskeyManagementTest extends HttpTestCase
         $this->assertTrue($off['user']['has_passkeys']);
 
         $signIn = ['email' => 'reader@example.test', 'password' => $password];
-        $this->assertJsonResponse(403, $this->post('/auth/login', $signIn));
+        $this->assertProblem(403, $this->post('/auth/login', $signIn));
 
         $on = $this->assertJsonResponse(200, $this->request('PATCH', '/auth/passkeys/password-login', ['disable' => false]));
         $this->assertFalse($on['password_login_disabled']);
@@ -231,8 +234,8 @@ final class PasskeyManagementTest extends HttpTestCase
 
         $this->assertSame(204, $this->request('DELETE', "/auth/passkeys/{$laptop}")->getStatusCode());
         $this->assertSame(
-            ['error' => 'That would leave you no way to sign in. First turn password login back on or link your Google account.'],
-            $this->assertJsonResponse(409, $this->request('DELETE', "/auth/passkeys/{$phone}"))
+            'That would leave you no way to sign in. First turn password login back on or link your Google account.',
+            $this->assertProblem(409, $this->request('DELETE', "/auth/passkeys/{$phone}"))
         );
         $this->assertSame(1, $this->rowCount('user_passkeys'));
 
@@ -262,8 +265,8 @@ final class PasskeyManagementTest extends HttpTestCase
         $this->signInAs($reader->user_id);
 
         $this->assertSame(
-            ['error' => 'That would leave you no way to sign in. First set a password or link your Google account.'],
-            $this->assertJsonResponse(409, $this->request('DELETE', "/auth/passkeys/{$phone}"))
+            'That would leave you no way to sign in. First set a password or link your Google account.',
+            $this->assertProblem(409, $this->request('DELETE', "/auth/passkeys/{$phone}"))
         );
         $this->assertSame(1, $this->rowCount('user_passkeys'));
     }
@@ -305,7 +308,7 @@ final class PasskeyManagementTest extends HttpTestCase
         $this->signInAs($reader->user_id);
         $this->service(UserRepository::class)->delete($reader->user_id);
 
-        $this->assertSame(self::SIGNED_OUT, $this->assertJsonResponse(401, $this->post('/auth/passkeys/register/options')));
+        $this->assertSame(self::SIGNED_OUT, $this->assertProblem(401, $this->post('/auth/passkeys/register/options')));
     }
 
     public function testAnEmailScopesSignInOptionsToThatAccountsPasskeys(): void

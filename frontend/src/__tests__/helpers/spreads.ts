@@ -58,7 +58,7 @@ export const pendingSpread = (
   positions: [position(1, 'Heart'), position(2, 'Mind')],
   submitter: 'Morgana',
   user_id: 7,
-  submitted_at: '2026-10-27 08:30:00',
+  submitted_at: '2026-10-27T08:30:00Z',
   ...overrides,
 })
 

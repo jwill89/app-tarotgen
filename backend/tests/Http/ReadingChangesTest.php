@@ -67,7 +67,7 @@ final class ReadingChangesTest extends HttpTestCase
         $this->assertCount(self::DECK_SIZE, $this->storedDraw($id));
 
         $exhausted = $this->post("/readings/{$id}/draw");
-        $this->assertSame(['error' => 'No more cards are left to draw from this deck.'], $this->assertJsonResponse(409, $exhausted));
+        $this->assertSame('No more cards are left to draw from this deck.', $this->assertProblem(409, $exhausted));
     }
 
     public function testTheDecksExtraCardsCanBeDrawnIntoAReadingWhenAskedFor(): void
@@ -76,7 +76,7 @@ final class ReadingChangesTest extends HttpTestCase
         $this->signInAs($this->createUser('owner@example.test')->user_id);
         $id = $this->generate(self::DECK_SIZE);
 
-        $this->assertJsonResponse(409, $this->post("/readings/{$id}/draw"));
+        $this->assertProblem(409, $this->post("/readings/{$id}/draw"));
         $this->assertJsonResponse(200, $this->post("/readings/{$id}/draw", ['count' => 5, 'use_additional_cards' => 'true']));
 
         $ids = array_column($this->storedDraw($id), 'card_id');
@@ -94,7 +94,7 @@ final class ReadingChangesTest extends HttpTestCase
         $this->assertJsonResponse(200, $this->post("/readings/{$id}/draw"));
         $this->assertCount(3, $this->storedDraw($id));
         // A new reading from the deck is refused, as for any visitor.
-        $this->assertSame(['error' => 'InvalidDeckID'], $this->assertJsonResponse(400, $this->post('/readings/generate', ['deck_id' => $this->deckId])));
+        $this->assertSame('InvalidDeckID', $this->assertProblem(422, $this->post('/readings/generate', ['deck_id' => $this->deckId])));
     }
 
     public function testDrawingFromADeckThatHasSinceBeenDeletedIsRefused(): void
@@ -105,7 +105,7 @@ final class ReadingChangesTest extends HttpTestCase
 
         $response = $this->post("/readings/{$id}/draw");
 
-        $this->assertSame(['error' => 'InvalidDeckID'], $this->assertJsonResponse(400, $response));
+        $this->assertSame('InvalidDeckID', $this->assertDocumentedProblem('post', '/readings/{reading_id}/draw', 409, $response));
         $this->assertCount(1, $this->storedDraw($id));
     }
 
@@ -129,7 +129,7 @@ final class ReadingChangesTest extends HttpTestCase
         $theirs = $this->generate(1);
         $this->useSessionCookie(null);
         $this->assertFalse($this->assertJsonResponse(200, $this->get("/readings/{$theirs}", $bearer))['is_owner']);
-        $this->assertJsonResponse(403, $this->post("/readings/{$theirs}/finalize", [], $bearer));
+        $this->assertProblem(403, $this->post("/readings/{$theirs}/finalize", [], $bearer));
     }
 
     public function testOnlyTheOwnerCanDrawMore(): void
@@ -139,14 +139,14 @@ final class ReadingChangesTest extends HttpTestCase
         $this->useSessionCookie(null);
         $guestMade = $this->generate(1);
 
-        $notYours = ['error' => 'You do not own this reading.'];
+        $notYours = 'You do not own this reading.';
         // Signed out, even in the browser that made it: a guest reading has no owner.
-        $this->assertSame($notYours, $this->assertJsonResponse(403, $this->post("/readings/{$owned}/draw")));
-        $this->assertSame($notYours, $this->assertJsonResponse(403, $this->post("/readings/{$guestMade}/draw")));
+        $this->assertSame($notYours, $this->assertProblem(403, $this->post("/readings/{$owned}/draw")));
+        $this->assertSame($notYours, $this->assertProblem(403, $this->post("/readings/{$guestMade}/draw")));
 
         $this->signInAs($this->createUser('stranger@example.test')->user_id);
-        $this->assertSame($notYours, $this->assertJsonResponse(403, $this->post("/readings/{$owned}/draw")));
-        $this->assertSame(['error' => 'Reading not found.'], $this->assertJsonResponse(404, $this->post('/readings/0000000000/draw')));
+        $this->assertSame($notYours, $this->assertProblem(403, $this->post("/readings/{$owned}/draw")));
+        $this->assertSame('Reading not found.', $this->assertProblem(404, $this->post('/readings/0000000000/draw')));
 
         $this->assertCount(1, $this->storedDraw($owned));
         $this->assertCount(1, $this->storedDraw($guestMade));
@@ -163,7 +163,7 @@ final class ReadingChangesTest extends HttpTestCase
         $this->assertFalse($viewed['can_draw_more']);
 
         $response = $this->post("/readings/{$custom['reading_id']}/draw");
-        $this->assertSame(['error' => 'Custom readings cannot draw additional cards.'], $this->assertJsonResponse(400, $response));
+        $this->assertSame('Custom readings cannot draw additional cards.', $this->assertDocumentedProblem('post', '/readings/{reading_id}/draw', 409, $response));
     }
 
     public function testFinalizingLocksAReadingForGood(): void
@@ -176,9 +176,9 @@ final class ReadingChangesTest extends HttpTestCase
         $this->assertFalse($final['can_draw_more']);
         $this->assertSame([['is_final' => 1]], $this->rows("SELECT is_final FROM readings WHERE reading_id = '{$id}'"));
 
-        $isFinal = ['error' => 'This reading is final and can no longer be changed.'];
-        $this->assertSame($isFinal, $this->assertJsonResponse(409, $this->post("/readings/{$id}/draw")));
-        $this->assertSame($isFinal, $this->assertJsonResponse(409, $this->place($id, [[]])));
+        $isFinal = 'This reading is final and can no longer be changed.';
+        $this->assertSame($isFinal, $this->assertProblem(409, $this->post("/readings/{$id}/draw")));
+        $this->assertSame($isFinal, $this->assertProblem(409, $this->place($id, [[]])));
         $this->assertCount(1, $this->storedDraw($id));
 
         // Finalizing again is harmless: still final, still the owner's.
@@ -192,13 +192,13 @@ final class ReadingChangesTest extends HttpTestCase
         $this->useSessionCookie(null);
         $guestMade = $this->generate(1);
 
-        $notYours = ['error' => 'You do not own this reading.'];
-        $this->assertSame($notYours, $this->assertJsonResponse(403, $this->post("/readings/{$owned}/finalize")));
-        $this->assertSame($notYours, $this->assertJsonResponse(403, $this->post("/readings/{$guestMade}/finalize")));
+        $notYours = 'You do not own this reading.';
+        $this->assertSame($notYours, $this->assertProblem(403, $this->post("/readings/{$owned}/finalize")));
+        $this->assertSame($notYours, $this->assertProblem(403, $this->post("/readings/{$guestMade}/finalize")));
 
         $this->signInAs($this->createUser('stranger@example.test')->user_id);
-        $this->assertSame($notYours, $this->assertJsonResponse(403, $this->post("/readings/{$owned}/finalize")));
-        $this->assertSame(['error' => 'Reading not found.'], $this->assertJsonResponse(404, $this->post('/readings/0000000000/finalize')));
+        $this->assertSame($notYours, $this->assertProblem(403, $this->post("/readings/{$owned}/finalize")));
+        $this->assertSame('Reading not found.', $this->assertProblem(404, $this->post('/readings/0000000000/finalize')));
 
         $this->assertSame([['is_final' => 0], ['is_final' => 0]], $this->rows('SELECT is_final FROM readings'));
     }
@@ -209,7 +209,7 @@ final class ReadingChangesTest extends HttpTestCase
         $this->useSessionCookie(null);
 
         $placed = $this->assertJsonResponse(200, $this->place($id, [
-            ['title' => '  Left  ', 'x' => 150, 'y' => -1, 'rotation' => 450],
+            ['title' => '  Left  ', 'x' => 100, 'y' => 0, 'rotation' => 450],
             ['x' => 25.555, 'rotation' => -90],
         ]));
 
@@ -224,6 +224,27 @@ final class ReadingChangesTest extends HttpTestCase
                 ['order' => 2, 'title' => '', 'x' => 25.56, 'y' => 50, 'rotation' => 270],
             ],
         ], $this->storedInfo($id)['spread']);
+    }
+
+    public function testAPlacementPastALimitIsRefusedNotMovedOrCut(): void
+    {
+        $id = $this->generate(2);
+        $before = $this->storedInfo($id);
+        $cases = [
+            'body.positions[0].x'     => [[['x' => 150], []], null],
+            'body.positions[1].y'     => [[[], ['y' => -1]], null],
+            'body.positions[0].title' => [[['title' => str_repeat('t', 101)], []], null],
+            'body.positions[1]'       => [[[], 'not a position'], null],
+            'body.spread_name'        => [[[], []], str_repeat('s', 101)],
+        ];
+
+        foreach ($cases as $location => [$positions, $spreadName]) {
+            $refused = $this->place($id, $positions, $spreadName);
+            $this->assertDocumentedProblem('put', '/readings/{reading_id}/placement', 422, $refused);
+            $this->assertSame([$location], array_keys($this->problemErrors($refused)), $location);
+        }
+
+        $this->assertSame($before, $this->storedInfo($id));
     }
 
     public function testPlacementRewritesASpreadsPositionsButKeepsWhichSpreadItIs(): void
@@ -253,16 +274,16 @@ final class ReadingChangesTest extends HttpTestCase
         $id = $this->generate(2);
         $before = $this->storedInfo($id);
 
-        $this->assertSame(['error' => 'At least one position is required.'], $this->assertJsonResponse(400, $this->place($id, [])));
+        $this->assertSame('At least one position is required.', $this->assertProblem(422, $this->place($id, [])));
         $this->assertSame(
-            ['error' => 'At least one position is required.'],
-            $this->assertJsonResponse(400, $this->request('PUT', "/readings/{$id}/placement", ['positions' => 'left, right']))
+            'At least one position is required.',
+            $this->assertProblem(422, $this->request('PUT', "/readings/{$id}/placement", ['positions' => 'left, right']))
         );
         $this->assertSame(
-            ['error' => 'Position count must match the number of drawn cards.'],
-            $this->assertJsonResponse(400, $this->place($id, [[]]))
+            'Position count must match the number of drawn cards.',
+            $this->assertProblem(422, $this->place($id, [[]]))
         );
-        $this->assertSame(['error' => 'Invalid position data.'], $this->assertJsonResponse(400, $this->place($id, [[], 'right'])));
+        $this->assertSame('Invalid position data.', $this->assertProblem(422, $this->place($id, [[], 'right'])));
 
         $this->assertSame($before, $this->storedInfo($id));
     }
@@ -274,12 +295,12 @@ final class ReadingChangesTest extends HttpTestCase
         $id = $this->generate(1);
 
         $this->useSessionCookie(null);
-        $notYours = ['error' => 'You do not own this reading.'];
-        $this->assertSame($notYours, $this->assertJsonResponse(403, $this->place($id, [[]])));
+        $notYours = 'You do not own this reading.';
+        $this->assertSame($notYours, $this->assertProblem(403, $this->place($id, [[]])));
         $this->signInAs($this->createUser('stranger@example.test')->user_id);
-        $this->assertSame($notYours, $this->assertJsonResponse(403, $this->place($id, [[]])));
+        $this->assertSame($notYours, $this->assertProblem(403, $this->place($id, [[]])));
         $this->assertArrayNotHasKey('spread', $this->storedInfo($id));
-        $this->assertSame(['error' => 'Reading not found.'], $this->assertJsonResponse(404, $this->place('0000000000', [[]])));
+        $this->assertSame('Reading not found.', $this->assertProblem(404, $this->place('0000000000', [[]])));
 
         $this->useSessionCookie(null);
         $this->signInAs($owner->user_id);

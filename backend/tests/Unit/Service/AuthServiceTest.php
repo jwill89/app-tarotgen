@@ -8,8 +8,10 @@ use ArrayObject;
 use PDO;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Tarot\Data\PluginTokenData;
 use Tarot\Data\UserData;
 use Tarot\Data\UserTokenData;
+use Tarot\Repository\PluginTokenRepository;
 use Tarot\Repository\UserRepository;
 use Tarot\Repository\UserTokenRepository;
 use Tarot\Service\AccountProtection;
@@ -40,59 +42,9 @@ final class AuthServiceTest extends TestCase
         $this->pdo = new PDO('sqlite::memory:');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        // UserData's SELECT always probes user_passkeys and authenticate() reads
-        // users.password_login_disabled, so the test schema must include the
-        // OAuth/passkey columns and table.
-        $this->pdo->exec(
-            'CREATE TABLE users (
-                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT NOT NULL COLLATE NOCASE,
-                password_hash TEXT NOT NULL,
-                display_name TEXT NOT NULL COLLATE NOCASE,
-                is_active INTEGER NOT NULL DEFAULT 0,
-                is_admin INTEGER NOT NULL DEFAULT 0,
-                registered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                last_login_at TEXT DEFAULT NULL,
-                google_id TEXT DEFAULT NULL,
-                password_login_disabled INTEGER NOT NULL DEFAULT 0
-            )'
-        );
-        $this->pdo->exec('CREATE UNIQUE INDEX idx_users_email ON users (email COLLATE NOCASE)');
-        $this->pdo->exec('CREATE UNIQUE INDEX idx_users_display_name ON users (display_name COLLATE NOCASE)');
-        $this->pdo->exec('CREATE UNIQUE INDEX idx_users_google_id ON users (google_id)');
-        $this->pdo->exec(
-            'CREATE TABLE user_tokens (
-                token_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                type TEXT NOT NULL,
-                token_hash TEXT NOT NULL,
-                expires_at TEXT NOT NULL,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                used_at TEXT DEFAULT NULL
-            )'
-        );
-        $this->pdo->exec(
-            "CREATE TABLE user_passkeys (
-                passkey_id     INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id        INTEGER NOT NULL,
-                credential_id  TEXT    NOT NULL,
-                public_key_pem TEXT    NOT NULL,
-                name           TEXT    NOT NULL DEFAULT 'My Passkey',
-                sign_count     INTEGER NOT NULL DEFAULT 0,
-                created_at     TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                last_used_at   TEXT    DEFAULT NULL,
-                FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
-            )"
-        );
-        // The sessions table, with the user_id that ties a session to its account.
-        $this->pdo->exec(
-            "CREATE TABLE sessions (
-                id      TEXT    PRIMARY KEY,
-                data    TEXT    NOT NULL DEFAULT '',
-                expires INTEGER NOT NULL,
-                user_id INTEGER DEFAULT NULL
-            )"
-        );
+        // The committed schema, as the app's own database has it.
+        $this->pdo->exec((string) file_get_contents(dirname(__DIR__, 3) . '/db/schema.sql'));
+        $this->pdo->exec('PRAGMA foreign_keys = ON');
 
         $this->savedProtected = $_ENV['PROTECTED_ADMIN_EMAILS'] ?? null;
         $_ENV['PROTECTED_ADMIN_EMAILS'] = '';
@@ -112,7 +64,7 @@ final class AuthServiceTest extends TestCase
 
         $this->userRepo = new UserRepository(new UserData($this->pdo));
         $tokens = new UserTokenRepository(new UserTokenData($this->pdo));
-        $this->auth = new AuthService($this->userRepo, $tokens, $mailer, new DbSessionHandler($this->pdo), new AccountProtection(), new AfterResponse());
+        $this->auth = new AuthService($this->userRepo, $tokens, new PluginTokenRepository(new PluginTokenData($this->pdo)), $mailer, new DbSessionHandler($this->pdo), new AccountProtection(), new AfterResponse());
     }
 
     protected function tearDown(): void
@@ -202,7 +154,7 @@ final class AuthServiceTest extends TestCase
         $this->auth->register('dupe@example.com', 'Mystic', 'correct horse battery staple');
 
         $dupeName = $this->auth->register('other@example.com', 'mystic', 'correct horse battery staple');
-        $this->assertSame(['ok' => false, 'errors' => ['That display name is already taken.']], $dupeName);
+        $this->assertSame(['ok' => false, 'reason' => 'taken', 'errors' => ['display_name' => 'That display name is already taken.']], $dupeName);
         $this->assertCount(1, $this->userRepo->getAll());
     }
 

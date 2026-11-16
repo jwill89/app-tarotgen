@@ -3,7 +3,7 @@ import { flushPromises } from '@vue/test-utils'
 import DashboardView from '@/views/admin/DashboardView.vue'
 import { useUser } from '@/composables/useUser'
 import { APP_VERSION } from '@/constants'
-import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 import { mountPage, resetPageState, click, toasts, apiCalls, button, dialog } from './helpers/page'
 import type { UsageStats } from '@/types'
 
@@ -272,7 +272,7 @@ describe('admin DashboardView', () => {
   })
 
   it("says insights aren't available and shows why when the summary fails", async () => {
-    stubApi({ 'GET /admin/summary': { status: 500, body: { error: 'Stats are unavailable.' } } })
+    stubApi({ 'GET /admin/summary': { status: 500, body: problem('Stats are unavailable.') } })
     await mountPage(DashboardView, { path: '/admin' })
 
     expect(toasts()).toEqual(['Stats are unavailable.'])
@@ -282,7 +282,7 @@ describe('admin DashboardView', () => {
   })
 
   it('drops to the login page when the session has expired', async () => {
-    stubApi({ 'GET /admin/summary': { status: 401, body: { error: 'Unauthorized' } } })
+    stubApi({ 'GET /admin/summary': { status: 401, body: problem('Unauthorized') } })
     const { router } = await mountPage(DashboardView, { path: '/admin' })
 
     // The login route's component loads lazily, so the navigation lands a beat later.

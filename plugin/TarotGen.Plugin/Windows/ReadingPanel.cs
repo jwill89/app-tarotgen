@@ -5,8 +5,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
-using TarotGen.Plugin.Models;
-using TarotGen.Plugin.Services;
+using TarotGen.Plugin.Core;
 
 namespace TarotGen.Plugin.Windows;
 
@@ -22,7 +21,7 @@ public sealed class ReadingPanel
     private static readonly Vector4 AccentColor = new(0.85f, 0.75f, 0.5f, 1f);
 
     private readonly TarotApiClient api;
-    private readonly CardTextureCache textures;
+    private readonly ICardTextures textures;
 
     private Reading? reading;
     private string codeBuffer = "";
@@ -46,13 +45,16 @@ public sealed class ReadingPanel
     private int reportReason = -1;
     private string reportDetails = "";
 
-    public ReadingPanel(TarotApiClient api, CardTextureCache textures)
+    public ReadingPanel(TarotApiClient api, ICardTextures textures)
     {
         this.api = api;
         this.textures = textures;
     }
 
     public bool HasReading => this.reading != null;
+
+    /// <summary>Whether a load, an unlock or a report is still waiting on the site.</summary>
+    internal bool Busy => this.loading || this.reportingCard;
 
     public void SetReading(Reading value)
     {
@@ -140,10 +142,10 @@ public sealed class ReadingPanel
         if (info?.Spread != null)
             meta += $"  ·  {info.Spread.Name}";
         if (!string.IsNullOrEmpty(r.ReadingTime))
-            meta += $"  ·  {r.ReadingTime}";
+            meta += $"  ·  {ReadingFormat.Time(r.ReadingTime)}";
         ImGui.TextDisabled(meta);
 
-        var url = $"{Configuration.SiteUrl}/reading/{r.ReadingId}";
+        var url = $"{this.api.SiteUrl}/reading/{r.ReadingId}";
 
         // The share code is what people paste into a /tell or party chat.
         ImGui.Spacing();
@@ -271,7 +273,7 @@ public sealed class ReadingPanel
             var mouse = ImGui.GetMousePos();
             for (var i = positions.Count - 1; i >= 0; i--)
             {
-                if (SpreadDraw.HitTest(mouse, CenterOf(positions[i]), cardWpx, cardHpx, positions[i].Rotation)
+                if (SpreadGeometry.HitTest(mouse, CenterOf(positions[i]), cardWpx, cardHpx, positions[i].Rotation)
                     && i < cards.Count)
                 {
                     this.OpenLightbox(info.DeckId, cards[i], positions[i].Title);
@@ -372,7 +374,7 @@ public sealed class ReadingPanel
 
     // ── Lightbox ──────────────────────────────────────────────────────────────
 
-    private void OpenLightbox(int deckId, DrawCard card, string? positionTitle = null)
+    internal void OpenLightbox(int deckId, DrawCard card, string? positionTitle = null)
     {
         this.lightbox = new LightboxCard(deckId, card.CardId, card.CardName, card.Reversed, positionTitle);
         this.lightboxShowReversed = card.Reversed;
@@ -497,8 +499,8 @@ public sealed class ReadingPanel
         var canSend = chosen != null && (!chosen.RequiresDetails || !string.IsNullOrWhiteSpace(this.reportDetails));
         using (ImRaii.Disabled(this.reportingCard || !canSend))
         {
-            if (Ui.PrimaryButton("Send report") && chosen != null)
-                this.StartReportCard(lb.DeckId, lb.CardId, lb.Name, chosen.Key, this.reportDetails.Trim());
+            if (Ui.PrimaryButton("Send report"))
+                this.SendReport();
         }
 
         ImGui.SameLine();
@@ -506,7 +508,25 @@ public sealed class ReadingPanel
             this.reportFormOpen = false;
     }
 
+    /// <summary>Open the lightbox's report form with a reason picked and details written.</summary>
+    internal void FillReport(int reason, string details)
+    {
+        this.reportFormOpen = true;
+        this.reportReason = reason;
+        this.reportDetails = details;
+    }
+
     // ── Async actions ─────────────────────────────────────────────────────────
+
+    /// <summary>Send the report form for the card in the lightbox.</summary>
+    internal void SendReport()
+    {
+        if (this.lightbox is not { } lb || this.reportReason < 0)
+            return;
+
+        var chosen = CardReportReason.All[this.reportReason];
+        this.StartReportCard(lb.DeckId, lb.CardId, lb.Name, chosen.Key, this.reportDetails.Trim());
+    }
 
     private void StartLoad(string idOrUrl)
     {

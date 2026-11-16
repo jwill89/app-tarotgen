@@ -42,9 +42,8 @@ abstract class AbstractController
     }
 
     /**
-     * The real client IP for this request. Resolved through Cloudflare
-     * (CF-Connecting-IP, trusted only from Cloudflare edge ranges) so that
-     * IP rate-limiting keys on the visitor, not the CDN edge. See {@see ClientIp}.
+     * The visitor's address as the rate limiters count it: what Apache put in
+     * REMOTE_ADDR, an IPv6 client by its /64. See {@see ClientIp}.
      */
     protected function clientIp(ServerRequestInterface $request): string
     {

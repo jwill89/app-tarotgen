@@ -7,15 +7,10 @@
  */
 
 use Psr\Container\ContainerInterface;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use Slim\App;
-use Slim\Exception\HttpMethodNotAllowedException;
-use Slim\Exception\HttpNotFoundException;
 use Slim\Factory\AppFactory;
-use Slim\Handlers\ErrorHandler;
 use Slim\Routing\RouteCollectorProxy;
-use Routes\JsonErrorRenderer;
+use Routes\ProblemErrorHandler;
 use Routes\Internal\{AccountController,
     AdminCardReportController,
     AdminContactController,
@@ -43,6 +38,7 @@ use Routes\Internal\{AccountController,
     UserController};
 use Routes\Middleware\AccountAuth;
 use Routes\Middleware\AdminAuth;
+use Routes\Middleware\JsonBodyParsing;
 use Routes\Middleware\OriginGuard;
 use Routes\Middleware\UserAuth;
 use Tarot\Config\Env;
@@ -64,30 +60,16 @@ return function (ContainerInterface $container, bool $is_production): App {
     // Set base path
     $app->setBasePath('/api');
 
-    // Setup Middleware
-    $app->addBodyParsingMiddleware();
+    // Setup Middleware. A JSON body that isn't a JSON object is refused with a 400.
+    $app->add(new JsonBodyParsing());
     $app->addRoutingMiddleware();
 
-    // Setup Error Handling — never leak details/stack traces in production.
+    // Every error, Slim's own included (an unknown route, a method a route doesn't
+    // take, an uncaught exception), answers as problem details whatever the
+    // request's Accept header. Details and stack traces never leave production.
     $error_middleware = $app->addErrorMiddleware($is_production === false, true, true);
-
-    // Every error answers in the API's `{ error }` JSON, whatever the request's
-    // Accept header: this is a JSON API, and the client reads `error`.
-    $default_error_handler = $error_middleware->getDefaultErrorHandler();
-    if (!$default_error_handler instanceof ErrorHandler) {
-        throw new LogicException('Expected Slim\'s own ErrorHandler as the default.');
-    }
-    $default_error_handler->registerErrorRenderer('application/json', JsonErrorRenderer::class);
-    $default_error_handler->forceContentType('application/json');
-
-    // 404/405s are mostly scanners probing for /api/.env and the like (~100 a day).
-    // Answer them as the default handler does, but without writing a stack trace to
-    // the shared Apache error log each time; real exceptions keep full logging.
-    // Not a static closure: Slim's CallableResolver binds closures to the container.
-    $error_middleware->setErrorHandler(
-        [HttpNotFoundException::class, HttpMethodNotAllowedException::class],
-        fn(ServerRequestInterface $request, Throwable $exception, bool $displayErrorDetails): ResponseInterface
-            => $default_error_handler($request, $exception, $displayErrorDetails, false, false)
+    $error_middleware->setDefaultErrorHandler(
+        new ProblemErrorHandler($app->getCallableResolver(), $app->getResponseFactory())
     );
 
     // Security headers + opt-in CORS. The SPA is same-origin, so cross-origin

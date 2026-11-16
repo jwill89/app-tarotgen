@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { useContact } from '@/composables/useContact'
 import { NETWORK_ERROR_MESSAGE } from '@/composables/apiClient'
+import { problemBody } from './helpers/api'
 
 // Runs the composable's own submit logic, not a copy of it, so the spec fails
 // when the real code changes.
@@ -49,7 +50,7 @@ describe('useContact.sendMessage', () => {
       vi
         .fn()
         .mockResolvedValue(
-          fakeResponse({ error: 'Please enter a valid email.' }, { ok: false, status: 400 }),
+          fakeResponse(problemBody(422, 'Please enter a valid email.'), { ok: false, status: 422 }),
         ),
     )
 
@@ -62,7 +63,9 @@ describe('useContact.sendMessage', () => {
   it('explains a rate limit (429) in its own words', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(fakeResponse({ error: 'Too many' }, { ok: false, status: 429 })),
+      vi
+        .fn()
+        .mockResolvedValue(fakeResponse(problemBody(429, 'Too many'), { ok: false, status: 429 })),
     )
 
     const result = await useContact().sendMessage(message)

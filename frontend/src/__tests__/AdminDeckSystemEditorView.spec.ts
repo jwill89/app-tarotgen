@@ -3,7 +3,7 @@ import { flushPromises } from '@vue/test-utils'
 import { RouterView, type Router } from 'vue-router'
 import DeckSystemEditorView from '@/views/admin/DeckSystemEditorView.vue'
 import { useUser } from '@/composables/useUser'
-import { cleanup, stubApi, signIn, testUser, testWebRouter, lazyLoad } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, testWebRouter, lazyLoad, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -158,7 +158,7 @@ describe('admin DeckSystemEditorView', () => {
       const api = stubApi({
         'POST /deck-systems': {
           status: 409,
-          body: { error: 'A deck system with that name already exists' },
+          body: problem('A deck system with that name already exists'),
         },
       })
       const router = await browse(NEW)
@@ -228,7 +228,7 @@ describe('admin DeckSystemEditorView', () => {
     it('stays in the editor when saving fails', async () => {
       stubApi({
         ...editing,
-        'PUT /admin/deck-systems/3': { status: 404, body: { error: 'Deck system not found' } },
+        'PUT /admin/deck-systems/3': { status: 404, body: problem('Deck system not found') },
       })
       const router = await browse(EDIT)
 
@@ -321,7 +321,7 @@ describe('admin DeckSystemEditorView', () => {
   describe('a system that cannot be opened', () => {
     it('says there is no such system, with the way back, for an unknown id', async () => {
       stubApi({
-        'GET /admin/deck-systems/99': { status: 404, body: { error: 'Deck system not found' } },
+        'GET /admin/deck-systems/99': { status: 404, body: problem('Deck system not found') },
       })
       await browse('/admin/deck-systems/99/edit')
 
@@ -346,7 +346,7 @@ describe('admin DeckSystemEditorView', () => {
 
     it("says why when the system couldn't be loaded", async () => {
       stubApi({
-        'GET /admin/deck-systems/3': { status: 500, body: { error: 'The database is busy.' } },
+        'GET /admin/deck-systems/3': { status: 500, body: problem('The database is busy.') },
       })
       await browse(EDIT)
 
@@ -362,7 +362,7 @@ describe('admin DeckSystemEditorView', () => {
       // Mounted bare, so the login page isn't drawn (and asks nothing); its leave
       // guard then has no route to watch, which vue-router warns about.
       vi.spyOn(console, 'warn').mockImplementation(() => {})
-      stubApi({ 'GET /admin/deck-systems/3': { status: 401, body: { error: 'Unauthorized' } } })
+      stubApi({ 'GET /admin/deck-systems/3': { status: 401, body: problem('Unauthorized') } })
       const { router } = await mountPage(DeckSystemEditorView, { path: EDIT })
 
       await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'), lazyLoad)
@@ -437,7 +437,7 @@ describe('admin DeckSystemEditorView', () => {
     it('from an unknown id, the way back goes to the list in place of it', async () => {
       stubApi({
         ...listing,
-        'GET /admin/deck-systems/99': { status: 404, body: { error: 'Deck system not found' } },
+        'GET /admin/deck-systems/99': { status: 404, body: problem('Deck system not found') },
       })
       const router = await browse('/admin/deck-systems/99/edit')
       const entries = window.history.length

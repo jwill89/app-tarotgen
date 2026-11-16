@@ -127,7 +127,7 @@ final class DrawAccessTest extends HttpTestCase
 
         // The site's New Draw form posts form-encoded fields, not JSON.
         $refused = $this->postForm('/readings/generate', ['deck_id' => (string) $this->deckId]);
-        $this->assertSame(['error' => self::CAPTCHA_FAILED], $this->assertJsonResponse(400, $refused));
+        $this->assertSame(self::CAPTCHA_FAILED, $this->assertProblem(422, $refused));
 
         $this->assertJsonResponse(201, $this->postForm('/readings/generate', ['deck_id' => (string) $this->deckId, 'turnstile_token' => self::PASSED]));
     }
@@ -152,7 +152,7 @@ final class DrawAccessTest extends HttpTestCase
 
         $response = $this->draw($route, $challenge);
 
-        $this->assertSame(['error' => self::CAPTCHA_FAILED], $this->assertJsonResponse(400, $response));
+        $this->assertSame(self::CAPTCHA_FAILED, $this->assertProblem(422, $response));
         $this->assertSame(0, $this->rowCount('readings'));
     }
 
@@ -163,8 +163,8 @@ final class DrawAccessTest extends HttpTestCase
 
         $response = $this->draw($route, [], ['User-Agent' => 'TarotGenPlugin/0.7.0.0 (+https://tarotgen.io)']);
 
-        $this->assertSame(['error' => 'This version of the TarotGen plugin can no longer draw without an account. '
-            . 'Update the plugin to get a draw key, or link your account.'], $this->assertJsonResponse(400, $response));
+        $this->assertSame('This version of the TarotGen plugin can no longer draw without an account. '
+            . 'Update the plugin to get a draw key, or link your account.', $this->assertProblem(422, $response));
         $this->assertSame(0, $this->rowCount('readings'));
     }
 
@@ -181,7 +181,7 @@ final class DrawAccessTest extends HttpTestCase
         $this->assertSame([['user_id' => null]], $this->rows('SELECT user_id FROM readings'));
         $this->assertCount(0, $this->verified);
         $this->assertSame([['just_now' => 1]], $this->rows(
-            "SELECT last_used_at BETWEEN datetime('now', '-10 seconds') AND datetime('now') AS just_now FROM plugin_draw_keys"
+            "SELECT last_used_at BETWEEN strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-10 seconds') AND strftime('%Y-%m-%dT%H:%M:%SZ', 'now') AS just_now FROM plugin_draw_keys"
         ));
     }
 
@@ -201,14 +201,14 @@ final class DrawAccessTest extends HttpTestCase
     {
         $this->configureTurnstile();
         $key = $revoked ? $this->issueKey() : 'tg_dk_' . bin2hex(random_bytes(32));
-        $this->db->exec("UPDATE plugin_draw_keys SET revoked_at = datetime('now')");
+        $this->db->exec("UPDATE plugin_draw_keys SET revoked_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')");
 
         // A passed challenge alongside doesn't rescue a dead key: the key is what was offered.
         $response = $this->draw($route, ['turnstile_token' => self::PASSED], ['Authorization' => "Bearer {$key}"]);
 
         $this->assertSame(
-            ['error' => 'This draw key is no longer valid. Get a new one from the plugin.'],
-            $this->assertJsonResponse(401, $response)
+            'This draw key is no longer valid. Get a new one from the plugin.',
+            $this->assertProblem(401, $response)
         );
         $this->assertSame(0, $this->rowCount('readings'));
     }
@@ -225,8 +225,8 @@ final class DrawAccessTest extends HttpTestCase
         $response = $this->draw($route, [], ['Authorization' => "Bearer {$token}"]);
 
         $this->assertSame(
-            ['error' => 'This account link is no longer valid. Link your account again in the plugin.'],
-            $this->assertJsonResponse(401, $response)
+            'This account link is no longer valid. Link your account again in the plugin.',
+            $this->assertProblem(401, $response)
         );
         $this->assertSame(0, $this->rowCount('readings'));
     }
@@ -237,21 +237,21 @@ final class DrawAccessTest extends HttpTestCase
         $bearer = ['Authorization' => 'Bearer ' . $this->issueKey()];
 
         // Not the account reads a linked plugin may make…
-        $this->assertJsonResponse(401, $this->get('/account/readings', $bearer));
-        $this->assertJsonResponse(401, $this->get('/account/favorites', $bearer));
-        $this->assertJsonResponse(401, $this->get('/account/favorite-decks', $bearer));
+        $this->assertProblem(401, $this->get('/account/readings', $bearer));
+        $this->assertProblem(401, $this->get('/account/favorites', $bearer));
+        $this->assertProblem(401, $this->get('/account/favorite-decks', $bearer));
         // …nor anything the session alone may do, linking a plugin included.
-        $this->assertJsonResponse(401, $this->get('/account/tokens', $bearer));
-        $this->assertJsonResponse(401, $this->post('/plugin/authorize', [
+        $this->assertProblem(401, $this->get('/account/tokens', $bearer));
+        $this->assertProblem(401, $this->post('/plugin/authorize', [
             'code_challenge' => Pkce::challengeFor('verifier'), 'redirect_uri' => 'http://127.0.0.1:5000/cb',
         ], $bearer));
-        $this->assertJsonResponse(401, $this->get('/admin/auth-check', $bearer));
+        $this->assertProblem(401, $this->get('/admin/auth-check', $bearer));
 
         // And a reading it draws is a guest's: the key can't finalize it as an owner.
         $created = $this->assertJsonResponse(201, $this->draw('/readings/generate', [], $bearer));
         $this->assertFalse($created['is_owner']);
         $this->assertIsString($id = $created['reading_id']);
-        $this->assertJsonResponse(403, $this->post("/readings/{$id}/finalize", [], $bearer));
+        $this->assertProblem(403, $this->post("/readings/{$id}/finalize", [], $bearer));
     }
 
     public function testAKeyDrawsTenReadingsAMinuteAcrossBothRoutes(): void
@@ -325,8 +325,8 @@ final class DrawAccessTest extends HttpTestCase
     private function assertKeyLimited(ResponseInterface $response): void
     {
         $this->assertSame(
-            ['error' => 'Too many readings with this draw key. Please try again later.'],
-            $this->assertJsonResponse(429, $response)
+            'Too many readings with this draw key. Please try again later.',
+            $this->assertProblem(429, $response)
         );
     }
 

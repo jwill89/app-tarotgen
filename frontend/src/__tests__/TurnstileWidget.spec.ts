@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { h, ref } from 'vue'
 import { flushPromises } from '@vue/test-utils'
 import TurnstileWidget from '@/components/TurnstileWidget.vue'
-import { mountWithApp, cleanup, stubApi } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, problem } from './helpers/app'
 
 const SCRIPT = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
 
@@ -78,7 +78,7 @@ describe('TurnstileWidget', () => {
   })
 
   it('stays off when the config cannot be loaded', async () => {
-    stubApi({ 'GET /config': { status: 500, body: { error: 'Boom' } } })
+    stubApi({ 'GET /config': { status: 500, body: problem('Boom') } })
 
     const { enabled } = await mountWidget()
 

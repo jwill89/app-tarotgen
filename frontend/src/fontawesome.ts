@@ -1,23 +1,17 @@
 /**
- * Self-hosted FontAwesome (Pro v7) wired for use with the Vue component
- * (`@fortawesome/vue-fontawesome`).
+ * Self-hosted Font Awesome Pro (v7), from the site's own kit package, wired for
+ * use with the Vue component (`@fortawesome/vue-fontawesome`).
  *
- * We deliberately register only the icons actually used in the app, keeping the
- * bundle tiny. Each icon is imported by name (tree-shakeable) and collected into
- * a `byPrefixAndName` lookup keyed by FA prefix + icon name, e.g.
+ * Only the icons the app uses are registered, so the bundle carries nothing more.
+ * Each icon is imported by name (tree-shakeable) and collected into a
+ * `byPrefixAndName` lookup keyed by Font Awesome prefix + icon name, e.g.
  *
  *     <FontAwesomeIcon :icon="byPrefixAndName.fad['cards-blank']" />
  *
  * The trade-off: when you use a NEW icon in a template, add its import below and
  * include it in `index(...)` — otherwise the lookup is `undefined` and it won't
- * render.
- *
- * Icons come from the per-style packages (@fortawesome/pro-{solid,regular,duotone}-svg-icons
- * + free @fortawesome/free-brands-svg-icons), NOT the monolithic @awesome.me kit.
- * The kit tarball is ~760 MB (every family + format + metadata), so re-pulling it
- * on each cold CI install would exhaust the Font Awesome bandwidth quota; these
- * per-style packages carry only JS path data and install a fraction of that.
- * Still self-hosted — no CDN requests, no pageview/impression metering.
+ * render. Every style the app uses (classic solid and regular, duotone solid,
+ * brands) is in the kit; a style the kit lacks has no module to import.
  */
 import { config } from '@fortawesome/fontawesome-svg-core'
 import type { IconDefinition, IconName, IconPrefix } from '@fortawesome/fontawesome-svg-core'
@@ -58,12 +52,10 @@ import {
   faCirclePlus,
   faCircleQuestion,
   faCircleUser,
-  faClockRotateLeft,
   faCode,
   faCookieBite,
   faCopy,
   faCrystalBall,
-  faDiamond,
   faEnvelope,
   faEnvelopeCircleCheck,
   faEnvelopeOpen,
@@ -71,14 +63,10 @@ import {
   faEyeSlash,
   faFileArrowDown,
   faFloppyDisk,
-  faFont,
   faForward,
-  faGamepad,
   faGaugeHigh,
   faGear,
   faGlobe,
-  faGrid2Plus,
-  faHandHoldingMagic,
   faHandPointer,
   faHashtag,
   faHeading,
@@ -89,7 +77,6 @@ import {
   faInbox,
   faItalic,
   faKey,
-  faLayerGroup,
   faLink,
   faListOl,
   faListUl,
@@ -118,7 +105,6 @@ import {
   faSparkles,
   faSpinner,
   faStar,
-  faSword,
   faTableCells,
   faTags,
   faTrash,
@@ -128,9 +114,8 @@ import {
   faUserPlus,
   faUserShield,
   faUsers,
-  faWandMagicSparkles,
   faXmark,
-} from '@fortawesome/pro-solid-svg-icons'
+} from '@awesome.me/kit-91d12dd2d3/icons/classic/solid'
 
 // ── Duotone solid (fad) ─────────────────────────────────────────────────────
 import {
@@ -139,28 +124,23 @@ import {
   faCircleCheck as fadCircleCheck,
   faCircleExclamation as fadCircleExclamation,
   faCircleQuestion as fadCircleQuestion,
-  faClockRotateLeft as fadClockRotateLeft,
-  faCrystalBall as fadCrystalBall,
   faEnvelope as fadEnvelope,
-  faGamepad as fadGamepad,
   faGear as fadGear,
   faGrid2Plus as fadGrid2Plus,
-  faHandHoldingMagic as fadHandHoldingMagic,
   faInbox as fadInbox,
   faLayerGroup as fadLayerGroup,
   faRightFromBracket as fadRightFromBracket,
   faScroll as fadScroll,
-  faScrollOld as fadScrollOld,
   faSparkles as fadSparkles,
   faTableCells as fadTableCells,
   faUsers as fadUsers,
-} from '@fortawesome/pro-duotone-svg-icons'
+} from '@awesome.me/kit-91d12dd2d3/icons/duotone/solid'
 
 // ── Regular (far) ───────────────────────────────────────────────────────────
-import { faStar as farStar } from '@fortawesome/pro-regular-svg-icons'
+import { faStar as farStar } from '@awesome.me/kit-91d12dd2d3/icons/classic/regular'
 
 // ── Brands (fab) ────────────────────────────────────────────────────────────
-import { faGoogle } from '@fortawesome/free-brands-svg-icons'
+import { faGoogle } from '@awesome.me/kit-91d12dd2d3/icons/classic/brands'
 
 // The core would otherwise inject its CSS at runtime; we import it statically
 // above so it's part of the bundle (no FOUC, no duplicate injection).
@@ -218,12 +198,10 @@ export const byPrefixAndName = index([
   faCirclePlus,
   faCircleQuestion,
   faCircleUser,
-  faClockRotateLeft,
   faCode,
   faCookieBite,
   faCopy,
   faCrystalBall,
-  faDiamond,
   faEnvelope,
   faEnvelopeCircleCheck,
   faEnvelopeOpen,
@@ -231,14 +209,10 @@ export const byPrefixAndName = index([
   faEyeSlash,
   faFileArrowDown,
   faFloppyDisk,
-  faFont,
   faForward,
-  faGamepad,
   faGaugeHigh,
   faGear,
   faGlobe,
-  faGrid2Plus,
-  faHandHoldingMagic,
   faHandPointer,
   faHashtag,
   faHeading,
@@ -249,7 +223,6 @@ export const byPrefixAndName = index([
   faInbox,
   faItalic,
   faKey,
-  faLayerGroup,
   faLink,
   faListOl,
   faListUl,
@@ -278,7 +251,6 @@ export const byPrefixAndName = index([
   faSparkles,
   faSpinner,
   faStar,
-  faSword,
   faTableCells,
   faTags,
   faTrash,
@@ -288,7 +260,6 @@ export const byPrefixAndName = index([
   faUserPlus,
   faUserShield,
   faUsers,
-  faWandMagicSparkles,
   faXmark,
   // duotone (fad)
   fadCalendarDay,
@@ -296,18 +267,13 @@ export const byPrefixAndName = index([
   fadCircleCheck,
   fadCircleExclamation,
   fadCircleQuestion,
-  fadClockRotateLeft,
-  fadCrystalBall,
   fadEnvelope,
-  fadGamepad,
   fadGear,
   fadGrid2Plus,
-  fadHandHoldingMagic,
   fadInbox,
   fadLayerGroup,
   fadRightFromBracket,
   fadScroll,
-  fadScrollOld,
   fadSparkles,
   fadTableCells,
   fadUsers,

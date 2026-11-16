@@ -14,6 +14,7 @@ use Slim\App;
 use Slim\Http\Factory\DecoratedServerRequestFactory;
 use Slim\Psr7\Factory\ServerRequestFactory;
 use Slim\Psr7\Factory\StreamFactory;
+use Tarot\Config\Env;
 use Tarot\Repository\UserRepository;
 use Tarot\Structure\User;
 use Tarot\Utility\Session;
@@ -42,6 +43,15 @@ abstract class HttpTestCase extends TestCase
         'APP_ENV', 'APP_URL', 'APP_ORIGIN', 'CSP_MODE', 'SMTP_HOST',
         'CLOUDFLARE_TURNSTILE_SITEKEY', 'CLOUDFLARE_TURNSTILE_SECRET',
         'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI', 'PROTECTED_ADMIN_EMAILS',
+    ];
+
+    /**
+     * What a value with each documented format must look like: a timestamp in
+     * RFC 3339 UTC to the second, as the columns store it, and a full-date.
+     */
+    private const array FORMATS = [
+        'date-time' => '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/',
+        'date' => '/^\d{4}-\d{2}-\d{2}$/',
     ];
 
     protected PDO $db;
@@ -99,7 +109,8 @@ abstract class HttpTestCase extends TestCase
         $db = $this->db;
         Session::useDatabase(static fn(): PDO => $db);
 
-        $this->clientIp = '2001:db8::' . bin2hex(random_bytes(2)) . ':' . bin2hex(random_bytes(2));
+        // A /64 of its own: the limiters count an IPv6 client by its /64.
+        $this->clientIp = '2001:db8:' . bin2hex(random_bytes(2)) . ':' . bin2hex(random_bytes(2)) . '::1';
     }
 
     protected function tearDown(): void
@@ -157,9 +168,22 @@ abstract class HttpTestCase extends TestCase
      */
     protected function request(string $method, string $path, ?array $json = null, array $headers = []): ResponseInterface
     {
-        return $json === null
-            ? $this->send($method, $path, null, $headers)
-            : $this->send($method, $path, ['application/json', json_encode($json, JSON_THROW_ON_ERROR)], $headers);
+        // An empty array is sent as the empty object a client sends, not as [].
+        return match (true) {
+            $json === null => $this->send($method, $path, null, $headers),
+            $json === []   => $this->send($method, $path, ['application/json', '{}'], $headers),
+            default        => $this->send($method, $path, ['application/json', json_encode($json, JSON_THROW_ON_ERROR)], $headers),
+        };
+    }
+
+    /**
+     * Send a raw JSON body as it is, well-formed or not.
+     *
+     * @param array<string,string> $headers
+     */
+    protected function sendRawJson(string $method, string $path, string $body, array $headers = []): ResponseInterface
+    {
+        return $this->send($method, $path, ['application/json', $body], $headers);
     }
 
     /**
@@ -233,6 +257,74 @@ abstract class HttpTestCase extends TestCase
         $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
         $this->assertIsArray($decoded);
         return $decoded;
+    }
+
+    /**
+     * Assert the status (showing the body when it differs) of an error and that
+     * it is RFC 9457 problem details, sent as application/problem+json and
+     * matching $schema in the committed openapi.json (ProblemDetails, or one
+     * that extends it). Returns the problem's detail, the message a user reads.
+     */
+    protected function assertProblem(int $status, ResponseInterface $response, string $schema = 'ProblemDetails'): string
+    {
+        $problem = $this->problemBody($status, $response);
+
+        $problems = $this->schemaProblems(['$ref' => "#/components/schemas/{$schema}"], $problem);
+        $this->assertSame([], $problems, "The problem doesn't match {$schema}: " . implode('; ', $problems));
+
+        $this->assertIsString($problem['detail']);
+        return $problem['detail'];
+    }
+
+    /**
+     * Like assertProblem(), checked against what the committed openapi.json
+     * documents for this operation's $status: the problem content it declares.
+     */
+    protected function assertDocumentedProblem(string $method, string $path, int $status, ResponseInterface $response): string
+    {
+        $content = self::spec()['paths'][$path][$method]['responses'][(string) $status]['content'] ?? [];
+        $this->assertIsArray($content, "{$method} {$path} documents no {$status}");
+        $this->assertSame(['application/problem+json'], array_keys($content), "{$method} {$path} {$status} isn't documented as problem details");
+
+        $ref = $content['application/problem+json']['schema']['$ref'] ?? '';
+        $this->assertIsString($ref);
+        return $this->assertProblem($status, $response, basename($ref));
+    }
+
+    /**
+     * The fields a failed validation (422) refused: each message, keyed by
+     * the field's location (`body.email`, `query.limit`).
+     *
+     * @return array<string,string>
+     */
+    protected function problemErrors(ResponseInterface $response): array
+    {
+        $errors = [];
+        foreach ($this->problemBody(422, $response)['errors'] ?? [] as $error) {
+            $this->assertIsArray($error);
+            $errors[(string) $error['location']] = (string) $error['message'];
+        }
+        return $errors;
+    }
+
+    /**
+     * The decoded problem body, after checking its status, content type and the
+     * members every problem has: for a problem's own members (`reading_id`).
+     *
+     * @return array<mixed>
+     */
+    protected function problemBody(int $status, ResponseInterface $response): array
+    {
+        $body = (string) $response->getBody();
+        $this->assertSame($status, $response->getStatusCode(), "Unexpected status; body: {$body}");
+        $this->assertStringStartsWith('application/problem+json', $response->getHeaderLine('Content-Type'));
+
+        $problem = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertIsArray($problem);
+        $this->assertSame('about:blank', $problem['type'] ?? null);
+        $this->assertSame($response->getReasonPhrase(), $problem['title'] ?? null);
+        $this->assertSame($status, $problem['status'] ?? null);
+        return $problem;
     }
 
     /**
@@ -320,7 +412,8 @@ abstract class HttpTestCase extends TestCase
 
     /**
      * Everything that makes $payload differ from $schema: a required property
-     * missing, an undocumented one present, or a nested schema that doesn't match.
+     * missing, an undocumented one present, a timestamp or date not in its
+     * documented format, or a nested schema that doesn't match.
      *
      * @param array<mixed> $schema
      * @param array<mixed> $payload
@@ -376,6 +469,11 @@ abstract class HttpTestCase extends TestCase
             $problems[] = "undocumented {$extra}";
         }
         foreach ($properties as $property => $definition) {
+            $pattern = self::FORMATS[$definition['format'] ?? ''] ?? null;
+            $value = $payload[$property] ?? null;
+            if ($pattern !== null && is_string($value) && preg_match($pattern, $value) !== 1) {
+                $problems[] = "{$property} '{$value}' is not a {$definition['format']}";
+            }
             $nested = isset($definition['$ref']) || isset($definition['items']['$ref']);
             if (!$nested || !is_array($payload[$property] ?? null)) {
                 continue;
@@ -397,10 +495,15 @@ abstract class HttpTestCase extends TestCase
         return self::$spec;
     }
 
-    /** @return App<ContainerInterface|null> */
+    /**
+     * The app, built as index.php builds it: in production when APP_ENV says so
+     * (setEnv()).
+     *
+     * @return App<ContainerInterface|null>
+     */
     private function app(): App
     {
-        return $this->app ??= (require dirname(__DIR__, 2) . '/api/app.php')($this->container, false);
+        return $this->app ??= (require dirname(__DIR__, 2) . '/api/app.php')($this->container, Env::isProduction());
     }
 
     /**

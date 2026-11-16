@@ -82,8 +82,8 @@ class StatsService
         $row = $this->row(
             "SELECT
                 COUNT(*) AS readings,
-                SUM(CASE WHEN reading_time >= datetime('now', '-7 days')  THEN 1 ELSE 0 END) AS last7,
-                SUM(CASE WHEN reading_time >= datetime('now', '-30 days') THEN 1 ELSE 0 END) AS last30
+                SUM(CASE WHEN reading_time >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-7 days')  THEN 1 ELSE 0 END) AS last7,
+                SUM(CASE WHEN reading_time >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-30 days') THEN 1 ELSE 0 END) AS last30
              FROM readings"
         );
 
@@ -171,7 +171,7 @@ class StatsService
         $rows = $this->rows(
             "SELECT date(reading_time) AS date, COUNT(*) AS count
              FROM readings
-             WHERE reading_time >= datetime('now', '-13 days')
+             WHERE reading_time >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-13 days')
              GROUP BY date
              ORDER BY date"
         );

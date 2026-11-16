@@ -21,11 +21,19 @@ final class ApiExceptionTest extends TestCase
         $this->assertSame(404, $e->getStatusCode());
     }
 
-    public function testStatusCodeDefaultsTo400(): void
+    public function testStatusCodeDefaultsTo422(): void
     {
         $e = new ApiException('Bad input');
 
-        $this->assertSame(400, $e->getStatusCode());
+        $this->assertSame(422, $e->getStatusCode());
+        $this->assertNull($e->getLocation());
+    }
+
+    public function testCarriesTheLocationOfTheFieldItRefused(): void
+    {
+        $e = new ApiException('Tags must be text.', 422, location: 'body.tags');
+
+        $this->assertSame('body.tags', $e->getLocation());
     }
 
     public function testIsRuntimeException(): void

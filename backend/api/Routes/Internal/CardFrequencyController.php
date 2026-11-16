@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\CardFrequencyRepository;
@@ -46,8 +47,8 @@ class CardFrequencyController extends AbstractController
                 description: 'The counts',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/CardFrequency')
             ),
-            new OAS\Response(response: 400, description: 'deck_id or days is not a whole number in range'),
             new OAS\Response(response: 401, description: 'Not signed in'),
+            new OAS\Response(response: 422, description: 'deck_id or days is not a whole number in range'),
         ]
     )]
     public function get(Request $request, Response $response): Response|ResponseInterface
@@ -56,12 +57,12 @@ class CardFrequencyController extends AbstractController
 
         $deckId = $this->wholeNumber($query['deck_id'] ?? null, PHP_INT_MAX);
         if ($deckId === false) {
-            return $response->withJson(['error' => 'deck_id must be a deck id (a whole number from 1).'], 400);
+            return Problem::invalid($response, 'query.deck_id', 'deck_id must be a deck id (a whole number from 1).');
         }
 
         $days = $this->wholeNumber($query['days'] ?? null, self::MAX_DAYS);
         if ($days === false) {
-            return $response->withJson(['error' => 'days must be a whole number from 1 to ' . self::MAX_DAYS . '.'], 400);
+            return Problem::invalid($response, 'query.days', 'days must be a whole number from 1 to ' . self::MAX_DAYS . '.');
         }
 
         return $response

@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use JsonException;
+use Routes\Problem;
 use Psr\Http\Message\ResponseInterface;
 use Random\RandomException;
 use Slim\Http\ServerRequest as Request;
@@ -34,8 +35,8 @@ class DailyCardController extends AbstractController
                 description: 'One per day drawn, oldest first; a day without a draw is left out; a day whose reading was deleted is still listed, its reading and card null',
                 content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/DailyCard'))
             ),
-            new OAS\Response(response: 400, description: 'month is missing or not YYYY-MM'),
             new OAS\Response(response: 401, description: 'Not signed in'),
+            new OAS\Response(response: 422, description: 'month is missing or not YYYY-MM'),
         ]
     )]
     public function list(Request $request, Response $response): Response|ResponseInterface
@@ -43,7 +44,7 @@ class DailyCardController extends AbstractController
         try {
             $cards = $this->dailyCards->month($this->authUserId($request), $request->getQueryParams()['month'] ?? null);
         } catch (ApiException $e) {
-            return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
+            return Problem::fromException($response, $e);
         }
 
         return $response->withJson($cards)->withHeader('Cache-Control', 'private, no-store');
@@ -66,7 +67,7 @@ class DailyCardController extends AbstractController
             content: new OAS\MediaType\Json(
                 required: ['day', 'deck_id'],
                 properties: [
-                    new OAS\Property(property: 'day', schema: new OAS\Schema(description: 'The local date, YYYY-MM-DD.', type: 'string')),
+                    new OAS\Property(property: 'day', schema: new OAS\Schema(description: 'The local date, YYYY-MM-DD.', type: 'string', format: 'date', examples: ['2026-11-07'])),
                     new OAS\Property(property: 'deck_id', schema: new OAS\Schema(type: 'integer')),
                     new OAS\Property(property: 'use_reversals', schema: new OAS\Schema(description: 'Off when omitted.', type: 'boolean')),
                 ]
@@ -78,16 +79,16 @@ class DailyCardController extends AbstractController
                 description: 'The day\'s card',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/DailyCard')
             ),
-            new OAS\Response(response: 400, description: 'day is not a date within a day of today (UTC), or the deck is missing, unknown or awaiting approval'),
             new OAS\Response(response: 401, description: 'Not signed in'),
             new OAS\Response(
                 response: 409,
                 description: 'The day already has its card, or had one whose reading was deleted',
-                content: new OAS\MediaType\Json(required: ['error', 'reading_id'], properties: [
-                    new OAS\Property(property: 'error', schema: new OAS\Schema(type: 'string')),
-                    new OAS\Property(property: 'reading_id', schema: new OAS\Schema(description: 'The reading already drawn for the day; null when it was deleted.', type: 'string', nullable: true)),
-                ])
+                content: new OAS\MediaType(
+                    mediaType: 'application/problem+json',
+                    schema: new OAS\Schema(ref: '#/components/schemas/DailyCardTaken')
+                )
             ),
+            new OAS\Response(response: 422, description: 'day is not a date within a day of today (UTC), or the deck is missing, unknown or awaiting approval'),
         ]
     )]
     public function draw(Request $request, Response $response): Response|ResponseInterface
@@ -95,9 +96,9 @@ class DailyCardController extends AbstractController
         try {
             $card = $this->dailyCards->draw($this->authUserId($request), $this->parsedBody($request));
         } catch (DailyCardTakenException $e) {
-            return $response->withJson(['error' => $e->getMessage(), 'reading_id' => $e->readingId], 409);
+            return Problem::respond($response, 409, $e->getMessage(), extensions: ['reading_id' => $e->readingId]);
         } catch (ApiException $e) {
-            return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
+            return Problem::fromException($response, $e);
         }
 
         return $response->withJson($card, 201);

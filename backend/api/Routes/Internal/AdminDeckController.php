@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Exception\NameTakenException;
@@ -20,6 +21,10 @@ use OpenApi\Spec as OAS;
 class AdminDeckController extends AbstractController
 {
     private const string NAME_TAKEN = 'A deck with that name already exists';
+
+    /** The range a card's width or height, in its aspect ratio, may take. */
+    private const float ASPECT_MIN = 0.1;
+    private const float ASPECT_MAX = 100000.0;
 
     public function __construct(
         private readonly DeckRepository $decks,
@@ -87,8 +92,8 @@ class AdminDeckController extends AbstractController
                 description: 'Created deck',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Deck')
             ),
-            new OAS\Response(response: 400, description: 'Name is required'),
             new OAS\Response(response: 409, description: 'A deck with that name already exists'),
+            new OAS\Response(response: 422, description: 'Name is required'),
         ]
     )]
     public function createDeck(Request $request, Response $response): Response|ResponseInterface
@@ -96,7 +101,12 @@ class AdminDeckController extends AbstractController
         $params = $this->parsedBody($request);
 
         if (trim((string) ($params['name'] ?? '')) === '') {
-            return $response->withJson(['error' => 'Name is required'], 400);
+            return Problem::invalid($response, 'body.name', 'Name is required');
+        }
+
+        $refused = $this->refuseAspect($response, $params);
+        if ($refused !== null) {
+            return $refused;
         }
 
         // Admin-created decks are auto-approved but NOT auto-usable.
@@ -106,7 +116,7 @@ class AdminDeckController extends AbstractController
 
         // Null only when the name is taken (decks.name is UNIQUE).
         if ($deck === null) {
-            return $response->withJson(['error' => self::NAME_TAKEN], 409);
+            return Problem::respond($response, 409, self::NAME_TAKEN);
         }
 
         return $response->withJson($deck, 201);
@@ -139,7 +149,7 @@ class AdminDeckController extends AbstractController
         $deck = $this->decks->update($deck_id, ['approved' => true]);
 
         if ($deck === null) {
-            return $response->withJson(['error' => 'Deck not found'], 404);
+            return Problem::respond($response, 404, 'Deck not found');
         }
 
         return $response->withJson($deck);
@@ -169,7 +179,7 @@ class AdminDeckController extends AbstractController
                     new OAS\Property(property: 'failed', schema: new OAS\Schema(type: 'integer')),
                 ])
             ),
-            new OAS\Response(response: 400, description: 'Invalid deck ID'),
+            new OAS\Response(response: 422, description: 'Invalid deck ID'),
         ]
     )]
     public function generateDeckImages(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -181,7 +191,7 @@ class AdminDeckController extends AbstractController
 
         $deck_id = (int) ($args['deck_id'] ?? 0);
         if ($deck_id < 1) {
-            return $response->withJson(['error' => 'Invalid deck ID'], 400);
+            return Problem::invalid($response, 'path.deck_id', 'Invalid deck ID');
         }
 
         return $response->withJson($this->cardImages->generateForDeck($deck_id));
@@ -246,9 +256,9 @@ class AdminDeckController extends AbstractController
                 description: 'Updated deck',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Deck')
             ),
-            new OAS\Response(response: 400, description: 'Name is required (a name sent blank)'),
-            new OAS\Response(response: 404, description: 'Deck not found or no valid fields'),
+            new OAS\Response(response: 404, description: 'Deck not found'),
             new OAS\Response(response: 409, description: 'Another deck already has that name'),
+            new OAS\Response(response: 422, description: 'Name is required (a name sent blank), or no field it can change'),
         ]
     )]
     public function updateDeck(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -258,17 +268,25 @@ class AdminDeckController extends AbstractController
 
         // A rename may not blank the name, any more than a create may leave it out.
         if (array_key_exists('name', $params) && trim((string) $params['name']) === '') {
-            return $response->withJson(['error' => 'Name is required'], 400);
+            return Problem::invalid($response, 'body.name', 'Name is required');
+        }
+
+        $refused = $this->refuseAspect($response, $params);
+        if ($refused !== null) {
+            return $refused;
         }
 
         try {
             $deck = $this->decks->update($deck_id, $params);
         } catch (NameTakenException) {
-            return $response->withJson(['error' => self::NAME_TAKEN], 409);
+            return Problem::respond($response, 409, self::NAME_TAKEN);
         }
 
         if ($deck === null) {
-            return $response->withJson(['error' => 'Deck not found or no valid fields'], 404);
+            // Nothing was written: no such deck, or no field a deck has.
+            return $this->decks->get($deck_id) instanceof Deck
+                ? Problem::invalid($response, 'body', 'No changes provided.')
+                : Problem::respond($response, 404, 'Deck not found');
         }
 
         // Enabling a deck (the `usable` field) creates its on-disk image folders.
@@ -302,7 +320,7 @@ class AdminDeckController extends AbstractController
         $result = $this->decks->delete($deck_id);
 
         if (!$result) {
-            return $response->withJson(['error' => 'Failed to delete deck'], 500);
+            return Problem::respond($response, 500, 'Failed to delete deck');
         }
 
         return $response->withStatus(204);
@@ -371,7 +389,7 @@ class AdminDeckController extends AbstractController
     {
         $deck_id = (int) ($args['deck_id'] ?? 0);
         if (!($this->decks->get($deck_id) instanceof Deck)) {
-            return $response->withJson(['error' => 'Deck not found'], 404);
+            return Problem::respond($response, 404, 'Deck not found');
         }
 
         $params = $this->parsedBody($request);
@@ -381,7 +399,7 @@ class AdminDeckController extends AbstractController
         // Null only when the card_id is taken in this deck (its primary key).
         $card = $this->specialCards->create($params);
         if ($card === null) {
-            return $response->withJson(['error' => 'This deck already has a special card with that card ID'], 409);
+            return Problem::respond($response, 409, 'This deck already has a special card with that card ID');
         }
 
         return $response->withJson($card, 201);
@@ -425,7 +443,7 @@ class AdminDeckController extends AbstractController
         $card = $this->specialCards->update($deck_id, $card_id, $params);
 
         if ($card === null) {
-            return $response->withJson(['error' => 'Special card not found'], 404);
+            return Problem::respond($response, 404, 'Special card not found');
         }
 
         return $response->withJson($card);
@@ -456,9 +474,34 @@ class AdminDeckController extends AbstractController
         $result = $this->specialCards->delete($deck_id, $card_id);
 
         if (!$result) {
-            return $response->withJson(['error' => 'Failed to delete special card'], 500);
+            return Problem::respond($response, 500, 'Failed to delete special card');
         }
 
         return $response->withStatus(204);
+    }
+
+    /**
+     * A 422 for a card aspect given outside its range or not as a number, which
+     * is refused rather than moved into the range; null when both are fine or absent.
+     *
+     * @param array<string,mixed> $params
+     */
+    private function refuseAspect(Response $response, array $params): ?ResponseInterface
+    {
+        foreach (['card_aspect_w', 'card_aspect_h'] as $key) {
+            if (!array_key_exists($key, $params)) {
+                continue;
+            }
+            $value = $params[$key];
+            if (!is_int($value) && !is_float($value) && !(is_string($value) && is_numeric($value))) {
+                return Problem::invalid($response, "body.{$key}", 'The card aspect must be a number.');
+            }
+            $number = (float) $value;
+            if ($number < self::ASPECT_MIN || $number > self::ASPECT_MAX) {
+                return Problem::invalid($response, "body.{$key}", 'The card aspect must be between 0.1 and 100000.');
+            }
+        }
+
+        return null;
     }
 }

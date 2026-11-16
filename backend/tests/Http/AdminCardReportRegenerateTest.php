@@ -18,7 +18,7 @@ use Tarot\Structure\CardReportReason;
 /**
  * "Regenerate & resolve" on a reported card: its web images are rebuilt from the
  * replaced master scan and only then is the report closed. Runs against a
- * temporary deck-images root rather than backend/assets/decks.
+ * temporary deck-images root rather than backend/public/assets/decks.
  */
 #[CoversClass(AdminCardReportController::class)]
 #[CoversClass(CardReportRepository::class)]
@@ -103,8 +103,8 @@ final class AdminCardReportRegenerateTest extends HttpTestCase
         $this->signInAs($this->createUser('admin@example.test', admin: true)->user_id);
 
         $this->assertSame(
-            ['error' => 'This report is already resolved.'],
-            $this->assertJsonResponse(409, $this->post("/admin/card-reports/{$id}/regenerate"))
+            'This report is already resolved.',
+            $this->assertProblem(409, $this->post("/admin/card-reports/{$id}/regenerate"))
         );
         $this->assertFileDoesNotExist("{$this->imageRoot}/{$this->deckId}/Card_0001.webp");
         $this->assertSame([['resolved_at' => $resolvedAt]], $this->rows('SELECT resolved_at FROM card_reports'));
@@ -116,8 +116,8 @@ final class AdminCardReportRegenerateTest extends HttpTestCase
         $this->signInAs($this->createUser('admin@example.test', admin: true)->user_id);
 
         $this->assertSame(
-            ['error' => "There is no master scan for this card on the server. Upload Card_0007.png to deck {$this->deckId}'s folder, then try again."],
-            $this->assertJsonResponse(409, $this->post("/admin/card-reports/{$id}/regenerate"))
+            "There is no master scan for this card on the server. Upload Card_0007.png to deck {$this->deckId}'s folder, then try again.",
+            $this->assertProblem(409, $this->post("/admin/card-reports/{$id}/regenerate"))
         );
         $this->assertSame([['resolved_at' => null]], $this->rows('SELECT resolved_at FROM card_reports'));
     }
@@ -130,8 +130,8 @@ final class AdminCardReportRegenerateTest extends HttpTestCase
         $this->signInAs($this->createUser('admin@example.test', admin: true)->user_id);
 
         $this->assertSame(
-            ['error' => "Couldn't make web images from Card_0001.png; is it a valid PNG? The report is still open."],
-            $this->assertJsonResponse(500, $this->post("/admin/card-reports/{$id}/regenerate"))
+            "Couldn't make web images from Card_0001.png; is it a valid PNG? The report is still open.",
+            $this->assertProblem(500, $this->post("/admin/card-reports/{$id}/regenerate"))
         );
         $this->assertSame([['resolved_at' => null]], $this->rows('SELECT resolved_at FROM card_reports'));
         $this->assertFileDoesNotExist("{$this->imageRoot}/{$this->deckId}/Card_0001.webp");
@@ -142,9 +142,9 @@ final class AdminCardReportRegenerateTest extends HttpTestCase
         $this->reportId(1, 'The Magician');
         $this->signInAs($this->createUser('admin@example.test', admin: true)->user_id);
 
-        $this->assertSame(['error' => 'Report not found'], $this->assertJsonResponse(404, $this->post('/admin/card-reports/999/regenerate')));
-        $this->assertSame(['error' => 'Invalid report ID'], $this->assertJsonResponse(400, $this->post('/admin/card-reports/0/regenerate')));
-        $this->assertSame(['error' => 'Invalid report ID'], $this->assertJsonResponse(400, $this->post('/admin/card-reports/all/regenerate')));
+        $this->assertSame('Report not found', $this->assertProblem(404, $this->post('/admin/card-reports/999/regenerate')));
+        $this->assertSame('Invalid report ID', $this->assertProblem(422, $this->post('/admin/card-reports/0/regenerate')));
+        $this->assertSame('Invalid report ID', $this->assertProblem(422, $this->post('/admin/card-reports/all/regenerate')));
         $this->assertSame([['resolved_at' => null]], $this->rows('SELECT resolved_at FROM card_reports'));
     }
 
@@ -158,7 +158,7 @@ final class AdminCardReportRegenerateTest extends HttpTestCase
         $this->db->exec("DELETE FROM decks WHERE deck_id = {$this->deckId}");
         $this->signInAs($this->createUser('admin@example.test', admin: true)->user_id);
 
-        $this->assertSame(['error' => 'Deck not found'], $this->assertJsonResponse(404, $this->post("/admin/card-reports/{$id}/regenerate")));
+        $this->assertSame('Deck not found', $this->assertProblem(404, $this->post("/admin/card-reports/{$id}/regenerate")));
         $this->assertSame([['resolved_at' => null]], $this->rows('SELECT resolved_at FROM card_reports'));
         $this->assertFileDoesNotExist("{$this->imageRoot}/{$this->deckId}/Card_0001.webp");
     }
@@ -168,10 +168,10 @@ final class AdminCardReportRegenerateTest extends HttpTestCase
         $id = $this->reportId(1, 'The Magician');
         $this->scan('Card_0001.png');
 
-        $this->assertSame(['error' => 'Unauthorized'], $this->assertJsonResponse(401, $this->post("/admin/card-reports/{$id}/regenerate")));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->post("/admin/card-reports/{$id}/regenerate")));
 
         $this->signInAs($this->createUser('reader@example.test')->user_id);
-        $this->assertSame(['error' => 'Unauthorized'], $this->assertJsonResponse(401, $this->post("/admin/card-reports/{$id}/regenerate")));
+        $this->assertSame('Only an admin can do that.', $this->assertProblem(403, $this->post("/admin/card-reports/{$id}/regenerate")));
 
         $this->assertSame([['resolved_at' => null]], $this->rows('SELECT resolved_at FROM card_reports'));
         $this->assertFileDoesNotExist("{$this->imageRoot}/{$this->deckId}/Card_0001.webp");

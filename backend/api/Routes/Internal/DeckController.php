@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Routes\Middleware\AdminAuth;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -71,7 +72,7 @@ class DeckController extends AbstractController
 
         $deck = $this->visibleDeck((int) $deck_id);
         if ($deck === null) {
-            return $response->withJson(['error' => 'InvalidDeckID'], 404);
+            return Problem::respond($response, 404, 'InvalidDeckID');
         }
 
         return $this->cacheable($response->withJson($deck->jsonSerializeWithout('submitted_by')), $deck->approved);
@@ -110,7 +111,7 @@ class DeckController extends AbstractController
     {
         $deck = $this->visibleDeck((int) ($args['deck_id'] ?? 0));
         if ($deck === null) {
-            return $response->withJson(['error' => 'InvalidDeckID'], 404);
+            return Problem::respond($response, 404, 'InvalidDeckID');
         }
 
         // Include extras so the user can place anything physically in the deck.
@@ -152,9 +153,9 @@ class DeckController extends AbstractController
                 description: 'The created (unapproved) deck',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Deck')
             ),
-            new OAS\Response(response: 400, description: 'Name and artist are required'),
             new OAS\Response(response: 401, description: 'Not authenticated'),
             new OAS\Response(response: 409, description: 'A deck with that name already exists'),
+            new OAS\Response(response: 422, description: 'Name and artist are required'),
         ]
     )]
     /**
@@ -170,7 +171,7 @@ class DeckController extends AbstractController
         $userId = Session::userId();
         $user   = $userId === null ? null : $this->users->findById($userId);
         if ($user === null || !$user->is_active) {
-            return $response->withJson(['error' => 'Not authenticated'], 401);
+            return Problem::respond($response, 401, 'Not authenticated');
         }
 
         $params = $this->parsedBody($request);
@@ -179,7 +180,15 @@ class DeckController extends AbstractController
         $artist = trim((string) ($params['artist'] ?? ''));
 
         if ($name === '' || $artist === '') {
-            return $response->withJson(['error' => 'Name and Artist are required.'], 400);
+            return Problem::respond(
+                $response,
+                422,
+                'Name and Artist are required.',
+                array_filter([
+                    'body.name'   => $name === '' ? 'Name is required.' : '',
+                    'body.artist' => $artist === '' ? 'Artist is required.' : '',
+                ], static fn(string $message): bool => $message !== '')
+            );
         }
 
         $deck = $this->decks->create([
@@ -195,7 +204,7 @@ class DeckController extends AbstractController
 
         // Null only when the name is taken (decks.name is UNIQUE).
         if ($deck === null) {
-            return $response->withJson(['error' => 'A deck with that name already exists.'], 409);
+            return Problem::respond($response, 409, 'A deck with that name already exists.');
         }
 
         return $response->withJson($deck, 201);

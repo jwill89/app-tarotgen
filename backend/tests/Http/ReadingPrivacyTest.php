@@ -33,8 +33,8 @@ use Tarot\Utility\Clock;
 #[CoversClass(Reading::class)]
 final class ReadingPrivacyTest extends HttpTestCase
 {
-    private const array UNKNOWN = ['error' => 'InvalidReadingID'];
-    private const array NOT_FOUND = ['error' => 'Reading not found.'];
+    private const string UNKNOWN = 'InvalidReadingID';
+    private const string NOT_FOUND = 'Reading not found.';
 
     private int $deckId;
 
@@ -65,11 +65,11 @@ final class ReadingPrivacyTest extends HttpTestCase
 
         // A guest, and another account: exactly as if there were no such reading.
         $this->useSessionCookie(null);
-        $this->assertSame(self::UNKNOWN, $this->assertJsonResponse(404, $this->get("/readings/{$id}")));
-        $this->assertSame(self::UNKNOWN, $this->assertJsonResponse(404, $this->post("/readings/{$id}/unlock", ['password' => 'anything'])));
+        $this->assertSame(self::UNKNOWN, $this->assertProblem(404, $this->get("/readings/{$id}")));
+        $this->assertSame(self::UNKNOWN, $this->assertProblem(404, $this->post("/readings/{$id}/unlock", ['password' => 'anything'])));
         $this->signInAs($this->createUser('other@example.test')->user_id);
-        $this->assertSame(self::UNKNOWN, $this->assertJsonResponse(404, $this->get("/readings/{$id}")));
-        $this->assertSame(self::UNKNOWN, $this->assertJsonResponse(404, $this->get('/readings/0000000000')));
+        $this->assertSame(self::UNKNOWN, $this->assertProblem(404, $this->get("/readings/{$id}")));
+        $this->assertSame(self::UNKNOWN, $this->assertProblem(404, $this->get('/readings/0000000000')));
     }
 
     public function testTheOwnersLinkedPluginCanOpenItAndNoOtherTokenCan(): void
@@ -84,8 +84,8 @@ final class ReadingPrivacyTest extends HttpTestCase
         $this->assertSame([$id], array_column($this->assertJsonResponse(200, $this->get('/account/readings', $mine)), 'reading_id'));
 
         $theirs = ['Authorization' => 'Bearer ' . $tokens->issueToken($this->createUser('other@example.test')->user_id)];
-        $this->assertSame(self::UNKNOWN, $this->assertJsonResponse(404, $this->get("/readings/{$id}", $theirs)));
-        $this->assertSame(self::NOT_FOUND, $this->assertJsonResponse(404, $this->post("/readings/{$id}/finalize", [], $theirs)));
+        $this->assertSame(self::UNKNOWN, $this->assertProblem(404, $this->get("/readings/{$id}", $theirs)));
+        $this->assertSame(self::NOT_FOUND, $this->assertProblem(404, $this->post("/readings/{$id}/finalize", [], $theirs)));
     }
 
     public function testNoOneElseCanChangeAPrivateReadingOrLearnItExists(): void
@@ -94,11 +94,11 @@ final class ReadingPrivacyTest extends HttpTestCase
         $this->signInAs($this->createUser('other@example.test')->user_id);
 
         // Not "you don't own this" (403), which would say it's there.
-        $this->assertSame(self::NOT_FOUND, $this->assertJsonResponse(404, $this->post("/readings/{$id}/draw")));
-        $this->assertSame(self::NOT_FOUND, $this->assertJsonResponse(404, $this->post("/readings/{$id}/finalize")));
+        $this->assertSame(self::NOT_FOUND, $this->assertProblem(404, $this->post("/readings/{$id}/draw")));
+        $this->assertSame(self::NOT_FOUND, $this->assertProblem(404, $this->post("/readings/{$id}/finalize")));
         $placement = $this->request('PUT', "/readings/{$id}/placement", ['positions' => [['title' => 'Here', 'x' => 50, 'y' => 50]]]);
-        $this->assertSame(self::NOT_FOUND, $this->assertJsonResponse(404, $placement));
-        $this->assertSame(self::NOT_FOUND, $this->assertJsonResponse(404, $this->request('PATCH', "/account/readings/{$id}", ['visibility' => 'link'])));
+        $this->assertSame(self::NOT_FOUND, $this->assertProblem(404, $placement));
+        $this->assertSame(self::NOT_FOUND, $this->assertProblem(404, $this->request('PATCH', "/account/readings/{$id}", ['visibility' => 'link'])));
 
         // The owner still can.
         $this->signInAs($this->ownerId);
@@ -123,7 +123,7 @@ final class ReadingPrivacyTest extends HttpTestCase
 
         // Password: a password is needed, then it locks rather than hides.
         $refused = $this->request('PATCH', "/account/readings/{$id}", ['visibility' => 'password']);
-        $this->assertSame(['error' => 'Choose a password of at least 4 characters for this reading.'], $this->assertJsonResponse(422, $refused));
+        $this->assertSame('Choose a password of at least 4 characters for this reading.', $this->assertProblem(422, $refused));
         $locked = $this->assertJsonResponse(200, $this->request('PATCH', "/account/readings/{$id}", ['visibility' => 'password', 'password' => 'abcd']));
         $this->assertSame(['password', true], [$locked['visibility'], $locked['password_protected']]);
         $this->assertTrue($this->assertJsonResponse(200, $this->asGuest(fn() => $this->get("/readings/{$id}")))['locked']);
@@ -160,19 +160,19 @@ final class ReadingPrivacyTest extends HttpTestCase
 
         $response = $this->post('/readings/generate', ['deck_id' => $this->deckId, 'visibility' => 'password']);
 
-        $this->assertSame(['error' => 'Choose a password of at least 4 characters for this reading.'], $this->assertJsonResponse(400, $response));
+        $this->assertSame('Choose a password of at least 4 characters for this reading.', $this->assertProblem(422, $response));
         $this->assertSame(0, $this->rowCount('readings'));
     }
 
     public function testAnUnknownVisibilityIsRefused(): void
     {
         $this->signInAs($this->ownerId);
-        $refused = ['error' => 'Choose who can open the reading: link, password or private.'];
+        $refused = 'Choose who can open the reading: link, password or private.';
 
-        $this->assertSame($refused, $this->assertJsonResponse(400, $this->post('/readings/generate', ['deck_id' => $this->deckId, 'visibility' => 'friends'])));
+        $this->assertSame($refused, $this->assertProblem(422, $this->post('/readings/generate', ['deck_id' => $this->deckId, 'visibility' => 'friends'])));
         $id = $this->assertJsonResponse(201, $this->post('/readings/generate', ['deck_id' => $this->deckId]))['reading_id'];
         $this->assertIsString($id);
-        $this->assertSame($refused, $this->assertJsonResponse(400, $this->request('PATCH', "/account/readings/{$id}", ['visibility' => 'public'])));
+        $this->assertSame($refused, $this->assertProblem(422, $this->request('PATCH', "/account/readings/{$id}", ['visibility' => 'public'])));
     }
 
     public function testAGuestCannotMakeAReadingPrivate(): void
@@ -189,7 +189,7 @@ final class ReadingPrivacyTest extends HttpTestCase
 
         $this->assertDocumented('post', '/readings/generate', 201, $created);
         $this->assertIsString($created['expires_at']);
-        $expires = strtotime($created['expires_at'] . ' UTC');
+        $expires = strtotime($created['expires_at']);
         $this->assertEqualsWithDelta(time() + 7 * 86400, $expires, 5);
         $this->assertSame($created['expires_at'], $this->assertJsonResponse(200, $this->get("/readings/{$created['reading_id']}"))['expires_at']);
 
@@ -198,7 +198,7 @@ final class ReadingPrivacyTest extends HttpTestCase
             'deck_id' => $this->deckId, 'cards' => [['card_id' => 1]], 'expires_in_days' => 1,
         ]));
         $this->assertIsString($custom['expires_at']);
-        $this->assertEqualsWithDelta(time() + 86400, strtotime($custom['expires_at'] . ' UTC'), 5);
+        $this->assertEqualsWithDelta(time() + 86400, strtotime($custom['expires_at']), 5);
     }
 
     public function testWithoutAChoiceAGuestReadingKeepsTheUsualRetention(): void
@@ -213,8 +213,8 @@ final class ReadingPrivacyTest extends HttpTestCase
         foreach (['2', 0, -1, 'forever', '7.5'] as $days) {
             $response = $this->post('/readings/generate', ['deck_id' => $this->deckId, 'expires_in_days' => $days]);
             $this->assertSame(
-                ['error' => 'A reading made without an account can be kept for 1, 7 or 30 days, or the usual year.'],
-                $this->assertJsonResponse(400, $response),
+                'A reading made without an account can be kept for 1, 7 or 30 days, or the usual year.',
+                $this->assertProblem(422, $response),
                 (string) $days
             );
         }
@@ -239,10 +239,10 @@ final class ReadingPrivacyTest extends HttpTestCase
 
         // Still stored until the nightly run, but no route will find it.
         $this->assertSame(1, $this->rowCount('readings'));
-        $this->assertSame(self::UNKNOWN, $this->assertJsonResponse(404, $this->get("/readings/{$id}")));
-        $this->assertSame(self::UNKNOWN, $this->assertJsonResponse(404, $this->post("/readings/{$id}/unlock")));
+        $this->assertSame(self::UNKNOWN, $this->assertProblem(404, $this->get("/readings/{$id}")));
+        $this->assertSame(self::UNKNOWN, $this->assertProblem(404, $this->post("/readings/{$id}/unlock")));
         $placement = $this->request('PUT', "/readings/{$id}/placement", ['positions' => [['title' => 'Here', 'x' => 50, 'y' => 50]]]);
-        $this->assertSame(self::NOT_FOUND, $this->assertJsonResponse(404, $placement));
+        $this->assertSame(self::NOT_FOUND, $this->assertProblem(404, $placement));
     }
 
     /** A private reading made by the owner, who stays signed in. */

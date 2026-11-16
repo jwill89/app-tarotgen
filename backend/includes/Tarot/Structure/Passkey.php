@@ -22,9 +22,9 @@ class Passkey extends AbstractStructure
     #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $name = '';
 
-    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string', format: 'date-time', examples: ['2026-11-07T09:18:09Z']))]
     public private(set) string $created_at = '';
 
-    #[OAS\Property(schema: new OAS\Schema(type: 'string', nullable: true))]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string', format: 'date-time', nullable: true, examples: ['2026-11-07T09:18:09Z']))]
     public private(set) ?string $last_used_at = null;
 }

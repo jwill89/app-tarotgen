@@ -115,8 +115,8 @@ describe('HomeView', () => {
 
     it('lists the readings made on this device, newest first, with links to them', async () => {
       const { record } = useRecentReadings()
-      record(recent('old', 'Two Paths', '2026-09-01 10:00:00'))
-      record(recent('new', '3 cards', '2026-10-01 10:00:00'))
+      record(recent('old', 'Two Paths', '2026-09-01T10:00:00Z'))
+      record(recent('new', '3 cards', '2026-10-01T10:00:00Z'))
       await mountHome()
 
       expect(recentRows()).toEqual([
@@ -127,10 +127,24 @@ describe('HomeView', () => {
       expect(open?.getAttribute('href')).toBe('/reading/old')
     })
 
+    it('sorts an entry saved in the older zone-less form by its time, as UTC', async () => {
+      const { record } = useRecentReadings()
+      record(recent('morning', 'Morning', '2026-10-01T09:00:00Z'))
+      record(recent('saved', 'Saved earlier', '2026-10-01 10:00:00'))
+      record(recent('evening', 'Evening', '2026-10-01T11:00:00Z'))
+      await mountHome()
+
+      expect(recentRows().map(([summary]) => summary)).toEqual([
+        'Evening',
+        'Saved earlier',
+        'Morning',
+      ])
+    })
+
     it('forgets one reading once the user confirms', async () => {
       const { record } = useRecentReadings()
-      record(recent('a', 'Two Paths', '2026-09-01 10:00:00'))
-      record(recent('b', '3 cards', '2026-10-01 10:00:00'))
+      record(recent('a', 'Two Paths', '2026-09-01T10:00:00Z'))
+      record(recent('b', '3 cards', '2026-10-01T10:00:00Z'))
       await mountHome()
 
       await click(button('Remove Two Paths from recent readings'))
@@ -141,7 +155,7 @@ describe('HomeView', () => {
     })
 
     it('keeps the reading when the user cancels', async () => {
-      useRecentReadings().record(recent('a', 'Two Paths', '2026-09-01 10:00:00'))
+      useRecentReadings().record(recent('a', 'Two Paths', '2026-09-01T10:00:00Z'))
       await mountHome()
 
       await click(button('Remove Two Paths from recent readings'))
@@ -152,8 +166,8 @@ describe('HomeView', () => {
 
     it('clears the whole history once the user confirms', async () => {
       const { record } = useRecentReadings()
-      record(recent('a', 'Two Paths', '2026-09-01 10:00:00'))
-      record(recent('b', '3 cards', '2026-10-01 10:00:00'))
+      record(recent('a', 'Two Paths', '2026-09-01T10:00:00Z'))
+      record(recent('b', '3 cards', '2026-10-01T10:00:00Z'))
       await mountHome()
 
       await click(button('Clear all'))

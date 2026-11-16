@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import SubmitSpreadView from '@/views/SubmitSpreadView.vue'
-import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -27,8 +27,8 @@ const savedSpread: UserSpread = {
   user_spread_id: 12,
   user_id: 7,
   ...dailyDraw,
-  created_at: '2026-10-28 10:00:00',
-  updated_at: '2026-10-28 10:00:00',
+  created_at: '2026-10-28T10:00:00Z',
+  updated_at: '2026-10-28T10:00:00Z',
 }
 
 function descriptionField(): HTMLElement {
@@ -116,7 +116,7 @@ describe('SubmitSpreadView', () => {
       stubApi({
         'POST /spreads': {
           status: 429,
-          body: { error: 'Too many submissions. Please try again later.' },
+          body: problem('Too many submissions. Please try again later.'),
         },
       })
       await mountPage(SubmitSpreadView, { path: '/create-spread' })
@@ -195,7 +195,7 @@ describe('SubmitSpreadView', () => {
 
     it("says why the personal save failed, in the server's words, and stays on the form", async () => {
       stubApi({
-        'POST /account/spreads': { status: 400, body: { error: 'Invalid position data.' } },
+        'POST /account/spreads': { status: 422, body: problem('Invalid position data.') },
       })
       const { router } = await mountPage(SubmitSpreadView, { path: '/create-spread' })
       await click(button('Personal Spread'))

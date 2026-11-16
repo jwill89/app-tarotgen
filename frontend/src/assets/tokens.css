@@ -31,29 +31,27 @@
   --myst-border-strong: rgb(255 255 255 / 16%);
   --myst-hair-gold: color-mix(in srgb, var(--myst-gold) 38%, transparent); /* thin gold hairline */
 
-  /* Text tiers — all SOLID and WCAG-AA (>=6:1) on every surface. Opacity-based
-       text (--myst-text-dim at 0.45 white) fails AA at ~3.3:1, so --myst-text-dim
-       is a solid #a3a1b2 (~6:1). Never use text below --myst-text-dim on a surface,
-       but for Bulma's .has-text-grey (--myst-text-grey, below). */
+  /* Text tiers, all solid: each reads at 7:1 or more on every surface up to
+       --myst-surface-3, the lightest, and on the hover tints over them. Text made
+       of translucent white would change with whatever sits under it. */
   --myst-text: #ecebf2;
   --myst-text-strong: #f6f5fb;
   --myst-text-muted: #b9b7c6;
-  --myst-text-dim: #a3a1b2;
+  --myst-text-dim: #afaebc;
   --myst-text-soft: var(--myst-text-dim);
 
   /* Bulma's .has-text-grey, the quietest text (hints, empty states), reads this
-       token. Bulma's own #69748c reads 2.7–4.2:1 on these surfaces. Same hue
-       (222deg, 14%), lightened to the first step that reaches 4.5:1 on all of
-       them: 6–7:1 on the page and panels, 5.4:1 on --myst-surface-3, 4.55:1 on
-       surface-3 under a 6% white hover, the lightest. */
-  --myst-text-grey: #929aad;
+       token: the blue-grey of Bulma's own #69748c (222deg, 14%), lightened to the
+       first step that reads at 7:1 on --myst-surface-3. */
+  --myst-text-grey: #a9b0bf;
 
-  /* Metals + the single pop. */
-  --myst-gold: #c9a24b;
+  /* Metals + the single pop. Gold and aqua are text too (links, the current
+       page), so each sits at the first step of its hue that reads at 7:1 there. */
+  --myst-gold: #ceab5b;
   --myst-gold-bright: #e6c47a;
   --myst-silver: #c7ccd6;
-  --myst-aqua: #43b3a7; /* the ONE pop: primary action + active/selected state only */
-  --myst-aqua-deep: #12796d; /* dark teal for filled badges/pills (white text ~5:1) */
+  --myst-aqua: #45b8ac; /* the ONE pop: primary action + active/selected state only */
+  --myst-aqua-deep: #0f645a; /* dark teal for filled badges/pills (white text at 7:1) */
   --myst-aqua-soft: color-mix(
     in srgb,
     var(--myst-aqua) 10%,
@@ -66,13 +64,28 @@
   ); /* primary border at rest */
   --myst-aqua-glow: color-mix(in srgb, var(--myst-aqua) 20%, transparent); /* primary hover glow */
   --myst-aqua-bright: #54c6ba; /* brighter aqua for the primary-CTA hover */
-  --myst-on-aqua: #062421; /* dark ink for text/icons sitting on a filled aqua surface */
+  --myst-on-aqua: #05211e; /* dark ink for text/icons sitting on a filled aqua surface */
 
   /* Semantic status colours (non-button UI: tags, dots, borders). */
   --myst-success: #44a878;
   --myst-danger: #d95a72;
   --myst-info: #4a9fd1;
   --myst-warning: #dda13a;
+
+  /* The same states as text (light tags, menu items, .has-text-*): each hue
+       lightened to the first step that reads at 7:1 on its own 12% wash over a
+       panel or the chrome. */
+  --myst-success-text: #73c79f;
+  --myst-info-text: #85bfe1;
+  --myst-warning-text: #e3b25d;
+  --myst-danger-text: #e99fad;
+
+  /* The edge that shows where a field is (inputs, selects, the editor): 3:1
+       against the field and every surface around it. */
+  --myst-control-border: #676773;
+
+  /* The keyboard focus ring, solid so it stands at 3:1 or more on every surface. */
+  --myst-focus-ring: var(--myst-gold);
 
   /* Alias for the panel surface (one consumer: .box in style.css). */
   --myst-panel: var(--myst-surface-2);
@@ -89,26 +102,37 @@
        warning = caution. */
   --bulma-primary-h: 174deg;
   --bulma-primary-s: 46%;
-  --bulma-primary-l: 48%;
+  --bulma-primary-l: 49.5%;
   --bulma-link-h: 43deg;
   --bulma-link-s: 52%;
-  --bulma-link-l: 52%;
+  --bulma-link-l: 54%;
 
   /* Text on a gold fill (an is-link button) is dark ink, as on the aqua primary:
-     Bulma's white reads at 2.4:1 on the gold. */
+     Bulma's white reads at 2.4:1 on the gold. The pale is-light link button's
+     gold text is the step dark enough for 7:1 on its cream. */
   --bulma-link-invert-l: var(--bulma-link-05-l);
+  --bulma-link-light-invert-l: var(--bulma-link-25-l);
+
+  /* Filled success, info and danger buttons, tags and notifications carry black
+     ink, on the first lightness of each fill where that ink reads at 7:1. An
+     outlined button and .help text take the colour at its on-scheme lightness,
+     the first step that reads at 7:1 on a panel. */
   --bulma-info-h: 205deg;
   --bulma-info-s: 52%;
-  --bulma-info-l: 52%;
+  --bulma-info-l: 57.5%;
+  --bulma-info-invert-l: var(--bulma-info-00-l);
   --bulma-success-h: 150deg;
   --bulma-success-s: 42%;
   --bulma-success-l: 46%;
+  --bulma-success-invert-l: var(--bulma-success-00-l);
   --bulma-warning-h: 38deg;
   --bulma-warning-s: 68%;
   --bulma-warning-l: 54%;
   --bulma-danger-h: 350deg;
   --bulma-danger-s: 60%;
-  --bulma-danger-l: 56%;
+  --bulma-danger-l: 66.5%;
+  --bulma-danger-invert-l: var(--bulma-danger-00-l);
+  --bulma-danger-on-scheme-l: 73%;
 
   /* ── Bulma neutral scheme → our charcoal surfaces/text/border ───── */
   --bulma-scheme-h: 250deg;
@@ -129,10 +153,10 @@
   --bulma-radius-medium: 0.7rem;
   --bulma-radius-large: 0.9rem;
 
-  /* Gold focus ring everywhere. */
-  --bulma-focus-h: 43deg;
-  --bulma-focus-s: 55%;
-  --bulma-focus-l: 54%;
+  /* Gold focus ring everywhere: Bulma's fields take --myst-gold's hue. */
+  --bulma-focus-h: 41deg;
+  --bulma-focus-s: 54%;
+  --bulma-focus-l: 58%;
 }
 
 /* ── Print palette: ink on paper ─────────────────────────────
@@ -153,15 +177,22 @@
     --myst-border: rgb(0 0 0 / 15%);
     --myst-border-strong: rgb(0 0 0 / 30%);
 
+    /* Each darkened to the first step of its hue that reads at 7:1 on
+       --myst-surface-3, the tint behind table heads. */
     --myst-text: #1c1c22;
     --myst-text-strong: #000;
     --myst-text-muted: #4a4a55;
-    --myst-text-dim: #5a5a66;
-    --myst-text-grey: #656f86; /* the same hue darkened: 5:1 on white, 4.5:1 on surface-3 */
+    --myst-text-dim: #51515c;
+    --myst-text-grey: #4b5263;
 
-    --myst-gold: #7a5b1c;
-    --myst-gold-bright: #6a4e16;
+    --myst-gold: #694e18;
+    --myst-gold-bright: #694d16;
     --myst-warning: #8a5a00;
+
+    --myst-success-text: #255b41;
+    --myst-info-text: #1e5677;
+    --myst-warning-text: #684812;
+    --myst-danger-text: #962238;
   }
 }
 
@@ -196,7 +227,17 @@
 }
 
 .button:focus-visible {
-  box-shadow: 0 0 0 0.18rem hsl(43deg 55% 54% / 45%);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
+}
+
+/* An outlined button's label and edge read at the colour's on-scheme lightness,
+   lighter than its fill, so the label reaches 7:1 on a panel. */
+.button.is-info {
+  --bulma-button-l: var(--bulma-info-on-scheme-l);
+}
+
+.button.is-danger {
+  --bulma-button-l: var(--bulma-danger-on-scheme-l);
 }
 
 /* Headings: mystical display serif + strong text. */
@@ -229,6 +270,24 @@
   color: var(--myst-text-grey) !important;
 }
 
+/* Bulma's state helpers read each fill's lightness, under 7:1 as text on a panel
+   (the danger red under 4.5:1): the state text tokens override them. */
+.has-text-success {
+  color: var(--myst-success-text) !important;
+}
+
+.has-text-info {
+  color: var(--myst-info-text) !important;
+}
+
+.has-text-warning {
+  color: var(--myst-warning-text) !important;
+}
+
+.has-text-danger {
+  color: var(--myst-danger-text) !important;
+}
+
 /* Small grey inline hints (e.g. "tap to place", instructions) use is-size-7
    + has-text-grey across the app — give them the same readable treatment. */
 .is-size-7.has-text-grey {
@@ -245,11 +304,12 @@ a:hover {
   color: var(--myst-gold-bright);
 }
 
-/* Inputs/selects/textareas: subtle, consistent, gold focus glow. */
+/* Inputs/selects/textareas: one quiet edge that still shows where the field is,
+   gold on focus (Bulma's focus colour, mapped above). */
 .input,
 .textarea,
 .select select {
-  border-color: var(--myst-border-strong);
+  border-color: var(--myst-control-border);
 }
 
 .input::placeholder,
@@ -263,36 +323,31 @@ a:hover {
 }
 
 /* Tags: Bulma's "is-light" variants produce pale pastel backgrounds that clash
-   with the dark theme. Override to use translucent tinted backgrounds with matching
-   text colours for a cohesive mystical look. */
+   with the dark theme. Override to use translucent tinted backgrounds with the
+   state's text colour, or bright gold, for a cohesive mystical look. */
 .tag.is-info.is-light {
   background-color: color-mix(in srgb, var(--myst-info) 12%, transparent);
-  color: var(--myst-info);
+  color: var(--myst-info-text);
 }
 
 .tag.is-success.is-light {
   background-color: color-mix(in srgb, var(--myst-success) 12%, transparent);
-  color: var(--myst-success);
+  color: var(--myst-success-text);
 }
 
 .tag.is-warning.is-light {
   background-color: color-mix(in srgb, var(--myst-warning) 12%, transparent);
-  color: var(--myst-warning);
+  color: var(--myst-warning-text);
 }
 
 .tag.is-danger.is-light {
   background-color: color-mix(in srgb, var(--myst-danger) 12%, transparent);
-  color: var(--myst-danger);
-}
-
-.tag.is-primary.is-light {
-  background-color: color-mix(in srgb, var(--myst-aqua) 12%, transparent);
-  color: var(--myst-aqua);
+  color: var(--myst-danger-text);
 }
 
 .tag.is-link.is-light {
   background-color: color-mix(in srgb, var(--myst-gold) 12%, transparent);
-  color: var(--myst-gold);
+  color: var(--myst-gold-bright);
 }
 
 /* Notifications: Bulma's "is-light" variants produce pale pastel backgrounds

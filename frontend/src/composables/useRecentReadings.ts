@@ -1,6 +1,7 @@
 import { ref, type Ref } from 'vue'
 import { local } from '@/utils/storage'
 import { STORAGE_KEYS } from '@/constants'
+import { parseTimestamp } from '@/utils/datetime'
 
 /**
  * Tracks the visitor's recently generated/viewed readings in localStorage so
@@ -18,14 +19,17 @@ export interface RecentReading {
 
 const MAX_ENTRIES = 12
 
-/** Normalise the timestamp for chronological string comparison (T or space). */
-function sortKey(r: RecentReading): string {
-  return (r.at || '').replace('T', ' ')
+/**
+ * The reading's time in milliseconds, so entries saved in the older zone-less
+ * form sort among RFC 3339 ones; an unreadable one sorts last.
+ */
+function sortKey(r: RecentReading): number {
+  return parseTimestamp(r.at)?.getTime() ?? 0
 }
 
 /** Newest reading date first. */
 function byDateDesc(a: RecentReading, b: RecentReading): number {
-  return sortKey(b).localeCompare(sortKey(a))
+  return sortKey(b) - sortKey(a)
 }
 
 function load(): RecentReading[] {

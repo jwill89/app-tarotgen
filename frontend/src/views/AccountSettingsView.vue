@@ -12,6 +12,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { endpoints } from '@/api/endpoints'
 import type { PluginToken } from '@/types'
+import { formatDate } from '@/utils/datetime'
 
 const router = useRouter()
 const route = useRoute()
@@ -549,9 +550,9 @@ async function revokePluginToken(token: PluginToken) {
                   /></span>
                   <span class="passkey-name">{{ pk.name }}</span>
                   <span class="is-size-7 has-text-grey ml-2">
-                    Added {{ new Date(pk.created_at).toLocaleDateString() }}
+                    Added {{ formatDate(pk.created_at) }}
                     <template v-if="pk.last_used_at">
-                      · Last used {{ new Date(pk.last_used_at).toLocaleDateString() }}</template
+                      · Last used {{ formatDate(pk.last_used_at) }}</template
                     >
                   </span>
                 </div>
@@ -690,16 +691,17 @@ async function revokePluginToken(token: PluginToken) {
             <h2 class="title is-5">Connected Apps</h2>
             <p class="mb-3">
               Apps linked to your account, like the TarotGen FFXIV plugin. Revoke access any time; a
-              revoked plugin must link again to reconnect.
+              revoked plugin must link again to reconnect. Changing or resetting your password
+              revokes every linked app.
             </p>
             <div v-if="pluginTokens.length > 0" class="mb-2">
               <div v-for="t in pluginTokens" :key="t.id" class="passkey-item">
                 <div class="passkey-info">
                   <span class="passkey-name">{{ t.label }}</span>
                   <span class="is-size-7 has-text-grey ml-2">
-                    Linked {{ new Date(t.created_at).toLocaleDateString() }}
+                    Linked {{ formatDate(t.created_at) }}
                     <template v-if="t.last_used_at">
-                      · Last used {{ new Date(t.last_used_at).toLocaleDateString() }}</template
+                      · Last used {{ formatDate(t.last_used_at) }}</template
                     >
                     <template v-if="t.revoked_at"> · Revoked</template>
                   </span>

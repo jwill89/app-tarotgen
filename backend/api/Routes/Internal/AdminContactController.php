@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\ContactRepository;
@@ -78,8 +79,8 @@ class AdminContactController extends AbstractController
                     properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))]
                 )
             ),
-            new OAS\Response(response: 400, description: 'Invalid contact ID'),
             new OAS\Response(response: 404, description: 'Contact not found'),
+            new OAS\Response(response: 422, description: 'Invalid contact ID'),
         ]
     )]
     public function updateContact(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -87,11 +88,11 @@ class AdminContactController extends AbstractController
         $contact_id = (int) ($args['contact_id'] ?? 0);
 
         if ($contact_id < 1) {
-            return $response->withJson(['error' => 'Invalid contact ID'], 400);
+            return Problem::invalid($response, 'path.contact_id', 'Invalid contact ID');
         }
 
         if (!$this->contacts->exists($contact_id)) {
-            return $response->withJson(['error' => 'Contact not found'], 404);
+            return Problem::respond($response, 404, 'Contact not found');
         }
 
         $params = $this->parsedBody($request);

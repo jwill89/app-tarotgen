@@ -16,7 +16,8 @@ use Tarot\Database\Schema;
  * The baseline (db/migrations/20261106000000_baseline.php) and the migrations
  * after it, run as the deploy runs them: with phinx.php's settings, on a file.
  * An empty file gets the whole schema (SchemaTest); a database that already
- * has it, as production does, must come out exactly as it went in.
+ * holds the schema the baseline froze, as production did, must come out of the
+ * baseline exactly as it went in, and out of the rest as the committed schema.
  */
 #[CoversClass(Schema::class)]
 #[CoversClass(Paths::class)]
@@ -24,9 +25,12 @@ final class BaselineMigrationTest extends TestCase
 {
     use ScratchDatabases;
 
-    public function testADatabaseBuiltFromSchemaSqlIsLeftExactlyAsItWas(): void
+    private const int BASELINE = 20261106000000;
+    private const int RETIRED_TABLES_DROPPED = 20261106000001;
+
+    public function testADatabaseBuiltFromTheBaselineSqlIsLeftExactlyAsItWas(): void
     {
-        $path = $this->databaseFrom($this->schemaSql());
+        $path = $this->databaseFrom($this->baselineSql());
         // Data the baseline must not touch: no reseeding of a category an admin
         // renamed or removed.
         $this->execute($path, <<<'SQL'
@@ -38,16 +42,24 @@ final class BaselineMigrationTest extends TestCase
             SQL);
         $before = $this->snapshot($path);
 
-        Schema::migrate($path);
+        Schema::migrate($path, self::BASELINE);
 
         $this->assertSame($before, $this->snapshot($path));
+        $this->assertSame(['Baseline'], $this->migrationsRun($path));
+
+        // The migrations after it bring it to the committed schema, keeping its rows.
+        Schema::migrate($path);
+
+        $migrated = $this->snapshot($path);
+        $this->assertSame($this->snapshot($this->databaseFrom($this->schemaSql(), 'fresh.db'))['(objects)'], $migrated['(objects)']);
+        $this->assertSame(['General', 'Love', 'Career', 'Decisions', 'Self-reflection'], array_column($migrated['spread_categories'], 'name'));
+        $this->assertSame(['abc123'], array_column($migrated['readings'], 'reading_id'));
         $this->assertSame($this->migrations(), $this->migrationsRun($path));
-        $this->assertSame('Baseline', $this->migrationsRun($path)[0]);
 
         // And again: nothing left to run, nothing changes.
         Schema::migrate($path);
 
-        $this->assertSame($before, $this->snapshot($path));
+        $this->assertSame($migrated, $this->snapshot($path));
         $this->assertSame($this->migrations(), $this->migrationsRun($path));
     }
 
@@ -57,23 +69,27 @@ final class BaselineMigrationTest extends TestCase
         // or before commas, two names quoted: a database built by other hands
         // can hold the same definitions laid out differently, and the baseline
         // accepts them as they are.
-        $sql = (string) preg_replace('/^--.*$/m', '', $this->schemaSql());
+        $sql = (string) preg_replace('/^--.*$/m', '', $this->baselineSql());
         $sql = (string) preg_replace('/\s+/', ' ', $sql);
         $sql = str_replace(['( ', ' )', ' ,'], ['(', ')', ','], $sql);
         $sql = str_replace(['CREATE TABLE users (', 'ON contacts (user_id)'], ['CREATE TABLE "users" (', 'ON "contacts" ("user_id")'], $sql);
         $path = $this->databaseFrom($sql);
         $before = $this->snapshot($path);
 
-        Schema::migrate($path);
+        Schema::migrate($path, self::BASELINE);
 
         $this->assertSame($before, $this->snapshot($path));
+        $this->assertSame(['Baseline'], $this->migrationsRun($path));
+
+        Schema::migrate($path);
+
         $this->assertSame($this->migrations(), $this->migrationsRun($path));
     }
 
     public function testAPartlyMigratedDatabaseIsRefusedAndLeftAsItWas(): void
     {
         // A database missing the daily_cards table and users.password_login_disabled.
-        $path = $this->databaseFrom($this->schemaSql());
+        $path = $this->databaseFrom($this->baselineSql());
         $this->execute($path, 'DROP TABLE daily_cards; ALTER TABLE users DROP COLUMN password_login_disabled;');
         $before = $this->snapshot($path);
 
@@ -109,7 +125,7 @@ final class BaselineMigrationTest extends TestCase
     public function testTheRetiredTablesAreDroppedAndNothingElse(): void
     {
         // The share relay's tables and the changelog table, still there with rows.
-        $path = $this->databaseFrom($this->schemaSql());
+        $path = $this->databaseFrom($this->baselineSql());
         $this->execute($path, <<<'SQL'
             CREATE TABLE plugin_clients (client_id INTEGER PRIMARY KEY, token_hash TEXT NOT NULL, user_id INTEGER REFERENCES users(user_id));
             CREATE INDEX idx_plugin_clients_hash ON plugin_clients (token_hash);
@@ -123,10 +139,10 @@ final class BaselineMigrationTest extends TestCase
             INSERT INTO changelog VALUES (1, 'An old entry');
             SQL);
 
-        Schema::migrate($path);
+        Schema::migrate($path, self::RETIRED_TABLES_DROPPED);
 
-        $this->assertSame($this->snapshot($this->databaseFrom($this->schemaSql(), 'plain.db')), $this->snapshot($path));
-        $this->assertSame($this->migrations(), $this->migrationsRun($path));
+        $this->assertSame($this->snapshot($this->databaseFrom($this->baselineSql(), 'plain.db')), $this->snapshot($path));
+        $this->assertSame(['Baseline', 'DropRetiredTables'], $this->migrationsRun($path));
     }
 
     public function testMigratingNeverCreatesADatabase(): void
@@ -147,7 +163,7 @@ final class BaselineMigrationTest extends TestCase
 
     public function testPhinxOpensTheDatabaseTheAppOpens(): void
     {
-        putenv('TAROT_DATA_DIR=/var/lib/tarotgen');
+        putenv('TAROT_DATA_DIR=/srv/example-data');
         try {
             $config = Config::fromPhp(dirname(__DIR__, 3) . '/phinx.php');
         } finally {
@@ -156,7 +172,7 @@ final class BaselineMigrationTest extends TestCase
 
         $app = $config->getEnvironment('app');
         $this->assertIsArray($app);
-        $this->assertSame('/var/lib/tarotgen/db/tarotdb.db', $app['name']);
+        $this->assertSame('/srv/example-data/db/tarotdb.db', $app['name']);
         $this->assertSame(['adapter' => 'sqlite', 'suffix' => '', 'mode' => 'rw', 'migration_table' => Schema::LOG_TABLE], array_diff_key($app, ['name' => true]));
         $this->assertSame('app', $config->getDefaultEnvironment());
         $this->assertSame([realpath(dirname(__DIR__, 3) . '/db/migrations')], array_map(realpath(...), $config->getMigrationPaths()));

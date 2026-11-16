@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import ActivateView from '@/views/ActivateView.vue'
-import { mountWithApp, cleanup, stubApi } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, problem } from './helpers/app'
 
 const text = (el: Element) => el.textContent.replace(/\s+/g, ' ').trim()
 const pageText = () => text(document.body)
@@ -41,8 +41,8 @@ describe('ActivateView', () => {
   it('explains a refused link and offers to register again', async () => {
     stubApi({
       'POST /auth/activate': {
-        status: 400,
-        body: { error: 'This activation link has expired.' },
+        status: 422,
+        body: problem('This activation link has expired.'),
       },
     })
     await mountWithApp(ActivateView, { path: '/activate?token=old' })

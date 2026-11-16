@@ -1,0 +1,50 @@
+{
+  "reading_id": "b7e01d93c4",
+  "reading_info": {
+    "deck_id": 4,
+    "origin": "generated",
+    "spread": {
+      "spread_id": 1,
+      "name": "Celtic Cross",
+      "description": "The classic ten-card spread: the heart of the matter, what crosses it, and where it leads.",
+      "positions": [
+        { "order": 1, "title": "Present", "x": 35, "y": 50, "rotation": 0, "description": "The heart of the matter" },
+        { "order": 2, "title": "Challenge", "x": 35, "y": 50, "rotation": 90, "description": "What crosses you" },
+        { "order": 3, "title": "Foundation", "x": 35, "y": 78, "rotation": 0 },
+        { "order": 4, "title": "Recent past", "x": 15, "y": 50, "rotation": 0 },
+        { "order": 5, "title": "Crown", "x": 35, "y": 22, "rotation": 0 },
+        { "order": 6, "title": "Near future", "x": 55, "y": 50, "rotation": 0 },
+        { "order": 7, "title": "Self", "x": 80, "y": 86, "rotation": 0 },
+        { "order": 8, "title": "Surroundings", "x": 80, "y": 62, "rotation": 0 },
+        { "order": 9, "title": "Hopes and fears", "x": 80, "y": 38, "rotation": 0 },
+        { "order": 10, "title": "Outcome", "x": 80, "y": 14, "rotation": 0 }
+      ]
+    },
+    "draw": [
+      { "card_id": 11, "reversed": false, "card_name": "Wheel of Fortune" },
+      { "card_id": 55, "reversed": true, "card_name": "Five of Swords" },
+      { "card_id": 66, "reversed": false, "card_name": "Two of Pentacles" },
+      { "card_id": 4, "reversed": false, "card_name": "The Empress" },
+      { "card_id": 22, "reversed": false, "card_name": "The World" },
+      { "card_id": 25, "reversed": true, "card_name": "Three of Wands" },
+      { "card_id": 10, "reversed": false, "card_name": "The Hermit" },
+      { "card_id": 47, "reversed": false, "card_name": "Page of Cups" },
+      { "card_id": 19, "reversed": true, "card_name": "The Moon" },
+      { "card_id": 79, "reversed": false }
+    ]
+  },
+  "reading_time": "2026-11-12 08:41:02",
+  "reading_name": "Before the move",
+  "reading_notes": "Asked the night before signing the lease.",
+  "reader": "Mira Ashgrove",
+  "is_owner": true,
+  "is_final": true,
+  "can_draw_more": false,
+  "locked": false,
+  "visibility": "password",
+  "expires_at": null,
+  "question": "Is this the right flat?",
+  "querent": "Mira",
+  "tags": ["home", "move"],
+  "hide_user": false
+}

@@ -11,9 +11,8 @@ use Slim\Psr7\Factory\ServerRequestFactory;
 use Tarot\Utility\ClientIp;
 
 /**
- * Verifies the Cloudflare-aware client IP resolution: the CF-Connecting-IP header
- * is honoured only when the transport peer is genuinely a Cloudflare edge, and we
- * fall back to REMOTE_ADDR everywhere else.
+ * The address a rate limit counts: REMOTE_ADDR as Apache restored it, never a
+ * forwarding header, and an IPv6 client by its /64.
  */
 #[CoversClass(ClientIp::class)]
 final class ClientIpTest extends TestCase
@@ -33,44 +32,35 @@ final class ClientIpTest extends TestCase
         return $request;
     }
 
-    public function testTrustsCfHeaderFromCloudflareEdge(): void
+    public function testAnIpv4AddressIsCountedAsItIs(): void
     {
-        // 173.245.48.0/20 is a Cloudflare range.
-        $request = $this->request('173.245.48.9', '203.0.113.7');
-        $this->assertSame('203.0.113.7', ClientIp::resolve($request));
+        $this->assertSame('198.51.100.4', ClientIp::resolve($this->request('198.51.100.4')));
     }
 
-    public function testTrustsCfHeaderFromCloudflareIpv6Edge(): void
+    public function testAForwardingHeaderIsNeverRead(): void
     {
-        // 2400:cb00::/32 is a Cloudflare v6 range.
-        $request = $this->request('2400:cb00::1', '203.0.113.7');
-        $this->assertSame('203.0.113.7', ClientIp::resolve($request));
+        // Apache has already put the visitor in REMOTE_ADDR; a header sent straight
+        // to the origin, even from a Cloudflare address, changes nothing.
+        $this->assertSame('173.245.48.9', ClientIp::resolve($this->request('173.245.48.9', '203.0.113.7')));
+        $this->assertSame('198.51.100.4', ClientIp::resolve($this->request('198.51.100.4', '203.0.113.7')));
     }
 
-    public function testIgnoresCfHeaderFromNonCloudflarePeer(): void
+    public function testAnIpv6ClientIsCountedByItsSlash64(): void
     {
-        // A direct origin hit: the peer isn't Cloudflare, so the header is untrusted.
-        $request = $this->request('198.51.100.4', '203.0.113.7');
-        $this->assertSame('198.51.100.4', ClientIp::resolve($request));
+        $this->assertSame('2001:db8:1:2::/64', ClientIp::resolve($this->request('2001:db8:1:2:aaaa:bbbb:cccc:dddd')));
+        $this->assertSame(
+            ClientIp::resolve($this->request('2001:db8:1:2::1')),
+            ClientIp::resolve($this->request('2001:db8:1:2:ffff:ffff:ffff:fffe')),
+        );
+        $this->assertNotSame(
+            ClientIp::resolve($this->request('2001:db8:1:2::1')),
+            ClientIp::resolve($this->request('2001:db8:1:3::1')),
+        );
     }
 
-    public function testCidrBoundaryIsRespected(): void
+    public function testAnIpv4MappedAddressIsCountedAsItsIpv4Address(): void
     {
-        // 173.245.64.1 sits just outside 173.245.48.0/20 (which ends at .63.255).
-        $request = $this->request('173.245.64.1', '203.0.113.7');
-        $this->assertSame('173.245.64.1', ClientIp::resolve($request));
-    }
-
-    public function testFallsBackToRemoteAddrWhenCfHeaderMissing(): void
-    {
-        $request = $this->request('173.245.48.9');
-        $this->assertSame('173.245.48.9', ClientIp::resolve($request));
-    }
-
-    public function testFallsBackWhenCfHeaderIsNotAValidIp(): void
-    {
-        $request = $this->request('173.245.48.9', 'not-an-ip');
-        $this->assertSame('173.245.48.9', ClientIp::resolve($request));
+        $this->assertSame('198.51.100.4', ClientIp::resolve($this->request('::ffff:198.51.100.4')));
     }
 
     public function testUnknownWhenNoRemoteAddr(): void

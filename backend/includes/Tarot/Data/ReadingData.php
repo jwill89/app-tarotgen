@@ -152,11 +152,12 @@ class ReadingData extends AbstractData
             $this->db->prepare(
                 'INSERT INTO readings (reading_id, reading_info, reading_time, user_id, hide_user, reading_name, reading_notes,
                                        password_hash, question, querent, is_private, expires_at)
-                 VALUES (:reading_id, :reading_info, CURRENT_TIMESTAMP, :user_id, :hide_user, :reading_name, :reading_notes,
+                 VALUES (:reading_id, :reading_info, :reading_time, :user_id, :hide_user, :reading_name, :reading_notes,
                          :password_hash, :question, :querent, :is_private, :expires_at)'
             )->execute([
                 ':reading_id'    => $reading->reading_id,
                 ':reading_info'  => $reading->reading_info,
+                ':reading_time'  => Clock::now(),
                 ':user_id'       => $reading->user_id,
                 ':hide_user'     => $reading->hide_user ? 1 : 0,
                 ':reading_name'  => $reading->reading_name,
@@ -346,11 +347,11 @@ class ReadingData extends AbstractData
     public function cleanGuestOlderThan(int $days): int
     {
         $stmt = $this->db->prepare(
-            "DELETE FROM readings
+            'DELETE FROM readings
              WHERE user_id IS NULL
-               AND reading_time < datetime('now', :interval)"
+               AND reading_time < :cutoff'
         );
-        $stmt->execute([':interval' => "-{$days} days"]);
+        $stmt->execute([':cutoff' => Clock::in(-$days * 86400)]);
 
         return $stmt->rowCount();
     }

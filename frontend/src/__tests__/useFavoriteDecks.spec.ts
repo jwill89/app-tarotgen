@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useFavoriteDecks } from '@/composables/useFavoriteDecks'
 import { useToasts } from '@/composables/useToasts'
-import { stubApi, signIn, testUser } from './helpers/app'
+import { stubApi, signIn, testUser, problem, problemBody } from './helpers/app'
 
 function fakeResponse(body: unknown, { ok = true, status = 200 } = {}): Response {
   return { ok, status, json: async () => body } as unknown as Response
@@ -27,7 +27,7 @@ describe('useFavoriteDecks.toggleFavorite', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(fakeResponse({ error: 'x' }, { ok: false, status: 500 })),
+      vi.fn().mockResolvedValue(fakeResponse(problemBody(500, 'x'), { ok: false, status: 500 })),
     )
 
     const { favoriteDecks, toggleFavorite } = useFavoriteDecks()
@@ -91,7 +91,7 @@ describe('useFavoriteDecks.fetchFavoriteDecks', () => {
     expect(useToasts().toasts.value).toEqual([])
 
     stubApi({
-      'GET /account/favorite-decks': { status: 500, body: { error: 'Database is locked.' } },
+      'GET /account/favorite-decks': { status: 500, body: problem('Database is locked.') },
     })
     await fetchFavoriteDecks()
     expect(useToasts().toasts.value.map((t) => t.message)).toEqual([

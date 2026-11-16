@@ -37,16 +37,16 @@ final class SignInFlowTest extends HttpTestCase
         $this->assertIsString($registered['activation_link']);
 
         $this->assertSame(
-            ['error' => 'Your account is not activated yet. Please use the activation link sent to your email.'],
-            $this->assertJsonResponse(403, $this->signIn($this->password))
+            'Your account is not activated yet. Please use the activation link sent to your email.',
+            $this->assertProblem(403, $this->signIn($this->password))
         );
 
         parse_str((string) parse_url($registered['activation_link'], PHP_URL_QUERY), $query);
         $this->assertJsonResponse(200, $this->post('/auth/activate', ['token' => $query['token'] ?? '']));
 
         $this->assertSame(
-            ['error' => 'Invalid email or password.'],
-            $this->assertJsonResponse(401, $this->signIn('not-' . $this->password))
+            'Invalid email or password.',
+            $this->assertProblem(401, $this->signIn('not-' . $this->password))
         );
 
         $signedIn = $this->assertJsonResponse(200, $this->signIn($this->password));
@@ -60,7 +60,7 @@ final class SignInFlowTest extends HttpTestCase
         $this->assertSame('Reader', $me['user']['display_name']);
 
         $this->assertJsonResponse(200, $this->post('/auth/logout'));
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->get('/auth/me')));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->get('/auth/me')));
     }
 
     public function testSigningInIssuesANewSessionId(): void
@@ -69,7 +69,7 @@ final class SignInFlowTest extends HttpTestCase
         $this->db->exec('UPDATE users SET is_active = 1');
 
         // A visitor's session from before signing in, e.g. one an attacker planted.
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
         $before = $this->sessionCookie();
         $this->assertNotNull($before);
 
@@ -78,7 +78,7 @@ final class SignInFlowTest extends HttpTestCase
 
         // The old id was deleted, not promoted.
         $this->useSessionCookie($before);
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 
     public function testADuplicateAccountIsRefusedForItsDisplayNameOnly(): void
@@ -86,10 +86,10 @@ final class SignInFlowTest extends HttpTestCase
         $account = ['email' => self::EMAIL, 'display_name' => 'Reader', 'password' => $this->password];
         $this->assertJsonResponse(201, $this->post('/auth/register', $account));
 
-        $again = $this->assertJsonResponse(422, $this->post('/auth/register', $account));
+        $again = $this->post('/auth/register', $account);
 
         // Not that the email has an account: anyone could ask that (AuthRegistrationTest).
-        $this->assertSame(['errors' => ['That display name is already taken.']], $again);
+        $this->assertSame('That display name is already taken.', $this->assertProblem(409, $again));
         $this->assertSame(1, $this->rowCount('users'));
     }
 
@@ -97,7 +97,7 @@ final class SignInFlowTest extends HttpTestCase
     {
         $this->post('/auth/register', ['email' => self::EMAIL, 'display_name' => 'Reader', 'password' => $this->password]);
         $this->db->exec('UPDATE users SET is_active = 1');
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
         $this->assertSame([['user_id' => null]], $this->rows('SELECT user_id FROM sessions'));
 
         $this->assertJsonResponse(200, $this->signIn($this->password));

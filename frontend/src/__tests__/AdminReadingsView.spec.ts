@@ -4,7 +4,7 @@ import ReadingsView from '@/views/admin/ReadingsView.vue'
 import { useUser } from '@/composables/useUser'
 import { NETWORK_ERROR_MESSAGE } from '@/composables/apiClient'
 import { formatDateTime } from '@/utils/datetime'
-import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -42,14 +42,14 @@ const reading = (
 })
 
 const readings = [
-  reading('aaa111', '2026-10-01 09:00:00', { spread_name: 'Celtic Cross' }),
-  reading('bbb222', '2026-10-20 18:30:00', {
+  reading('aaa111', '2026-10-01T09:00:00Z', { spread_name: 'Celtic Cross' }),
+  reading('bbb222', '2026-10-20T18:30:00Z', {
     user_id: 7,
     display_name: 'Morgana',
     deck_name: 'Thoth Tarot',
     spread_name: 'Three Card',
   }),
-  reading('ccc333', '2026-10-10 12:15:00', { deck_name: 'Celestial Tarot' }),
+  reading('ccc333', '2026-10-10T12:15:00Z', { deck_name: 'Celestial Tarot' }),
 ]
 
 /** `count` guest readings, the newest first: r001 is the latest. */
@@ -137,16 +137,16 @@ describe('admin ReadingsView', () => {
 
       expect(tableRows()).toEqual([
         [
-          formatDateTime('2026-10-20 18:30:00'),
+          formatDateTime('2026-10-20T18:30:00Z'),
           'bbb222',
           'Morgana',
           'Three Card',
           'Thoth Tarot',
           '',
         ],
-        [formatDateTime('2026-10-10 12:15:00'), 'ccc333', 'Guest', '—', 'Celestial Tarot', ''],
+        [formatDateTime('2026-10-10T12:15:00Z'), 'ccc333', 'Guest', '—', 'Celestial Tarot', ''],
         [
-          formatDateTime('2026-10-01 09:00:00'),
+          formatDateTime('2026-10-01T09:00:00Z'),
           'aaa111',
           'Guest',
           'Celtic Cross',
@@ -188,7 +188,7 @@ describe('admin ReadingsView', () => {
     })
 
     it('drops to the login page when the session has expired', async () => {
-      stubApi({ 'GET /admin/readings': { status: 401, body: { error: 'Unauthorized' } } })
+      stubApi({ 'GET /admin/readings': { status: 401, body: problem('Unauthorized') } })
       const { router } = await mountPage(ReadingsView, { path: '/admin/readings' })
 
       // The login route's component loads lazily, so the navigation lands a beat later.
@@ -313,7 +313,7 @@ describe('admin ReadingsView', () => {
     it("keeps the reading listed and shows the server's reason when the delete fails", async () => {
       stubApi({
         ...list(readings),
-        'DELETE /admin/readings/ccc333': { status: 404, body: { error: 'Reading not found' } },
+        'DELETE /admin/readings/ccc333': { status: 404, body: problem('Reading not found') },
       })
       await mountPage(ReadingsView, { path: '/admin/readings' })
       await click(button('Delete', row('ccc333')))
@@ -362,8 +362,8 @@ describe('admin ReadingsView', () => {
       const api = stubApi({
         ...list(readings),
         'DELETE /admin/readings/all': {
-          status: 400,
-          body: { error: 'older_than_days must be at least 1' },
+          status: 422,
+          body: problem('older_than_days must be at least 1'),
         },
       })
       await mountPage(ReadingsView, { path: '/admin/readings' })

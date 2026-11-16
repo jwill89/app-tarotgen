@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Routes\Middleware\AdminAuth;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -13,6 +14,7 @@ use Tarot\Repository\UserRepository;
 use Tarot\Service\DrawKeyService;
 use Tarot\Service\PluginTokenService;
 use Tarot\Service\ReadingService;
+use Tarot\Service\SpreadInput;
 use Tarot\Service\TurnstileService;
 use Tarot\Structure\Reading;
 use Tarot\Utility\BearerToken;
@@ -88,7 +90,7 @@ class ReadingController extends AbstractController
                 ]))
             ),
             new OAS\Response(response: 404, description: "InvalidReadingID: no such reading, one past its expiry, or someone else's private reading"),
-            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded: 120 fetches/IP/minute'),
         ]
     )]
     public function getReading(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -96,9 +98,10 @@ class ReadingController extends AbstractController
         $ip      = $this->clientIp($request);
         $limiter = new RateLimiter('reading_read', self::READ_MAX_PER_WINDOW, self::RATE_WINDOW_SECONDS);
         if ($limiter->isLimited($ip)) {
-            return $response->withJson(
-                ['error' => 'Too many requests. Please slow down and try again shortly.'],
-                429
+            return Problem::tooManyRequests(
+                $response,
+                'Too many requests. Please slow down and try again shortly.',
+                $limiter->retryAfter($ip)
             );
         }
         $limiter->hit($ip);
@@ -111,7 +114,7 @@ class ReadingController extends AbstractController
 
         // A private reading is unknown to everyone but its owner (and their plugin).
         if (!($reading instanceof Reading) || !$reading->isVisibleTo($viewerId)) {
-            return $response->withJson(['error' => 'InvalidReadingID'], 404);
+            return Problem::respond($response, 404, 'InvalidReadingID');
         }
 
         $isOwner = $reading->isOwnedBy($viewerId);
@@ -153,9 +156,9 @@ class ReadingController extends AbstractController
                 description: 'The unlocked reading',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/ReadingView')
             ),
-            new OAS\Response(response: 401, description: 'Incorrect password'),
+            new OAS\Response(response: 403, description: 'Incorrect password'),
             new OAS\Response(response: 404, description: "InvalidReadingID: no such reading, one past its expiry, or someone else's private reading"),
-            new OAS\Response(response: 429, description: 'Too many password attempts'),
+            new OAS\Response(response: 429, description: 'Too many password attempts: 10/IP/minute, every attempt counted'),
         ]
     )]
     public function unlockReading(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -164,9 +167,10 @@ class ReadingController extends AbstractController
         $ip      = $this->clientIp($request);
         $limiter = new RateLimiter('reading_unlock', self::UNLOCK_MAX_PER_WINDOW, self::RATE_WINDOW_SECONDS);
         if ($limiter->isLimited($ip)) {
-            return $response->withJson(
-                ['error' => 'Too many password attempts. Please wait a minute and try again.'],
-                429
+            return Problem::tooManyRequests(
+                $response,
+                'Too many password attempts. Please wait a minute and try again.',
+                $limiter->retryAfter($ip)
             );
         }
         $limiter->hit($ip);
@@ -178,7 +182,7 @@ class ReadingController extends AbstractController
         $viewerId = $this->currentUserId($request);
 
         if (!($reading instanceof Reading) || !$reading->isVisibleTo($viewerId)) {
-            return $response->withJson(['error' => 'InvalidReadingID'], 404);
+            return Problem::respond($response, 404, 'InvalidReadingID');
         }
 
         $isOwner = $reading->isOwnedBy($viewerId);
@@ -191,7 +195,7 @@ class ReadingController extends AbstractController
 
         $password = (string) (($this->parsedBody($request))['password'] ?? '');
         if (!$this->readings->verifyPassword($reading_id, $password)) {
-            return $response->withJson(['error' => 'Incorrect password.'], 401);
+            return Problem::respond($response, 403, 'Incorrect password.');
         }
 
         // Remember the unlock for this session so refreshes keep working.
@@ -225,8 +229,8 @@ class ReadingController extends AbstractController
                 description: 'The created reading',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/ReadingView')
             ),
-            new OAS\Response(response: 400, description: 'Invalid draw spec (InvalidDeckID also for a deck awaiting approval, unless an admin draws); ' . self::DRAW_REFUSED_DOC),
             new OAS\Response(response: 401, description: self::DRAW_CREDENTIAL_DOC),
+            new OAS\Response(response: 422, description: 'Invalid draw spec (InvalidDeckID also for a deck awaiting approval, unless an admin draws); ' . self::DRAW_REFUSED_DOC),
             new OAS\Response(response: 429, description: 'Rate limit exceeded: 30 draws/IP/minute; ' . self::KEY_LIMITS_DOC),
         ]
     )]
@@ -235,9 +239,10 @@ class ReadingController extends AbstractController
         $ip      = $this->clientIp($request);
         $limiter = new RateLimiter('reading_generate', self::GENERATE_MAX_PER_WINDOW, self::RATE_WINDOW_SECONDS);
         if ($limiter->isLimited($ip)) {
-            return $response->withJson(
-                ['error' => 'You are generating readings too quickly. Please wait a moment.'],
-                429
+            return Problem::tooManyRequests(
+                $response,
+                'You are generating readings too quickly. Please wait a moment.',
+                $limiter->retryAfter($ip)
             );
         }
         $limiter->hit($ip);
@@ -255,7 +260,7 @@ class ReadingController extends AbstractController
             $isOwner = $userId !== null && $reading->user_id === $userId;
             return $response->withJson($this->accessiblePayload($reading, $isOwner), 201);
         } catch (ApiException $e) {
-            return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
+            return Problem::fromException($response, $e);
         }
     }
 
@@ -278,8 +283,8 @@ class ReadingController extends AbstractController
                 description: 'The created reading, as stored (not the viewer payload the other reading commands return)',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Reading')
             ),
-            new OAS\Response(response: 400, description: 'Invalid input (InvalidDeckID also for a deck awaiting approval, unless an admin records it); ' . self::DRAW_REFUSED_DOC),
             new OAS\Response(response: 401, description: self::DRAW_CREDENTIAL_DOC),
+            new OAS\Response(response: 422, description: 'Invalid input (InvalidDeckID also for a deck awaiting approval, unless an admin records it); ' . self::DRAW_REFUSED_DOC),
             new OAS\Response(response: 429, description: 'Rate limit exceeded: ' . self::KEY_LIMITS_DOC),
         ]
     )]
@@ -295,7 +300,7 @@ class ReadingController extends AbstractController
             $reading = $this->readingService->createCustom($this->parsedBody($request), $userId, $this->isAdmin($userId));
             return $response->withJson($reading, 201);
         } catch (ApiException $e) {
-            return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
+            return Problem::fromException($response, $e);
         }
     }
 
@@ -320,7 +325,7 @@ class ReadingController extends AbstractController
                 required: ['positions'],
                 properties: [
                     new OAS\Property(property: 'positions', schema: new OAS\Schema(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/SpreadPosition'))),
-                    new OAS\Property(property: 'spread_name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'spread_name', schema: new OAS\Schema(type: 'string', maxLength: 100)),
                 ]
             )
         ),
@@ -333,10 +338,10 @@ class ReadingController extends AbstractController
                     new OAS\Property(property: 'reading_id', schema: new OAS\Schema(type: 'string')),
                 ])
             ),
-            new OAS\Response(response: 400, description: 'Position count mismatch or invalid data'),
             new OAS\Response(response: 403, description: 'Not the owner'),
             new OAS\Response(response: 404, description: "Reading not found: no such reading, one past its expiry, or someone else's private reading"),
             new OAS\Response(response: 409, description: 'Reading is final'),
+            new OAS\Response(response: 422, description: 'Position count mismatch, or a position that is not an object or is past a limit (a title over 100 characters, x or y outside 0–100), or a spread name over 100 characters'),
         ]
     )]
     public function updatePlacement(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -349,52 +354,56 @@ class ReadingController extends AbstractController
         $userId = $this->currentUserId($request);
 
         if (!($reading instanceof Reading) || !$reading->isVisibleTo($userId)) {
-            return $response->withJson(['error' => 'Reading not found.'], 404);
+            return Problem::respond($response, 404, 'Reading not found.');
         }
 
         $isOwner = $reading->isOwnedBy($userId);
         $isGuest = $reading->user_id === null;
 
         if (!$isOwner && !$isGuest) {
-            return $response->withJson(['error' => 'You do not own this reading.'], 403);
+            return Problem::respond($response, 403, 'You do not own this reading.');
         }
 
         if ($reading->is_final) {
-            return $response->withJson(['error' => 'This reading is final and can no longer be changed.'], 409);
+            return Problem::respond($response, 409, 'This reading is final and can no longer be changed.');
         }
 
         $params = $this->parsedBody($request);
         $positions = $params['positions'] ?? [];
 
         if (!is_array($positions) || count($positions) === 0) {
-            return $response->withJson(['error' => 'At least one position is required.'], 400);
+            return Problem::invalid($response, 'body.positions', 'At least one position is required.');
         }
 
         // Decode existing reading_info.
         $info = json_decode($reading->reading_info, true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($info)) {
-            return $response->withJson(['error' => 'Invalid reading data.'], 500);
+            return Problem::respond($response, 500, 'Invalid reading data.');
         }
 
         $drawCount = count($info['draw'] ?? []);
         if (count($positions) !== $drawCount) {
-            return $response->withJson(['error' => 'Position count must match the number of drawn cards.'], 400);
+            return Problem::invalid($response, 'body.positions', 'Position count must match the number of drawn cards.');
         }
 
         // Build spread snapshot from the placement data. When the reading
         // already had a spread (e.g. drawing more cards into an existing spread),
         // preserve its identity — only the positions are being rewritten.
         $existingSpread = is_array($info['spread'] ?? null) ? $info['spread'] : null;
-        $spreadName = Input::string($params['spread_name'] ?? null, 100);
+        try {
+            $spreadName = Input::text($params['spread_name'] ?? null, 100, 'body.spread_name');
+        } catch (ApiException $e) {
+            return Problem::fromException($response, $e);
+        }
         if ($spreadName === '') {
             $existingName = (string) ($existingSpread['name'] ?? '');
             $spreadName = $existingName !== '' ? $existingName : 'Free Draw Placement';
         }
         $snappedPositions = [];
 
-        foreach ($positions as $idx => $pos) {
+        foreach (array_values($positions) as $idx => $pos) {
             if (!is_array($pos)) {
-                return $response->withJson(['error' => 'Invalid position data.'], 400);
+                return Problem::invalid($response, "body.positions[{$idx}]", 'Invalid position data.');
             }
 
             $rotation = (int) ($pos['rotation'] ?? 0) % 360;
@@ -402,13 +411,17 @@ class ReadingController extends AbstractController
                 $rotation += 360;
             }
 
-            $snapped = [
-                'order'    => $idx + 1,
-                'title'    => Input::string($pos['title'] ?? null, 100),
-                'x'        => max(0.0, min(100.0, round((float) ($pos['x'] ?? 50), 2))),
-                'y'        => max(0.0, min(100.0, round((float) ($pos['y'] ?? 50), 2))),
-                'rotation' => $rotation,
-            ];
+            try {
+                $snapped = [
+                    'order'    => $idx + 1,
+                    'title'    => SpreadInput::title($pos['title'] ?? null, "body.positions[{$idx}].title"),
+                    'x'        => SpreadInput::coordinate($pos['x'] ?? null, "body.positions[{$idx}].x"),
+                    'y'        => SpreadInput::coordinate($pos['y'] ?? null, "body.positions[{$idx}].y"),
+                    'rotation' => $rotation,
+                ];
+            } catch (ApiException $e) {
+                return Problem::fromException($response, $e);
+            }
 
             // A position that keeps its place and title keeps its description:
             // re-placing after drawing more cards mustn't lose the spread's own.
@@ -432,7 +445,7 @@ class ReadingController extends AbstractController
         $updated = $this->readings->updateReadingInfo($reading_id, $updatedJson, $ownerId);
 
         if ($updated === null) {
-            return $response->withJson(['error' => 'Failed to save placement.'], 500);
+            return Problem::respond($response, 500, 'Failed to save placement.');
         }
 
         return $response->withJson(['success' => true, 'reading_id' => $reading_id]);
@@ -460,10 +473,9 @@ class ReadingController extends AbstractController
                 description: 'The updated reading',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/ReadingView')
             ),
-            new OAS\Response(response: 400, description: 'Custom readings cannot draw'),
             new OAS\Response(response: 403, description: 'Not the owner'),
             new OAS\Response(response: 404, description: "Reading not found: no such reading, one past its expiry, or someone else's private reading"),
-            new OAS\Response(response: 409, description: 'Reading is final'),
+            new OAS\Response(response: 409, description: 'Reading is final, a custom reading (which cannot draw), or every card of the deck is drawn'),
         ]
     )]
     public function drawCards(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -473,30 +485,30 @@ class ReadingController extends AbstractController
         $userId     = $this->currentUserId($request);
 
         if (!($reading instanceof Reading) || !$reading->isVisibleTo($userId)) {
-            return $response->withJson(['error' => 'Reading not found.'], 404);
+            return Problem::respond($response, 404, 'Reading not found.');
         }
 
         if ($userId === null || !$reading->isOwnedBy($userId)) {
-            return $response->withJson(['error' => 'You do not own this reading.'], 403);
+            return Problem::respond($response, 403, 'You do not own this reading.');
         }
 
         if ($reading->is_final) {
-            return $response->withJson(['error' => 'This reading is final and can no longer be changed.'], 409);
+            return Problem::respond($response, 409, 'This reading is final and can no longer be changed.');
         }
 
         $info = json_decode($reading->reading_info, true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($info)) {
-            return $response->withJson(['error' => 'Invalid reading data.'], 500);
+            return Problem::respond($response, 500, 'Invalid reading data.');
         }
 
         if (($info['origin'] ?? null) === 'custom') {
-            return $response->withJson(['error' => 'Custom readings cannot draw additional cards.'], 400);
+            return Problem::respond($response, 409, 'Custom readings cannot draw additional cards.');
         }
 
         try {
             $updated = $this->readingService->drawAdditional($info, $this->parsedBody($request));
         } catch (ApiException $e) {
-            return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
+            return Problem::fromException($response, $e);
         }
 
         $saved = $this->readings->updateReadingInfo(
@@ -506,7 +518,7 @@ class ReadingController extends AbstractController
         );
 
         if (!($saved instanceof Reading)) {
-            return $response->withJson(['error' => 'Failed to save the new cards.'], 500);
+            return Problem::respond($response, 500, 'Failed to save the new cards.');
         }
 
         return $response->withJson($this->accessiblePayload($saved, true))
@@ -544,16 +556,16 @@ class ReadingController extends AbstractController
         $userId     = $this->currentUserId($request);
 
         if (!($reading instanceof Reading) || !$reading->isVisibleTo($userId)) {
-            return $response->withJson(['error' => 'Reading not found.'], 404);
+            return Problem::respond($response, 404, 'Reading not found.');
         }
 
         if ($userId === null || !$reading->isOwnedBy($userId)) {
-            return $response->withJson(['error' => 'You do not own this reading.'], 403);
+            return Problem::respond($response, 403, 'You do not own this reading.');
         }
 
         $updated = $this->readings->markFinal($reading_id, $userId);
         if (!($updated instanceof Reading)) {
-            return $response->withJson(['error' => 'Failed to finalize the reading.'], 500);
+            return Problem::respond($response, 500, 'Failed to finalize the reading.');
         }
 
         return $response->withJson($this->accessiblePayload($updated, true))
@@ -641,7 +653,7 @@ class ReadingController extends AbstractController
         if ($this->drawKeys->presentsKey($authorization)) {
             $fingerprint = $this->drawKeys->resolve($authorization);
             if ($fingerprint === null) {
-                return $response->withJson(['error' => self::KEY_INVALID], 401);
+                return Problem::respond($response, 401, self::KEY_INVALID);
             }
 
             return $this->limitKeyDraw($request, $response, $fingerprint);
@@ -650,7 +662,7 @@ class ReadingController extends AbstractController
         // Any other Bearer credential is an account token that resolves to no one:
         // revoked from Connected Apps, or its account deleted.
         if (BearerToken::from($authorization) !== null) {
-            return $response->withJson(['error' => self::ACCOUNT_LINK_INVALID], 401);
+            return Problem::respond($response, 401, self::ACCOUNT_LINK_INVALID);
         }
 
         $ip = $this->clientIp($request);
@@ -665,7 +677,7 @@ class ReadingController extends AbstractController
             ? self::PLUGIN_NEEDS_KEY
             : self::CAPTCHA_FAILED;
 
-        return $response->withJson(['error' => $error], 400);
+        return Problem::invalid($response, 'body.turnstile_token', $error);
     }
 
     /** The draw-key limits (see KEY_DRAWS_*): null within them, else the 429. Every attempt counts. */
@@ -677,7 +689,14 @@ class ReadingController extends AbstractController
         $perIp     = new RateLimiter('draw_key_ip', self::KEY_DRAWS_PER_IP_MINUTE, self::RATE_WINDOW_SECONDS);
 
         if ($perMinute->isLimited($fingerprint) || $perDay->isLimited($fingerprint) || $perIp->isLimited($ip)) {
-            return $response->withJson(['error' => self::KEY_LIMITED], 429);
+            // Each limit that is reached has to run out before a draw goes through.
+            $wait = max(
+                $perMinute->isLimited($fingerprint) ? $perMinute->retryAfter($fingerprint) : 0,
+                $perDay->isLimited($fingerprint) ? $perDay->retryAfter($fingerprint) : 0,
+                $perIp->isLimited($ip) ? $perIp->retryAfter($ip) : 0,
+            );
+
+            return Problem::tooManyRequests($response, self::KEY_LIMITED, $wait);
         }
 
         $perMinute->hit($fingerprint);

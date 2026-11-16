@@ -84,10 +84,10 @@ final class AdminSpecialCardsTest extends HttpTestCase
     public function testEditingACardTheDeckDoesNotHaveIsNotFound(): void
     {
         $this->service(SpecialCardData::class)->store(['deck_id' => $this->deckId, 'card_id' => 79, 'name' => 'The Artist']);
-        $notFound = ['error' => 'Special card not found'];
+        $notFound = 'Special card not found';
 
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('PUT', "/admin/decks/{$this->otherDeckId}/special-cards/79", ['name' => 'Moved'])));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('PUT', "/admin/decks/{$this->deckId}/special-cards/79", ['card_id' => 80])));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->request('PUT', "/admin/decks/{$this->otherDeckId}/special-cards/79", ['name' => 'Moved'])));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->request('PUT', "/admin/decks/{$this->deckId}/special-cards/79", ['card_id' => 80])));
         $this->assertSame([['deck_id' => $this->deckId, 'card_id' => 79, 'name' => 'The Artist']], $this->rows('SELECT deck_id, card_id, name FROM special_cards'));
     }
 
@@ -108,7 +108,7 @@ final class AdminSpecialCardsTest extends HttpTestCase
 
         $response = $this->post("/admin/decks/{$this->deckId}/special-cards", ['card_id' => 79, 'name' => 'Again']);
 
-        $this->assertSame(['error' => 'This deck already has a special card with that card ID'], $this->assertJsonResponse(409, $response));
+        $this->assertSame('This deck already has a special card with that card ID', $this->assertProblem(409, $response));
         // The same card id in another deck is a different card.
         $this->assertJsonResponse(201, $this->post("/admin/decks/{$this->otherDeckId}/special-cards", ['card_id' => 79, 'name' => 'Elsewhere']));
         $this->assertSame([['name' => 'The Artist'], ['name' => 'Elsewhere']], $this->rows('SELECT name FROM special_cards ORDER BY deck_id'));
@@ -118,7 +118,7 @@ final class AdminSpecialCardsTest extends HttpTestCase
     {
         $response = $this->post('/admin/decks/999/special-cards', ['card_id' => 79, 'name' => 'Nowhere']);
 
-        $this->assertSame(['error' => 'Deck not found'], $this->assertJsonResponse(404, $response));
+        $this->assertSame('Deck not found', $this->assertProblem(404, $response));
         $this->assertSame(0, $this->rowCount('special_cards'));
     }
 }

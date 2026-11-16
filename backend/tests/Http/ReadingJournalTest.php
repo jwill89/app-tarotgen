@@ -141,17 +141,43 @@ final class ReadingJournalTest extends HttpTestCase
         $this->assertSame(0, $this->rowCount('reading_tags'));
     }
 
-    public function testTheQuestionAndQuerentAreCappedLikeTheName(): void
+    public function testTheQuestionAndQuerentAreKeptUpToTheirLimits(): void
     {
         $this->signInAs($this->ownerId);
 
         $created = $this->assertJsonResponse(201, $this->post('/readings/generate', [
-            'deck_id' => $this->deckId, 'question' => str_repeat('q', 600), 'querent' => '  ' . str_repeat('é', 150), 'tags' => [],
+            'deck_id' => $this->deckId, 'question' => str_repeat('q', ReadingInput::QUESTION_MAX),
+            'querent' => '  ' . str_repeat('é', ReadingInput::QUERENT_MAX), 'tags' => [],
         ]));
 
         $this->assertSame(ReadingInput::QUESTION_MAX, mb_strlen((string) $created['question']));
         $this->assertSame(str_repeat('é', ReadingInput::QUERENT_MAX), $created['querent']);
         $this->assertSame([], $created['tags']);
+    }
+
+    public function testTheNameNotesQuestionAndQuerentOverTheirLimitsAreRefusedNotCut(): void
+    {
+        $this->signInAs($this->ownerId);
+        $over = [
+            'reading_name'  => str_repeat('n', ReadingInput::NAME_MAX + 1),
+            'reading_notes' => str_repeat('n', ReadingInput::NOTES_MAX + 1),
+            'question'      => str_repeat('q', ReadingInput::QUESTION_MAX + 1),
+            'querent'       => str_repeat('é', ReadingInput::QUERENT_MAX + 1),
+        ];
+
+        foreach ($over as $field => $value) {
+            $drawn = $this->post('/readings/generate', ['deck_id' => $this->deckId, $field => $value]);
+            $this->assertDocumentedProblem('post', '/readings/generate', 422, $drawn);
+            $this->assertSame(["body.{$field}"], array_keys($this->problemErrors($drawn)), $field);
+        }
+        $this->assertSame(0, $this->rowCount('readings'));
+
+        $id = $this->assertJsonResponse(201, $this->post('/readings/generate', ['deck_id' => $this->deckId]))['reading_id'];
+        foreach ($over as $field => $value) {
+            $edited = $this->request('PATCH', "/account/readings/{$id}", [$field => $value]);
+            $this->assertDocumentedProblem('patch', '/account/readings/{reading_id}', 422, $edited);
+            $this->assertSame(["body.{$field}"], array_keys($this->problemErrors($edited)), $field);
+        }
     }
 
     public function testTagsOverTheLimitsAreRefused(): void
@@ -160,16 +186,16 @@ final class ReadingJournalTest extends HttpTestCase
 
         $tooMany = array_map(static fn(int $n): string => "tag {$n}", range(1, ReadingInput::TAGS_MAX + 1));
         $this->assertSame(
-            ['error' => 'A reading can have at most 10 tags.'],
-            $this->assertJsonResponse(400, $this->post('/readings/generate', ['deck_id' => $this->deckId, 'tags' => $tooMany]))
+            'A reading can have at most 10 tags.',
+            $this->assertProblem(422, $this->post('/readings/generate', ['deck_id' => $this->deckId, 'tags' => $tooMany]))
         );
         $this->assertSame(
-            ['error' => 'A tag can be at most 30 characters: "' . str_repeat('x', 31) . '".'],
-            $this->assertJsonResponse(400, $this->post('/readings/generate', ['deck_id' => $this->deckId, 'tags' => [str_repeat('X', 31)]]))
+            'A tag can be at most 30 characters: "' . str_repeat('x', 31) . '".',
+            $this->assertProblem(422, $this->post('/readings/generate', ['deck_id' => $this->deckId, 'tags' => [str_repeat('X', 31)]]))
         );
         $this->assertSame(
-            ['error' => 'Tags must be text.'],
-            $this->assertJsonResponse(400, $this->post('/readings/generate', ['deck_id' => $this->deckId, 'tags' => [['nested']]]))
+            'Tags must be text.',
+            $this->assertProblem(422, $this->post('/readings/generate', ['deck_id' => $this->deckId, 'tags' => [['nested']]]))
         );
         $this->assertSame(0, $this->rowCount('readings'));
 
@@ -203,7 +229,7 @@ final class ReadingJournalTest extends HttpTestCase
         $this->assertSame(['x'], $repeats['tags']);
         // Eleven tags are refused, and nothing else in that edit is applied.
         $tooMany = $this->request('PATCH', "/account/readings/{$id}", ['tags' => array_map(strval(...), range(1, 11)), 'question' => 'Never saved']);
-        $this->assertSame(['error' => 'A reading can have at most 10 tags.'], $this->assertJsonResponse(400, $tooMany));
+        $this->assertSame('A reading can have at most 10 tags.', $this->assertProblem(422, $tooMany));
         $this->assertSame([['question' => 'Saved']], $this->rows("SELECT question FROM readings WHERE reading_id = '{$id}'"));
     }
 
@@ -227,9 +253,9 @@ final class ReadingJournalTest extends HttpTestCase
 
     public function testTheTagListIsForASignedInBrowserOnly(): void
     {
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->get('/account/tags')));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->get('/account/tags')));
 
         $bearer = ['Authorization' => 'Bearer ' . $this->service(PluginTokenService::class)->issueToken($this->ownerId)];
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->get('/account/tags', $bearer)));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->get('/account/tags', $bearer)));
     }
 }

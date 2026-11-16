@@ -18,7 +18,7 @@ use OpenApi\Spec as OAS;
 #[OAS\Schema(description: "A day's daily card: the reading drawn for that day and the card it holds. A day whose reading was deleted stays drawn, with reading_id and every card field null.")]
 class DailyCard extends AbstractStructure
 {
-    #[OAS\Property(schema: new OAS\Schema(description: 'The day it was drawn for: the owner\'s local date, "Y-m-d".', type: 'string'))]
+    #[OAS\Property(schema: new OAS\Schema(description: 'The day it was drawn for: the owner\'s local date, "Y-m-d".', type: 'string', format: 'date', examples: ['2026-11-07']))]
     public private(set) string $day = '';
 
     #[OAS\Property(schema: new OAS\Schema(description: 'The reading drawn for the day; null once that reading was deleted.', type: 'string', nullable: true))]

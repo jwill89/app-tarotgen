@@ -7,7 +7,7 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useToasts } from '@/composables/useToasts'
 import { useConfirm } from '@/composables/useConfirm'
 import { useUserSpreads } from '@/composables/useUserSpreads'
-import { mountWithApp, cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, signIn, testUser, problem } from './helpers/app'
 import type { UserSpread } from '@/types'
 
 // The view inside what App.vue gives it: the TooltipProvider its Tooltips need
@@ -79,8 +79,8 @@ const spread = (user_spread_id: number, name: string, description = ''): UserSpr
     { order: 1, title: 'Past', x: 30, y: 50, rotation: 0 },
     { order: 2, title: 'Future', x: 70, y: 50, rotation: 0 },
   ],
-  created_at: '2026-09-01 10:00:00',
-  updated_at: '2026-09-02 10:00:00',
+  created_at: '2026-09-01T10:00:00Z',
+  updated_at: '2026-09-02T10:00:00Z',
 })
 
 describe('AccountSpreadsView', () => {
@@ -158,8 +158,8 @@ describe('AccountSpreadsView', () => {
       stubApi({
         'GET /account/spreads': { body: [spread(1, 'Two Paths')] },
         'PUT /account/spreads/1': {
-          status: 400,
-          body: { error: 'A spread needs at least one card position.' },
+          status: 422,
+          body: problem('A spread needs at least one card position.'),
         },
       })
       await mountWithApp(Page, { path: '/account/spreads' })
@@ -272,7 +272,7 @@ describe('AccountSpreadsView', () => {
       vi.spyOn(console, 'error').mockImplementation(() => {})
       stubApi({
         'GET /account/spreads': { body: [spread(1, 'Two Paths')] },
-        'POST /account/spreads/1/submit': { status: 409, body: { error: 'Already submitted.' } },
+        'POST /account/spreads/1/submit': { status: 409, body: problem('Already submitted.') },
       })
       await mountWithApp(Page, { path: '/account/spreads' })
 

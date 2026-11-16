@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest'
 import SubmitDeckSystemView from '@/views/SubmitDeckSystemView.vue'
-import { cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -146,7 +146,7 @@ describe('SubmitDeckSystemView', () => {
 
   it("keeps the form and shows the server's reason when the submission is refused", async () => {
     stubApi({
-      'POST /deck-systems': { status: 400, body: { error: 'A system with that name exists.' } },
+      'POST /deck-systems': { status: 422, body: problem('A system with that name exists.') },
     })
     await mountPage(SubmitDeckSystemView, { path: '/submit-deck-system' })
     await typeInto(labelled('System Name'), 'Marseille')

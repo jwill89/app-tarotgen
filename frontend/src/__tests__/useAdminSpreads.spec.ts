@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { defineComponent } from 'vue'
 import { useAdminSpreads } from '@/composables/useAdminSpreads'
-import { cleanup, mountWithApp, signIn, stubApi, testUser } from './helpers/app'
+import { cleanup, mountWithApp, signIn, stubApi, testUser, problem } from './helpers/app'
 import { apiCalls } from './helpers/page'
 import { categories, crossroads, spreads } from './helpers/spreads'
 
@@ -56,11 +56,11 @@ describe('useAdminSpreads', () => {
     let failing = false
     stubApi({
       'GET /admin/spreads': () =>
-        failing ? { status: 500, body: { error: 'Busy' } } : { body: spreads },
+        failing ? { status: 500, body: problem('Busy') } : { body: spreads },
       'GET /admin/spread-categories': () =>
-        failing ? { status: 500, body: { error: 'Busy' } } : { body: categories },
+        failing ? { status: 500, body: problem('Busy') } : { body: categories },
       'GET /admin/pending-spreads': () =>
-        failing ? { status: 500, body: { error: 'Busy' } } : { body: [crossroads] },
+        failing ? { status: 500, body: problem('Busy') } : { body: [crossroads] },
     })
     const held = await lists()
     await Promise.all([held.loadSpreads(), held.loadCategories(), held.loadPending()])

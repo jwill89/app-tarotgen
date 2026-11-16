@@ -5,7 +5,7 @@ import { useCardReports } from '@/composables/useCardReports'
 import { useToasts } from '@/composables/useToasts'
 import { NETWORK_ERROR_MESSAGE } from '@/composables/apiClient'
 import { cardImageUrls } from '@/utils/cardImages'
-import { mountWithApp, cleanup, stubApi } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, problem } from './helpers/app'
 import type { ReadingCard } from '@/types'
 
 // Deck 41 is only used here: reported cards are module state that outlives a test.
@@ -182,7 +182,7 @@ describe('CardReportDialog', () => {
 
   it("shows the server's error and stays open so the user can retry", async () => {
     stubApi({
-      'POST /card-reports': { status: 429, body: { error: 'Too many reports. Try later.' } },
+      'POST /card-reports': { status: 429, body: problem('Too many reports. Try later.') },
     })
     const form = await openForm(card(19, 'The Sun'))
 

@@ -78,11 +78,11 @@ final class ContactFormTest extends HttpTestCase
 
     public function testEveryFieldIsRequired(): void
     {
-        $required = ['error' => 'Name, email, and message are all required.'];
+        $required = 'Name, email, and message are all required.';
         $valid = ['name' => 'Morgan', 'email' => 'morgan@example.test', 'message' => 'Hello'];
 
         foreach (['name', 'email', 'message'] as $field) {
-            $this->assertSame($required, $this->assertJsonResponse(400, $this->post('/contacts', [$field => '  '] + $valid)), $field);
+            $this->assertSame($required, $this->assertProblem(422, $this->post('/contacts', [$field => '  '] + $valid)), $field);
         }
         $this->assertSame(0, $this->rowCount('contacts'));
     }
@@ -90,8 +90,8 @@ final class ContactFormTest extends HttpTestCase
     public function testTheEmailMustBeAnAddress(): void
     {
         $this->assertSame(
-            ['error' => 'Please provide a valid email address.'],
-            $this->assertJsonResponse(400, $this->post('/contacts', ['name' => 'Morgan', 'email' => 'morgan at example', 'message' => 'Hello']))
+            'Please provide a valid email address.',
+            $this->assertProblem(422, $this->post('/contacts', ['name' => 'Morgan', 'email' => 'morgan at example', 'message' => 'Hello']))
         );
         $this->assertSame(0, $this->rowCount('contacts'));
     }
@@ -100,10 +100,10 @@ final class ContactFormTest extends HttpTestCase
     {
         $this->configureTurnstile(passes: false);
 
-        $this->assertSame(['error' => self::CAPTCHA_FAILED], $this->assertJsonResponse(400, $this->post('/contacts', self::MESSAGE)));
+        $this->assertSame(self::CAPTCHA_FAILED, $this->assertProblem(422, $this->post('/contacts', self::MESSAGE)));
         $this->assertSame(
-            ['error' => self::CAPTCHA_FAILED],
-            $this->assertJsonResponse(400, $this->post('/contacts', ['turnstile_token' => 'rejected-by-cloudflare'] + self::MESSAGE))
+            self::CAPTCHA_FAILED,
+            $this->assertProblem(422, $this->post('/contacts', ['turnstile_token' => 'rejected-by-cloudflare'] + self::MESSAGE))
         );
 
         // A blank token never reaches Cloudflare; the one sent is what it checked.
@@ -116,7 +116,7 @@ final class ContactFormTest extends HttpTestCase
         $this->configureTurnstile(passes: true);
 
         // Even when Cloudflare would pass anything, no token is no message.
-        $this->assertSame(['error' => self::CAPTCHA_FAILED], $this->assertJsonResponse(400, $this->post('/contacts', self::MESSAGE)));
+        $this->assertSame(self::CAPTCHA_FAILED, $this->assertProblem(422, $this->post('/contacts', self::MESSAGE)));
 
         $this->assertJsonResponse(201, $this->post('/contacts', ['turnstile_token' => 'passed-the-challenge'] + self::MESSAGE));
 
@@ -129,8 +129,8 @@ final class ContactFormTest extends HttpTestCase
         $this->configureTurnstile(passes: true);
 
         $this->assertSame(
-            ['error' => 'Please provide a valid email address.'],
-            $this->assertJsonResponse(400, $this->post('/contacts', ['email' => 'bad', 'turnstile_token' => 'passed-the-challenge'] + self::MESSAGE))
+            'Please provide a valid email address.',
+            $this->assertProblem(422, $this->post('/contacts', ['email' => 'bad', 'turnstile_token' => 'passed-the-challenge'] + self::MESSAGE))
         );
 
         $this->assertCount(0, $this->verified);
@@ -140,7 +140,7 @@ final class ContactFormTest extends HttpTestCase
     {
         $this->configureTurnstile(passes: false);
         for ($i = 1; $i <= 5; $i++) {
-            $this->assertJsonResponse(400, $this->post('/contacts', ['turnstile_token' => 'rejected-by-cloudflare'] + self::MESSAGE));
+            $this->assertProblem(422, $this->post('/contacts', ['turnstile_token' => 'rejected-by-cloudflare'] + self::MESSAGE));
         }
 
         $this->cloudflarePasses = true;
@@ -148,21 +148,21 @@ final class ContactFormTest extends HttpTestCase
             $this->assertJsonResponse(201, $this->post('/contacts', ['turnstile_token' => 'passed-the-challenge'] + self::MESSAGE));
         }
 
-        $this->assertJsonResponse(429, $this->post('/contacts', ['turnstile_token' => 'passed-the-challenge'] + self::MESSAGE));
+        $this->assertProblem(429, $this->post('/contacts', ['turnstile_token' => 'passed-the-challenge'] + self::MESSAGE));
         $this->assertSame(5, $this->rowCount('contacts'));
     }
 
     public function testAVisitorCanSendFiveMessagesAnHour(): void
     {
         // Refused messages don't use up the allowance.
-        $this->assertJsonResponse(400, $this->post('/contacts', ['name' => 'Morgan', 'email' => 'bad', 'message' => 'Hello']));
+        $this->assertProblem(422, $this->post('/contacts', ['name' => 'Morgan', 'email' => 'bad', 'message' => 'Hello']));
         for ($i = 1; $i <= 5; $i++) {
             $this->assertJsonResponse(201, $this->post('/contacts', ['name' => 'Morgan', 'email' => 'morgan@example.test', 'message' => "Message {$i}"]));
         }
 
         $this->assertSame(
-            ['error' => 'You have submitted too many messages recently. Please try again later.'],
-            $this->assertJsonResponse(429, $this->post('/contacts', ['name' => 'Morgan', 'email' => 'morgan@example.test', 'message' => 'Message 6']))
+            'You have submitted too many messages recently. Please try again later.',
+            $this->assertProblem(429, $this->post('/contacts', ['name' => 'Morgan', 'email' => 'morgan@example.test', 'message' => 'Message 6']))
         );
         $this->assertSame(5, $this->rowCount('contacts'));
     }

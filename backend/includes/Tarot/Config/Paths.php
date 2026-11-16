@@ -5,11 +5,10 @@ namespace Tarot\Config;
 /**
  * Where the app's private files live: the `.env` and the SQLite database.
  *
- * In production these sit OUTSIDE the web root. The deploy flattens backend/
- * into the document root, so anything kept there is one missing .htaccess rule
- * away from being downloadable. The server sets TAROT_DATA_DIR (Apache
- * `SetEnv` for web requests, /etc/environment and the cron file for CLI) to a
- * directory holding `.env` and `db/tarotdb.db`.
+ * In production these sit outside the site's folder altogether, apart from
+ * the code. The server sets TAROT_DATA_DIR (Apache `SetEnv` for web requests,
+ * /etc/environment and the cron file for CLI) to a directory holding `.env`
+ * and `db/tarotdb.db`.
  *
  * When TAROT_DATA_DIR is unset — local development — the project root is used,
  * i.e. backend/.env and backend/db/tarotdb.db.

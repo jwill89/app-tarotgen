@@ -3,12 +3,15 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\FavoriteSpreadRepository;
 use Tarot\Repository\PendingSpreadRepository;
 use Tarot\Repository\SpreadCategoryRepository;
 use Tarot\Repository\SpreadRepository;
+use Tarot\Exception\ApiException;
+use Tarot\Service\SpreadInput;
 use Tarot\Structure\PendingSpread;
 use Tarot\Structure\Spread;
 use OpenApi\Spec as OAS;
@@ -74,7 +77,7 @@ class AdminSpreadController extends AbstractController
         $spread = $this->spreads->get((int) ($args['spread_id'] ?? 0));
 
         if (!($spread instanceof Spread)) {
-            return $response->withJson(['error' => 'Spread not found'], 404);
+            return Problem::respond($response, 404, 'Spread not found');
         }
 
         return $response->withJson($spread);
@@ -102,7 +105,7 @@ class AdminSpreadController extends AbstractController
                 description: 'Created spread',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Spread')
             ),
-            new OAS\Response(response: 400, description: 'Name is required, or an unknown category'),
+            new OAS\Response(response: 422, description: 'Name is required (of at most 200 characters), a position past a limit, or an unknown category'),
             new OAS\Response(response: 500, description: 'Failed to create spread'),
         ]
     )]
@@ -110,18 +113,25 @@ class AdminSpreadController extends AbstractController
     {
         $params = $this->parsedBody($request);
 
-        if (trim((string) ($params['name'] ?? '')) === '') {
-            return $response->withJson(['error' => 'Name is required'], 400);
+        try {
+            if (SpreadInput::name($params['name'] ?? null) === '') {
+                return Problem::invalid($response, 'body.name', 'Name is required');
+            }
+            if (is_array($params['positions'] ?? null)) {
+                SpreadInput::positions($params['positions']);
+            }
+        } catch (ApiException $e) {
+            return Problem::fromException($response, $e);
         }
 
         if (!$this->knownCategory($params)) {
-            return $response->withJson(['error' => self::UNKNOWN_CATEGORY], 400);
+            return Problem::invalid($response, 'body.category_id', self::UNKNOWN_CATEGORY);
         }
 
         $spread = $this->spreads->create($params);
 
         if ($spread === null) {
-            return $response->withJson(['error' => 'Failed to create spread'], 500);
+            return Problem::respond($response, 500, 'Failed to create spread');
         }
 
         return $response->withJson($spread, 201);
@@ -154,8 +164,8 @@ class AdminSpreadController extends AbstractController
                 description: 'Updated spread',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Spread')
             ),
-            new OAS\Response(response: 400, description: 'Name is required (a name sent blank), or an unknown category'),
-            new OAS\Response(response: 404, description: 'Spread not found or no valid fields'),
+            new OAS\Response(response: 404, description: 'Spread not found'),
+            new OAS\Response(response: 422, description: 'Name is required (a name sent blank, or one over 200 characters), a position past a limit, an unknown category, or no field it can change'),
         ]
     )]
     public function updateSpread(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -164,18 +174,28 @@ class AdminSpreadController extends AbstractController
         $params = $this->parsedBody($request);
 
         // A rename may not blank the name, any more than a create may leave it out.
-        if (array_key_exists('name', $params) && trim((string) $params['name']) === '') {
-            return $response->withJson(['error' => 'Name is required'], 400);
+        try {
+            if (array_key_exists('name', $params) && SpreadInput::name($params['name']) === '') {
+                return Problem::invalid($response, 'body.name', 'Name is required');
+            }
+            if (is_array($params['positions'] ?? null)) {
+                SpreadInput::positions($params['positions']);
+            }
+        } catch (ApiException $e) {
+            return Problem::fromException($response, $e);
         }
 
         if (!$this->knownCategory($params)) {
-            return $response->withJson(['error' => self::UNKNOWN_CATEGORY], 400);
+            return Problem::invalid($response, 'body.category_id', self::UNKNOWN_CATEGORY);
         }
 
         $spread = $this->spreads->update($spread_id, $params);
 
         if ($spread === null) {
-            return $response->withJson(['error' => 'Spread not found or no valid fields'], 404);
+            // Nothing was written: no such spread, or no field a spread has.
+            return $this->spreads->get($spread_id) instanceof Spread
+                ? Problem::invalid($response, 'body', 'No changes provided.')
+                : Problem::respond($response, 404, 'Spread not found');
         }
 
         return $response->withJson($spread);
@@ -203,7 +223,7 @@ class AdminSpreadController extends AbstractController
         $result = $this->spreads->delete($spread_id);
 
         if (!$result) {
-            return $response->withJson(['error' => 'Failed to delete spread'], 500);
+            return Problem::respond($response, 500, 'Failed to delete spread');
         }
 
         // Remove any user favorites pointing to this deleted public spread.
@@ -257,8 +277,8 @@ class AdminSpreadController extends AbstractController
                 description: 'Approved spread',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Spread')
             ),
-            new OAS\Response(response: 400, description: 'Unknown category'),
             new OAS\Response(response: 404, description: 'Pending spread not found'),
+            new OAS\Response(response: 422, description: 'Unknown category'),
             new OAS\Response(response: 500, description: 'Failed to approve spread'),
         ]
     )]
@@ -267,12 +287,12 @@ class AdminSpreadController extends AbstractController
         $pending_id = (int) ($args['pending_id'] ?? 0);
 
         if (!($this->pendingSpreads->get($pending_id) instanceof PendingSpread)) {
-            return $response->withJson(['error' => 'Pending spread not found'], 404);
+            return Problem::respond($response, 404, 'Pending spread not found');
         }
 
         $params = $this->parsedBody($request);
         if (!$this->knownCategory($params)) {
-            return $response->withJson(['error' => self::UNKNOWN_CATEGORY], 400);
+            return Problem::invalid($response, 'body.category_id', self::UNKNOWN_CATEGORY);
         }
 
         $categoryId = $params['category_id'] ?? null;
@@ -282,7 +302,7 @@ class AdminSpreadController extends AbstractController
         );
 
         if ($spread === null) {
-            return $response->withJson(['error' => 'Failed to approve spread'], 500);
+            return Problem::respond($response, 500, 'Failed to approve spread');
         }
 
         return $response->withJson($spread, 201);
@@ -311,7 +331,7 @@ class AdminSpreadController extends AbstractController
         $result = $this->pendingSpreads->reject($pending_id);
 
         if (!$result) {
-            return $response->withJson(['error' => 'Failed to reject spread'], 500);
+            return Problem::respond($response, 500, 'Failed to reject spread');
         }
 
         return $response->withStatus(204);

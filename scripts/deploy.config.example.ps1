@@ -17,7 +17,9 @@ param()
 $DeployVpsHost = '<your-droplet-ip-or-hostname>'
 $DeployVpsUser = '<ssh-user>'                     # required (no default): root, since the backend runs runuser and installs cron and systemd files
 $DeployKeyPath = '<path-to-your-deploy-key.ppk>'  # load it into Pageant first if it has a passphrase
-$DeployWebRoot = '<apache-documentroot-on-host>'  # e.g. /var/www/example.com
+$DeployWebRoot = '<site-folder-on-host>'          # e.g. /var/www/example.com; Apache serves its public/
+# The private data folder, TAROT_DATA_DIR: the .env and db/tarotdb.db, outside the site's folder.
+$DeployDataDir = '<data-folder-on-host>'          # e.g. /var/lib/example
 # Optional: the site's public address, fetched after every deploy (the smoke check) as
 # visitors reach it, through Cloudflare; the plugin's download links are built from it
 # too. Unset, it is https://tarotgen.io; set it only to check another.

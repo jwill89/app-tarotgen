@@ -79,13 +79,17 @@ final class AccountSettingsTest extends HttpTestCase
         // A copy of its old cookie and the other device are signed out.
         foreach ([$here, $otherDevice] as $cookie) {
             $this->useSessionCookie($cookie);
-            $this->assertJsonResponse(401, $this->get('/auth/me'));
+            $this->assertProblem(401, $this->get('/auth/me'));
         }
         $this->useSessionCookie($someoneElse);
         $this->assertJsonResponse(200, $this->get('/auth/me'));
-        // A linked plugin is revoked under Connected Apps, not by this.
+        // Every linked plugin's token is revoked with the old password.
         $this->useSessionCookie(null);
-        $this->assertJsonResponse(200, $this->get('/account/readings', ['Authorization' => "Bearer {$plugin}"]));
+        $this->assertProblem(401, $this->get('/account/readings', ['Authorization' => "Bearer {$plugin}"]));
+        $this->assertSame(
+            [],
+            $this->rows("SELECT id FROM plugin_tokens WHERE user_id = {$this->userId} AND revoked_at IS NULL"),
+        );
     }
 
     public function testARememberedSessionStaysRememberedThroughThePasswordChange(): void
@@ -106,12 +110,13 @@ final class AccountSettingsTest extends HttpTestCase
     public function testThePasswordChangeNeedsTheCurrentPassword(): void
     {
         $before = $this->passwordHash();
-        $incorrect = ['error' => 'Your current password is incorrect.'];
+        $incorrect = 'Your current password is incorrect.';
 
+        // Signed in but not allowed: a wrong current password is a 403.
         $wrong = $this->post('/account/change-password', ['current_password' => 'not it', 'new_password' => 'a brand new passphrase']);
-        $this->assertSame($incorrect, $this->assertJsonResponse(422, $wrong));
+        $this->assertSame($incorrect, $this->assertDocumentedProblem('post', '/account/change-password', 403, $wrong));
         $missing = $this->post('/account/change-password', ['new_password' => 'a brand new passphrase']);
-        $this->assertSame($incorrect, $this->assertJsonResponse(422, $missing));
+        $this->assertSame($incorrect, $this->assertProblem(403, $missing));
 
         $this->assertSame($before, $this->passwordHash());
     }
@@ -122,10 +127,9 @@ final class AccountSettingsTest extends HttpTestCase
 
         $response = $this->post('/account/change-password', ['current_password' => self::PASSWORD, 'new_password' => 'short']);
 
-        $this->assertSame(
-            ['error' => 'Password must be at least 12 characters long. A memorable passphrase works well.'],
-            $this->assertJsonResponse(422, $response)
-        );
+        $weak = 'Password must be at least 12 characters long. A memorable passphrase works well.';
+        $this->assertSame($weak, $this->assertDocumentedProblem('post', '/account/change-password', 422, $response));
+        $this->assertSame(['body.new_password' => $weak], $this->problemErrors($response));
         $this->assertSame($before, $this->passwordHash());
     }
 
@@ -165,17 +169,25 @@ final class AccountSettingsTest extends HttpTestCase
         yield 'too short' => ['ab', 'Display name must be between 3 and 30 characters.'];
         yield 'too long' => [str_repeat('a', 31), 'Display name must be between 3 and 30 characters.'];
         yield 'markup' => ['<b>Reader</b>', 'Display name may only contain letters, numbers, spaces, and . _ -'];
-        yield "another account's, in any case" => ['TAKEN NAME', 'That display name is already taken.'];
     }
 
     #[DataProvider('refusedDisplayNames')]
-    public function testADisplayNameMustBeValidAndFree(string $name, string $error): void
+    public function testADisplayNameMustBeValid(string $name, string $error): void
+    {
+        $response = $this->request('PATCH', '/account', ['display_name' => $name]);
+
+        $this->assertSame($error, $this->assertDocumentedProblem('patch', '/account', 422, $response));
+        $this->assertSame(['body.display_name' => $error], $this->problemErrors($response));
+        $this->assertSame([['display_name' => 'reader']], $this->rows("SELECT display_name FROM users WHERE user_id = {$this->userId}"));
+    }
+
+    public function testADisplayNameAnotherAccountHasInAnyCaseIsAConflict(): void
     {
         $this->service(UserRepository::class)->updateDisplayName($this->createUser('other@example.test')->user_id, 'Taken Name');
 
-        $response = $this->request('PATCH', '/account', ['display_name' => $name]);
+        $response = $this->request('PATCH', '/account', ['display_name' => 'TAKEN NAME']);
 
-        $this->assertSame(['error' => $error], $this->assertJsonResponse(422, $response));
+        $this->assertSame('That display name is already taken.', $this->assertDocumentedProblem('patch', '/account', 409, $response));
         $this->assertSame([['display_name' => 'reader']], $this->rows("SELECT display_name FROM users WHERE user_id = {$this->userId}"));
     }
 
@@ -208,8 +220,8 @@ final class AccountSettingsTest extends HttpTestCase
         // A spread already sent for review stays in the queue, no longer credited.
         $this->assertSame([['name' => 'Mine', 'user_id' => null]], $this->rows('SELECT name, user_id FROM pending_spreads'));
 
-        $this->assertJsonResponse(401, $this->get('/account/readings'));
-        $this->assertJsonResponse(401, $this->get('/account/readings', ['Authorization' => "Bearer {$token}"]));
+        $this->assertProblem(401, $this->get('/account/readings'));
+        $this->assertProblem(401, $this->get('/account/readings', ['Authorization' => "Bearer {$token}"]));
     }
 
     public function testDeletingTheAccountSignsTheBrowserOut(): void
@@ -219,7 +231,7 @@ final class AccountSettingsTest extends HttpTestCase
         $this->assertSame(204, $this->request('DELETE', '/account', ['password' => self::PASSWORD])->getStatusCode());
 
         $this->assertNotSame($before, $this->sessionCookie());
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->get('/auth/me')));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->get('/auth/me')));
     }
 
     public function testDeletingTheAccountSignsItOutEverywhere(): void
@@ -237,7 +249,7 @@ final class AccountSettingsTest extends HttpTestCase
 
         $this->assertSame([], $this->rows("SELECT 1 FROM sessions WHERE user_id = {$this->userId}"));
         $this->useSessionCookie($otherDevice);
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
         $this->assertSame([['user_id' => $other->user_id]], $this->rows('SELECT user_id FROM sessions WHERE user_id IS NOT NULL'));
     }
 
@@ -246,8 +258,8 @@ final class AccountSettingsTest extends HttpTestCase
         $this->setEnv('PROTECTED_ADMIN_EMAILS', 'READER@example.test');
 
         $this->assertSame(
-            ['error' => "This account is protected and can't be deleted."],
-            $this->assertJsonResponse(403, $this->request('DELETE', '/account', ['password' => self::PASSWORD]))
+            "This account is protected and can't be deleted.",
+            $this->assertProblem(403, $this->request('DELETE', '/account', ['password' => self::PASSWORD]))
         );
         $this->assertSame(1, $this->rowCount('users'));
 
@@ -257,11 +269,11 @@ final class AccountSettingsTest extends HttpTestCase
 
     public function testDeletingTheAccountNeedsItsPassword(): void
     {
-        $incorrect = ['error' => 'Password is incorrect.'];
+        $incorrect = 'Password is incorrect.';
         $this->insertReading('mine000001', $this->userId);
 
-        $this->assertSame($incorrect, $this->assertJsonResponse(403, $this->request('DELETE', '/account', ['password' => 'not it'])));
-        $this->assertSame($incorrect, $this->assertJsonResponse(403, $this->request('DELETE', '/account')));
+        $this->assertSame($incorrect, $this->assertProblem(403, $this->request('DELETE', '/account', ['password' => 'not it'])));
+        $this->assertSame($incorrect, $this->assertProblem(403, $this->request('DELETE', '/account')));
 
         $this->assertSame(1, $this->rowCount('users'));
         $this->assertSame(1, $this->rowCount('readings'));

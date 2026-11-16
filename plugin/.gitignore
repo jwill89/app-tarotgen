@@ -8,3 +8,9 @@ dist/
 
 # Dalamud packager output
 packages/
+
+# The preview's pictures (dotnet run --project TarotGen.Plugin.Preview)
+previews/
+
+# Test runner output
+TestResults/

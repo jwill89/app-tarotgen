@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import SpreadSubmissionsView from '@/views/admin/SpreadSubmissionsView.vue'
 import { useUser } from '@/composables/useUser'
 import { formatDateTime } from '@/utils/datetime'
-import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -84,8 +84,8 @@ describe('admin SpreadSubmissionsView', () => {
 
     expect(document.body.textContent).toContain('2 submissions waiting for review.')
     expect(tableRows()).toEqual([
-      [formatDateTime('2026-10-27 08:30:00'), 'Crossroads', 'Morgana', '3', ''],
-      [formatDateTime('2026-10-27 08:30:00'), 'Quick Look', '—', '2', ''],
+      [formatDateTime('2026-10-27T08:30:00Z'), 'Crossroads', 'Morgana', '3', ''],
+      [formatDateTime('2026-10-27T08:30:00Z'), 'Quick Look', '—', '2', ''],
     ])
   })
 
@@ -222,7 +222,7 @@ describe('admin SpreadSubmissionsView', () => {
       ...loads([crossroads]),
       'POST /admin/pending-spreads/5/approve': {
         status: 500,
-        body: { error: 'Failed to approve spread' },
+        body: problem('Failed to approve spread'),
       },
     })
     await mountPage(SpreadSubmissionsView, { path: '/admin/spreads/submissions' })
@@ -297,7 +297,7 @@ describe('admin SpreadSubmissionsView', () => {
   it("keeps the submission queued and shows the server's reason when rejecting fails", async () => {
     stubApi({
       ...loads([crossroads]),
-      'DELETE /admin/pending-spreads/5': { status: 500, body: { error: 'Failed to reject' } },
+      'DELETE /admin/pending-spreads/5': { status: 500, body: problem('Failed to reject') },
     })
     await mountPage(SpreadSubmissionsView, { path: '/admin/spreads/submissions' })
     await click(button('Reject', row('Crossroads')))
@@ -309,7 +309,7 @@ describe('admin SpreadSubmissionsView', () => {
   })
 
   it('drops to the login page when the session has expired', async () => {
-    const expired = { status: 401, body: { error: 'Unauthorized' } }
+    const expired = { status: 401, body: problem('Unauthorized') }
     stubApi({ 'GET /admin/pending-spreads': expired, 'GET /admin/spread-categories': expired })
     const { router } = await mountPage(SpreadSubmissionsView, {
       path: '/admin/spreads/submissions',

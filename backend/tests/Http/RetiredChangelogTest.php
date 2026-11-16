@@ -28,8 +28,7 @@ final class RetiredChangelogTest extends HttpTestCase
             ['DELETE', '/admin/changelog/1', null],
         ];
         foreach ($requests as [$method, $path, $json]) {
-            $body = $this->assertJsonResponse(404, $this->request($method, $path, $json));
-            $this->assertSame('Not found.', $body['error'] ?? null, "{$method} {$path}");
+            $this->assertSame('Not found.', $this->assertProblem(404, $this->request($method, $path, $json)), "{$method} {$path}");
         }
     }
 

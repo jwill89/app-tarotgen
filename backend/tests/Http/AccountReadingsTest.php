@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarot\Tests\Http;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Routes\Internal\AccountController;
 use Tarot\Repository\ReadingRepository;
 use Tarot\Structure\Reading;
@@ -31,10 +32,10 @@ final class AccountReadingsTest extends HttpTestCase
     public function testTheListHoldsOnlyYourReadingsNewestFirst(): void
     {
         $other = $this->createUser('other@example.test');
-        $this->insertReading('older00001', $this->userId, '2026-01-01 09:00:00', passwordHash: password_hash('abcd', PASSWORD_BCRYPT));
-        $this->insertReading('newer00002', $this->userId, '2026-01-02 09:00:00');
-        $this->insertReading('theirs0003', $other->user_id, '2026-01-03 09:00:00');
-        $this->insertReading('guest00004', null, '2026-01-04 09:00:00');
+        $this->insertReading('older00001', $this->userId, '2026-01-01T09:00:00Z', passwordHash: password_hash('abcd', PASSWORD_BCRYPT));
+        $this->insertReading('newer00002', $this->userId, '2026-01-02T09:00:00Z');
+        $this->insertReading('theirs0003', $other->user_id, '2026-01-03T09:00:00Z');
+        $this->insertReading('guest00004', null, '2026-01-04T09:00:00Z');
         $this->signInAs($this->userId);
 
         $response = $this->get('/account/readings');
@@ -51,7 +52,7 @@ final class AccountReadingsTest extends HttpTestCase
     public function testAPageOfReadingsComesWithTheTotalCount(): void
     {
         foreach (['2026-01-01', '2026-01-02', '2026-01-03'] as $n => $day) {
-            $this->insertReading("reading000{$n}", $this->userId, "{$day} 09:00:00");
+            $this->insertReading("reading000{$n}", $this->userId, "{$day}T09:00:00Z");
         }
         $this->signInAs($this->userId);
 
@@ -63,8 +64,28 @@ final class AccountReadingsTest extends HttpTestCase
         $this->assertSame(['reading0000'], array_column($this->assertJsonResponse(200, $rest), 'reading_id'));
         $this->assertSame('3', $rest->getHeaderLine('X-Total-Count'));
 
-        // Out-of-range values are clamped rather than refused.
-        $this->assertCount(1, $this->assertJsonResponse(200, $this->get('/account/readings?limit=0&offset=-5')));
+    }
+
+    /**
+     * @return iterable<string,array{string,string,string}>
+     */
+    public static function pagesOutOfRange(): iterable
+    {
+        yield 'no readings' => ['limit=0', 'query.limit', 'limit must be a whole number from 1 to 100.'];
+        yield 'over the most a page holds' => ['limit=101', 'query.limit', 'limit must be a whole number from 1 to 100.'];
+        yield 'not a number' => ['limit=ten', 'query.limit', 'limit must be a whole number from 1 to 100.'];
+        yield 'a negative offset' => ['limit=2&offset=-5', 'query.offset', 'offset must be a whole number from 0.'];
+    }
+
+    #[DataProvider('pagesOutOfRange')]
+    public function testAPageOutOfRangeIsRefusedNotClamped(string $query, string $location, string $error): void
+    {
+        $this->signInAs($this->userId);
+
+        $response = $this->get('/account/readings?' . $query);
+
+        $this->assertSame($error, $this->assertDocumentedProblem('get', '/account/readings', 422, $response));
+        $this->assertSame([$location => $error], $this->problemErrors($response));
     }
 
     public function testAReadingCanBeRenamedAnnotatedAndHidden(): void
@@ -120,7 +141,7 @@ final class AccountReadingsTest extends HttpTestCase
 
         $response = $this->request('PATCH', '/account/readings/mine000001', ['password' => 'abc', 'reading_name' => 'Renamed']);
 
-        $this->assertSame(['error' => 'Reading password must be at least 4 characters.'], $this->assertJsonResponse(422, $response));
+        $this->assertSame('Reading password must be at least 4 characters.', $this->assertProblem(422, $response));
         // Nothing else in the request was applied either.
         $this->assertSame([['reading_name' => null, 'password_hash' => null]], $this->rows(
             "SELECT reading_name, password_hash FROM readings WHERE reading_id = 'mine000001'"
@@ -132,10 +153,10 @@ final class AccountReadingsTest extends HttpTestCase
         $this->insertReading('mine000001', $this->userId);
         $this->signInAs($this->userId);
 
-        $noChanges = ['error' => 'No changes provided.'];
-        $this->assertSame($noChanges, $this->assertJsonResponse(400, $this->request('PATCH', '/account/readings/mine000001', [])));
+        $noChanges = 'No changes provided.';
+        $this->assertSame($noChanges, $this->assertProblem(422, $this->request('PATCH', '/account/readings/mine000001', [])));
         // An empty password means "leave it", not "set it to nothing".
-        $this->assertSame($noChanges, $this->assertJsonResponse(400, $this->request('PATCH', '/account/readings/mine000001', ['password' => ''])));
+        $this->assertSame($noChanges, $this->assertProblem(422, $this->request('PATCH', '/account/readings/mine000001', ['password' => ''])));
     }
 
     public function testSomeoneElsesReadingCannotBeChangedOrDeleted(): void
@@ -145,11 +166,11 @@ final class AccountReadingsTest extends HttpTestCase
         $this->insertReading('guest00002', null);
         $this->signInAs($this->userId);
 
-        $notFound = ['error' => 'Reading not found.'];
+        $notFound = 'Reading not found.';
         foreach (['theirs0001', 'guest00002', 'unknown003'] as $id) {
             $patch = $this->request('PATCH', "/account/readings/{$id}", ['reading_name' => 'Mine now', 'password' => 'abcd']);
-            $this->assertSame($notFound, $this->assertJsonResponse(404, $patch), $id);
-            $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('DELETE', "/account/readings/{$id}")), $id);
+            $this->assertSame($notFound, $this->assertProblem(404, $patch), $id);
+            $this->assertSame($notFound, $this->assertProblem(404, $this->request('DELETE', "/account/readings/{$id}")), $id);
         }
 
         $this->assertSame(
@@ -168,11 +189,11 @@ final class AccountReadingsTest extends HttpTestCase
 
         $this->assertSame(204, $response->getStatusCode());
         $this->assertSame([['reading_id' => 'mine000002']], $this->rows('SELECT reading_id FROM readings'));
-        $this->assertJsonResponse(404, $this->get('/readings/mine000001'));
-        $this->assertJsonResponse(404, $this->request('DELETE', '/account/readings/mine000001'));
+        $this->assertProblem(404, $this->get('/readings/mine000001'));
+        $this->assertProblem(404, $this->request('DELETE', '/account/readings/mine000001'));
     }
 
-    private function insertReading(string $id, ?int $userId, string $time = '2026-01-01 09:00:00', ?string $passwordHash = null): void
+    private function insertReading(string $id, ?int $userId, string $time = '2026-01-01T09:00:00Z', ?string $passwordHash = null): void
     {
         $this->db->prepare('INSERT INTO readings (reading_id, reading_info, reading_time, user_id, password_hash) VALUES (?, ?, ?, ?, ?)')
             ->execute([$id, json_encode(['deck_id' => 1, 'origin' => 'generated', 'draw' => [['card_id' => 1, 'reversed' => false]]]), $time, $userId, $passwordHash]);

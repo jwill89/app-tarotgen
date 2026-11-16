@@ -3,7 +3,7 @@ import { nextTick } from 'vue'
 import { useUser } from '@/composables/useUser'
 import { NETWORK_ERROR_MESSAGE } from '@/composables/apiClient'
 import { STORAGE_KEYS } from '@/constants'
-import { stubApi, signIn, testUser } from './helpers/app'
+import { stubApi, signIn, testUser, problem } from './helpers/app'
 
 const sentBody = (api: ReturnType<typeof stubApi>, call = 0): unknown =>
   JSON.parse(String(api.mock.calls[call]?.[1]?.body))
@@ -28,7 +28,7 @@ describe('useUser session', () => {
 
   it('signs out locally when the session has expired', async () => {
     signIn(testUser())
-    stubApi({ 'GET /auth/me': { status: 401, body: { error: 'Not authenticated' } } })
+    stubApi({ 'GET /auth/me': { status: 401, body: problem('Not authenticated') } })
     const { fetchMe, currentUser, isLoggedIn } = useUser()
 
     await fetchMe()
@@ -93,7 +93,7 @@ describe('useUser.login', () => {
   })
 
   it("stays signed out and passes the server's reason on", async () => {
-    stubApi({ 'POST /auth/login': { status: 401, body: { error: 'Invalid email or password.' } } })
+    stubApi({ 'POST /auth/login': { status: 401, body: problem('Invalid email or password.') } })
     const { login, currentUser } = useUser()
 
     expect(await login('reader@example.test', 'wrong')).toEqual({
@@ -169,25 +169,41 @@ describe('useUser.register', () => {
     expect(res.activationLink).toBe('http://localhost/activate?token=t')
   })
 
-  it('returns every validation error the server lists', async () => {
+  it('returns every field the server refused', async () => {
     stubApi({
       'POST /auth/register': {
         status: 422,
-        body: {
-          error: 'Validation failed.',
-          errors: ['Email is already registered.', 'Password must be at least 12 characters.'],
-        },
+        body: problem(
+          'Please enter a valid email address. Password must be at least 12 characters.',
+          {
+            errors: [
+              { message: 'Please enter a valid email address.', location: 'body.email' },
+              { message: 'Password must be at least 12 characters.', location: 'body.password' },
+            ],
+          },
+        ),
       },
     })
 
-    expect(await useUser().register('taken@example.test', 'X', 'short')).toEqual({
+    expect(await useUser().register('not-an-email', 'X', 'short')).toEqual({
       ok: false,
-      errors: ['Email is already registered.', 'Password must be at least 12 characters.'],
+      errors: ['Please enter a valid email address.', 'Password must be at least 12 characters.'],
+    })
+  })
+
+  it('returns a taken display name as its one error', async () => {
+    stubApi({
+      'POST /auth/register': { status: 409, body: problem('That display name is already taken.') },
+    })
+
+    expect(await useUser().register('new@example.test', 'Reader', 'a long passphrase')).toEqual({
+      ok: false,
+      errors: ['That display name is already taken.'],
     })
   })
 
   it('falls back to the single error when there is no list', async () => {
-    stubApi({ 'POST /auth/register': { status: 429, body: { error: 'Too many attempts.' } } })
+    stubApi({ 'POST /auth/register': { status: 429, body: problem('Too many attempts.') } })
 
     expect(await useUser().register('a@b.test', 'X', 'pw')).toEqual({
       ok: false,
@@ -219,7 +235,7 @@ describe('useUser account recovery', () => {
   })
 
   it('says why an activation link was refused', async () => {
-    stubApi({ 'POST /auth/activate': { status: 400, body: { error: 'Link expired.' } } })
+    stubApi({ 'POST /auth/activate': { status: 422, body: problem('Link expired.') } })
 
     expect(await useUser().activate('old')).toEqual({ ok: false, error: 'Link expired.' })
   })
@@ -240,7 +256,7 @@ describe('useUser account recovery', () => {
   })
 
   it('reports why a reset email could not be requested', async () => {
-    stubApi({ 'POST /auth/forgot-password': { status: 429, body: { error: 'Slow down.' } } })
+    stubApi({ 'POST /auth/forgot-password': { status: 429, body: problem('Slow down.') } })
 
     expect(await useUser().requestPasswordReset('reader@example.test')).toEqual({
       ok: false,
@@ -259,7 +275,7 @@ describe('useUser account recovery', () => {
   })
 
   it('says why a new password was refused', async () => {
-    stubApi({ 'POST /auth/reset-password': { status: 400 } })
+    stubApi({ 'POST /auth/reset-password': { status: 422 } })
 
     expect(await useUser().resetPassword('tok', 'pw')).toEqual({
       ok: false,

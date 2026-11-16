@@ -54,9 +54,16 @@ export type CardFrequency = Schemas['CardFrequency']
 export type CardCount = Schemas['CardCount']
 /** One day's daily card (GET/POST /account/daily-cards). */
 export type DailyCard = Schemas['DailyCard']
+/** The 409 a second daily card for one day answers with: a problem naming the day's reading. */
+export type DailyCardTaken = Schemas['DailyCardTaken']
 
 /** Admin dashboard usage analytics (GET /admin/stats, and `stats` in GET /admin/summary). */
 export type UsageStats = Schemas['UsageStats']
+
+// Errors: every one the API sends is RFC 9457 problem details
+// (application/problem+json); a failed validation (422) lists its fields.
+export type ProblemDetails = Schemas['ProblemDetails']
+export type ProblemFieldError = Schemas['ProblemFieldError']
 
 /**
  * A daily card whose reading still exists, so its card is known. A day whose

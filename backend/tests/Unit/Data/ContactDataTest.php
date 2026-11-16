@@ -27,7 +27,7 @@ final class ContactDataTest extends TestCase
                 email        TEXT NOT NULL,
                 message      TEXT NOT NULL,
                 is_read      INTEGER NOT NULL DEFAULT 0,
-                submitted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                submitted_at DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
             )"
         );
         $this->pdo->exec(
@@ -77,8 +77,8 @@ final class ContactDataTest extends TestCase
     public function testRetrieveReturnsAllContactsNewestFirst(): void
     {
         // Insert with explicit timestamps to ensure ordering.
-        $this->pdo->exec("INSERT INTO contacts (name, email, message, submitted_at) VALUES ('A', 'a@x.com', 'First', '2026-01-01 00:00:00')");
-        $this->pdo->exec("INSERT INTO contacts (name, email, message, submitted_at) VALUES ('B', 'b@x.com', 'Second', '2026-01-02 00:00:00')");
+        $this->pdo->exec("INSERT INTO contacts (name, email, message, submitted_at) VALUES ('A', 'a@x.com', 'First', '2026-01-01T00:00:00Z')");
+        $this->pdo->exec("INSERT INTO contacts (name, email, message, submitted_at) VALUES ('B', 'b@x.com', 'Second', '2026-01-02T00:00:00Z')");
 
         $all = $this->data->retrieve();
         $this->assertCount(2, $all);

@@ -4,7 +4,7 @@ import App from '@/App.vue'
 import { useUser } from '@/composables/useUser'
 import { useDecks } from '@/composables/useDecks'
 import { useToasts } from '@/composables/useToasts'
-import { mountWithApp, cleanup, signIn, stubApi, testUser, lazyLoad } from './helpers/app'
+import { mountWithApp, cleanup, signIn, stubApi, testUser, lazyLoad, problem } from './helpers/app'
 
 // A page with no API calls of its own, so each test states only the app's.
 async function openApp(path = '/privacy') {
@@ -77,7 +77,7 @@ describe('App', () => {
       stubApi(newDrawLoads)
       const { wrapper } = await openApp('/new')
 
-      const active = wrapper.findAll('.nav-links a.active').map((a) => a.text())
+      const active = wrapper.findAll('.nav-links a.is-active').map((a) => a.text())
       expect(active).toEqual(['New Draw'])
     })
 
@@ -197,7 +197,7 @@ describe('App', () => {
     it('opens the reading for the code entered, trimmed', async () => {
       stubApi({
         'GET /decks': { body: [] },
-        'GET /readings/abc123': { status: 404, body: { error: 'Not found' } },
+        'GET /readings/abc123': { status: 404, body: problem('Not found') },
       })
       vi.spyOn(console, 'error').mockImplementation(() => {})
       const { wrapper, router } = await openApp()

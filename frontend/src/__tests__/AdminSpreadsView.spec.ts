@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import SpreadsView from '@/views/admin/SpreadsView.vue'
 import { useUser } from '@/composables/useUser'
 import { NETWORK_ERROR_MESSAGE } from '@/composables/apiClient'
-import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -100,7 +100,7 @@ describe('admin SpreadsView', () => {
     })
 
     it('drops to the login page when the session has expired', async () => {
-      const expired = { status: 401, body: { error: 'Unauthorized' } }
+      const expired = { status: 401, body: problem('Unauthorized') }
       stubApi({ 'GET /admin/spreads': expired, 'GET /admin/pending-spreads': expired })
       const { router } = await mountPage(SpreadsView, { path: '/admin/spreads' })
 
@@ -207,7 +207,7 @@ describe('admin SpreadsView', () => {
     it("keeps the spread and shows the server's reason when deleting fails", async () => {
       const api = stubApi({
         ...loads(),
-        'DELETE /admin/spreads/2': { status: 500, body: { error: 'Failed to delete spread' } },
+        'DELETE /admin/spreads/2': { status: 500, body: problem('Failed to delete spread') },
       })
       await mountPage(SpreadsView, { path: '/admin/spreads' })
       await click(button('Delete', row('Celtic Cross')))

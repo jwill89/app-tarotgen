@@ -8,6 +8,33 @@ Releases before 5.0.0 were reconstructed from the Git history; their dates are t
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-11-16
+
+### Changed
+
+- API errors are problem details (`application/problem+json`): the message a person reads is in `detail`, and a failed validation lists each field's problem in `errors`. A request that fails validation answers 422 instead of 400. A signed-in account without admin rights gets 403 from the admin API, as does a wrong password on a locked reading or a wrong current password when changing it; a display name someone else has is 409. Every "too many attempts" answer says when to try again (`Retry-After`). The API's own version is now 2.0.0.
+- A name, note, question or other text longer than its limit is refused with a message naming the field, where it was cut short without a word, and a spread position off the canvas is refused rather than moved onto it.
+- API timestamps are RFC 3339 in UTC, such as `2026-11-07T09:18:09Z`, where they were `2026-11-07 09:18:09`.
+- Changing or resetting your password also disconnects every linked app, such as the FFXIV plugin, which then needs linking again.
+- Everyone is signed out once, as the sign-in cookie has a new name.
+- Rate limits count a visitor on IPv6 by their /64 block, so moving between addresses in it no longer resets a limit.
+- Starting Google sign-in when it isn't set up returns to the sign-in page with a message, rather than to a bare error.
+- Deploys need a new setting, the server's data folder, and move the site onto a document root that holds no code. Needs a one-time step at deploy (docs/ops.md, Upgrading to 6.0.0).
+- After a backend deploy, the card scans and the site's other images are copied to the developer's machine as well as the database, fetching only what is new or changed (`-NoDbPull` skips both).
+- All text, links, tags and buttons now stand out from their backgrounds at a 7:1 contrast. Hints and grey text are a little lighter, info and danger buttons are lighter with dark text, coloured status text and tags are paler, and form fields have a clearer edge.
+- Keyboard focus shows as a solid gold ring instead of a faint glow.
+- On phones, the current page in the menu is underlined as well as coloured.
+- The API reference at `/api/docs` is now Swagger UI, served from the site itself, where it was Scalar from a CDN.
+- FFXIV plugin 0.9.0 shows the site's error messages in their new form, and still reads older servers' messages. Readings' times show in your own time zone.
+
+### Security
+
+- Browsers are told to use HTTPS for the site for a year (HSTS).
+- Pages send `Referrer-Policy: same-origin`, so no other site learns which page a visitor came from.
+- The sign-in cookie is `__Host-` prefixed, so only this exact host, over HTTPS, can set or read it.
+- No folder of the site's images can be listed.
+- Pages admit no inline styles but their own, each carrying the response's one-time nonce, and the API reference runs with no inline code at all.
+
 ## [5.6.0] - 2026-11-11
 
 ### Changed
@@ -52,7 +79,7 @@ Releases before 5.0.0 were reconstructed from the Git history; their dates are t
 - Grey hint text was too faint on the dark surfaces; it is lighter now, and darker when printed.
 - A screen reader could announce a face-down card's name before it was turned. Face-down cards are announced by their position only, and the lightbox shows a face-down card's back with no Report button.
 
-## [5.4.0] — 2026-10-30
+## [5.4.0] - 2026-10-30
 
 ### Added
 
@@ -71,7 +98,7 @@ Releases before 5.0.0 were reconstructed from the Git history; their dates are t
 
 - The hand-written changelog: the public `/changelog` page (it now goes to the home page), the admin editor and their API routes.
 
-## [5.3.0] — 2026-10-30
+## [5.3.0] - 2026-10-30
 
 ### Changed
 
@@ -82,7 +109,7 @@ Releases before 5.0.0 were reconstructed from the Git history; their dates are t
 
 - Saving a deck system in the admin could undo another admin's approval made while the form was open.
 
-## [5.2.0] — 2026-10-30
+## [5.2.0] - 2026-10-30
 
 ### Added
 
@@ -100,7 +127,7 @@ Releases before 5.0.0 were reconstructed from the Git history; their dates are t
 
 - The journal export includes question, querent, tags and who can open each reading; the CSV gains those columns after Reading Name.
 
-## [5.1.0] — 2026-10-30
+## [5.1.0] - 2026-10-30
 
 ### Added
 
@@ -111,7 +138,7 @@ Releases before 5.0.0 were reconstructed from the Git history; their dates are t
 - Sign out of all other devices from Account Settings.
 - Admin: the dashboard counts open card reports, and Errored Cards has Regenerate & resolve: once a new scan is uploaded, one click rebuilds that card's web images, closes the report, and lists the image URLs to purge from the CDN cache.
 
-## [5.0.0] — 2026-10-28
+## [5.0.0] - 2026-10-28
 
 ### Added
 
@@ -168,7 +195,7 @@ Releases before 5.0.0 were reconstructed from the Git history; their dates are t
 - The contact form is protected by Turnstile (when configured), and the plugin's token exchange is rate-limited.
 - Dependencies with published security advisories were updated.
 
-## [4.1.0] — 2026-07-04
+## [4.1.0] - 2026-07-04
 
 ### Added
 
@@ -188,7 +215,7 @@ Releases before 5.0.0 were reconstructed from the Git history; their dates are t
 - Card reports are rate-limited by an overall cap per address plus a per-address, per-card cooldown, so a card's count can't be inflated.
 - The plugin authenticates with bearer tokens over HTTPS, separate from the site's session cookie.
 
-## [4.0.0] — 2026-07-01
+## [4.0.0] - 2026-07-01
 
 ### Added
 
@@ -204,13 +231,13 @@ Releases before 5.0.0 were reconstructed from the Git history; their dates are t
 - The retention cleanup is a bulk delete: `DELETE /admin/readings/all?older_than_days=` returning `{ "deleted": N }`.
 - Special cards are nested under their deck (`/admin/decks/{deck_id}/special-cards/{card_id}`), and favorites are removed by path (`DELETE /account/favorites/{type}/{id}`) rather than by request body.
 
-## [3.4.0] — 2026-06-30
+## [3.4.0] - 2026-06-30
 
 ### Added
 
 - A written REST API reference (`API.md`) documenting every endpoint with its method, auth requirement, request body, responses, rate limits and caching.
 
-## [3.3.0] — 2026-06-28
+## [3.3.0] - 2026-06-28
 
 ### Added
 
@@ -231,7 +258,7 @@ Releases before 5.0.0 were reconstructed from the Git history; their dates are t
 
 - A report-only Content-Security-Policy plus `X-Frame-Options`, `X-Content-Type-Options` and `Referrer-Policy` headers on the app shell.
 
-## [3.2.0] — 2026-06-24
+## [3.2.0] - 2026-06-24
 
 ### Changed
 
@@ -241,14 +268,14 @@ Releases before 5.0.0 were reconstructed from the Git history; their dates are t
 
 - A batch of refinements across the site's views and admin screens: consistency, edge-case handling and input validation.
 
-## [3.1.0] — 2026-06-11
+## [3.1.0] - 2026-06-11
 
 ### Added
 
 - Additional draws within a reading: a finalized reading can be unlocked to draw more cards, extending the spread rather than starting over.
 - Font Awesome Pro v7 duotone icons across the app, and a page for previewing heading fonts.
 
-## [3.0.0] — 2026-06-04
+## [3.0.0] - 2026-06-04
 
 ### Added
 
@@ -281,7 +308,7 @@ Releases before 5.0.0 were reconstructed from the Git history; their dates are t
 - CSRF defence: state-changing requests are rejected unless their origin matches the site.
 - Hardened session cookies (`HttpOnly`, `SameSite=Lax`, `Secure` in production), `X-Frame-Options` and `X-Content-Type-Options` headers, opt-in credentialed CORS (never `*`), and per-address rate limiting on registration, login and password-reset requests.
 
-## [2.0.0] — 2026-04-17
+## [2.0.0] - 2026-04-17
 
 ### Added
 
@@ -297,7 +324,7 @@ Releases before 5.0.0 were reconstructed from the Git history; their dates are t
 
 - The jQuery and lightbox dependencies.
 
-## [1.0.0] — 2025-04-08
+## [1.0.0] - 2025-04-08
 
 Initial release.
 
@@ -305,7 +332,8 @@ Initial release.
 
 - A server-rendered PHP tarot reading generator with a jQuery front end and a lightbox card viewer.
 
-[Unreleased]: https://github.com/jwill89/app-tarotgen/compare/v5.6.0...HEAD
+[Unreleased]: https://github.com/jwill89/app-tarotgen/compare/v6.0.0...HEAD
+[6.0.0]: https://github.com/jwill89/app-tarotgen/compare/v5.6.0...v6.0.0
 [5.6.0]: https://github.com/jwill89/app-tarotgen/compare/v5.5.1...v5.6.0
 [5.5.1]: https://github.com/jwill89/app-tarotgen/compare/v5.5.0...v5.5.1
 [5.5.0]: https://github.com/jwill89/app-tarotgen/compare/v5.4.0...v5.5.0
@@ -315,11 +343,11 @@ Initial release.
 [5.1.0]: https://github.com/jwill89/app-tarotgen/compare/v5.0.0...v5.1.0
 [5.0.0]: https://github.com/jwill89/app-tarotgen/compare/v4.1.0...v5.0.0
 [4.1.0]: https://github.com/jwill89/app-tarotgen/compare/v4.0.0...v4.1.0
-[4.0.0]: https://github.com/jwill89/app-tarotgen/compare/v3.4.0...v4.0.0
-[3.4.0]: https://github.com/jwill89/app-tarotgen/compare/v3.3.0...v3.4.0
-[3.3.0]: https://github.com/jwill89/app-tarotgen/compare/v3.2.0...v3.3.0
-[3.2.0]: https://github.com/jwill89/app-tarotgen/compare/v3.1.0...v3.2.0
-[3.1.0]: https://github.com/jwill89/app-tarotgen/compare/v3.0.0...v3.1.0
-[3.0.0]: https://github.com/jwill89/app-tarotgen/compare/v2.0.0...v3.0.0
-[2.0.0]: https://github.com/jwill89/app-tarotgen/compare/v1.0.0...v2.0.0
+[4.0.0]: https://github.com/jwill89/app-tarotgen/releases/tag/v4.0.0
+[3.4.0]: https://github.com/jwill89/app-tarotgen/releases/tag/v3.4.0
+[3.3.0]: https://github.com/jwill89/app-tarotgen/releases/tag/v3.3.0
+[3.2.0]: https://github.com/jwill89/app-tarotgen/releases/tag/v3.2.0
+[3.1.0]: https://github.com/jwill89/app-tarotgen/releases/tag/v3.1.0
+[3.0.0]: https://github.com/jwill89/app-tarotgen/releases/tag/v3.0.0
+[2.0.0]: https://github.com/jwill89/app-tarotgen/releases/tag/v2.0.0
 [1.0.0]: https://github.com/jwill89/app-tarotgen/releases/tag/v1.0.0

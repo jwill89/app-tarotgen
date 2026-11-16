@@ -21,11 +21,13 @@ import {
   DialogDescription,
   DialogClose,
   TooltipProvider,
+  ConfigProvider,
 } from 'reka-ui'
 import ToastContainer from '@/components/ToastContainer.vue'
 import StarField from '@/components/StarField.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import CookieBanner from '@/components/CookieBanner.vue'
+import { cspNonce } from '@/utils/cspNonce'
 
 const router = useRouter()
 const { currentUser, isLoggedIn, logout: userLogout } = useUser()
@@ -39,6 +41,10 @@ const currentYear = computed(() => new Date().getFullYear())
 // runtime URL string, not a bundled import (Vite would compile an import of it
 // into a module that returns raw image bytes).
 const brandLogo = '/assets/favicon.png'
+
+// Reka UI's select and combobox lists add a <style> element for their scrollbars,
+// which the page's policy admits only with its nonce.
+const styleNonce = cspNonce()
 
 // Primary nav links (also used by the mobile menu). Creating a spread starts
 // from the Spreads library (and Home), which keeps the bar to five links: a
@@ -116,102 +122,84 @@ function skipToContent() {
 </script>
 
 <template>
-  <TooltipProvider :delay-duration="300">
-    <div class="app-wrapper">
-      <a class="skip-link" href="#main-content" @click.prevent="skipToContent">Skip to content</a>
-      <StarField />
+  <ConfigProvider :nonce="styleNonce">
+    <TooltipProvider :delay-duration="300">
+      <div class="app-wrapper">
+        <a class="skip-link" href="#main-content" @click.prevent="skipToContent">Skip to content</a>
+        <StarField />
 
-      <nav class="site-nav" aria-label="main navigation">
-        <div class="nav-inner">
-          <router-link class="brand" :to="{ name: 'home' }" aria-label="TarotGen.io home">
-            <span class="glyph"><img :src="brandLogo" alt="" class="brand-logo" /></span>
-            <span class="word">Tarot<span class="gen">Gen</span><span class="tld">.io</span></span>
-          </router-link>
-
-          <div class="nav-links">
-            <template v-for="(l, i) in navLinks" :key="l.label">
-              <router-link :to="l.to" exact-active-class="active" @click="closeMenu">{{
-                l.label
-              }}</router-link>
-              <span v-if="i < navLinks.length - 1" class="nav-sep" aria-hidden="true">·</span>
-            </template>
-          </div>
-
-          <div class="nav-right">
-            <DialogRoot v-model:open="codeDialogOpen">
-              <DialogTrigger class="btn btn-quiet nav-code-btn">
-                <span class="icon"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
-                /></span>
-                <span class="nav-code-label">View a Reading</span>
-              </DialogTrigger>
-              <DialogPortal>
-                <DialogOverlay class="myst-dialog-overlay" />
-                <DialogContent class="myst-dialog">
-                  <DialogTitle class="myst-dialog-title">View a Reading</DialogTitle>
-                  <DialogDescription class="myst-dialog-desc">
-                    Enter the code you were given to open that reading.
-                  </DialogDescription>
-                  <form class="code-dialog-form" @submit.prevent="viewReading">
-                    <input
-                      v-model="searchReadingId"
-                      class="code-dialog-input"
-                      type="text"
-                      placeholder="Reading Code"
-                      aria-label="Reading Code"
-                    />
-                    <button class="btn-view" type="submit">
-                      View
-                      <span class="icon"
-                        ><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-right']"
-                      /></span>
-                    </button>
-                  </form>
-                  <DialogClose class="myst-dialog-close" aria-label="Close">
-                    <FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" />
-                  </DialogClose>
-                </DialogContent>
-              </DialogPortal>
-            </DialogRoot>
-
-            <router-link v-if="!isLoggedIn" class="btn btn-login" :to="{ name: 'login' }">
-              Log In
+        <nav class="site-nav" aria-label="main navigation">
+          <div class="nav-inner">
+            <router-link class="brand" :to="{ name: 'home' }" aria-label="TarotGen.io home">
+              <span class="glyph"><img :src="brandLogo" alt="" class="brand-logo" /></span>
+              <span class="word"
+                >Tarot<span class="gen">Gen</span><span class="tld">.io</span></span
+              >
             </router-link>
 
-            <DropdownMenuRoot v-else :modal="false">
-              <DropdownMenuTrigger class="btn account-trigger">
-                <span class="icon"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['circle-user']"
-                /></span>
-                <span class="acct-name">{{ currentUser?.display_name }}</span>
-                <span class="chev"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['chevron-down']"
-                /></span>
-              </DropdownMenuTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuContent class="myst-menu" align="end" :side-offset="8">
-                  <DropdownMenuItem v-for="item in accountItems" :key="item.label" as-child>
-                    <router-link class="myst-menu-item" :to="item.to">
-                      <span class="mi-icon"
-                        ><FontAwesomeIcon :icon="byPrefixAndName.fas[item.icon]"
-                      /></span>
-                      <span>{{ item.label }}</span>
-                    </router-link>
-                  </DropdownMenuItem>
+            <div class="nav-links">
+              <template v-for="(l, i) in navLinks" :key="l.label">
+                <router-link :to="l.to" exact-active-class="is-active" @click="closeMenu">{{
+                  l.label
+                }}</router-link>
+                <span v-if="i < navLinks.length - 1" class="nav-sep" aria-hidden="true">·</span>
+              </template>
+            </div>
 
-                  <template v-if="currentUser?.is_admin">
-                    <DropdownMenuSeparator class="myst-menu-sep" />
-                    <DropdownMenuLabel class="myst-menu-label">
-                      <span class="mi-icon"
-                        ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']"
-                      /></span>
-                      <span>Admin</span>
-                    </DropdownMenuLabel>
-                    <DropdownMenuItem
-                      v-for="item in adminItems"
-                      :key="'admin-' + item.label"
-                      as-child
-                    >
+            <div class="nav-right">
+              <DialogRoot v-model:open="codeDialogOpen">
+                <DialogTrigger class="btn btn-quiet nav-code-btn">
+                  <span class="icon"
+                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
+                  /></span>
+                  <span class="nav-code-label">View a Reading</span>
+                </DialogTrigger>
+                <DialogPortal>
+                  <DialogOverlay class="myst-dialog-overlay" />
+                  <DialogContent class="myst-dialog">
+                    <DialogTitle class="myst-dialog-title">View a Reading</DialogTitle>
+                    <DialogDescription class="myst-dialog-desc">
+                      Enter the code you were given to open that reading.
+                    </DialogDescription>
+                    <form class="code-dialog-form" @submit.prevent="viewReading">
+                      <input
+                        v-model="searchReadingId"
+                        class="code-dialog-input"
+                        type="text"
+                        placeholder="Reading Code"
+                        aria-label="Reading Code"
+                      />
+                      <button class="btn-view" type="submit">
+                        View
+                        <span class="icon"
+                          ><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-right']"
+                        /></span>
+                      </button>
+                    </form>
+                    <DialogClose class="myst-dialog-close" aria-label="Close">
+                      <FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" />
+                    </DialogClose>
+                  </DialogContent>
+                </DialogPortal>
+              </DialogRoot>
+
+              <router-link v-if="!isLoggedIn" class="btn btn-login" :to="{ name: 'login' }">
+                Log In
+              </router-link>
+
+              <DropdownMenuRoot v-else :modal="false">
+                <DropdownMenuTrigger class="btn account-trigger">
+                  <span class="icon"
+                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['circle-user']"
+                  /></span>
+                  <span class="acct-name">{{ currentUser?.display_name }}</span>
+                  <span class="chev"
+                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['chevron-down']"
+                  /></span>
+                </DropdownMenuTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuContent class="myst-menu" align="end" :side-offset="8">
+                    <DropdownMenuItem v-for="item in accountItems" :key="item.label" as-child>
                       <router-link class="myst-menu-item" :to="item.to">
                         <span class="mi-icon"
                           ><FontAwesomeIcon :icon="byPrefixAndName.fas[item.icon]"
@@ -219,119 +207,141 @@ function skipToContent() {
                         <span>{{ item.label }}</span>
                       </router-link>
                     </DropdownMenuItem>
-                  </template>
 
-                  <DropdownMenuSeparator class="myst-menu-sep" />
-                  <DropdownMenuItem class="myst-menu-item" @select="doUserLogout">
-                    <span class="mi-icon"
-                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['right-from-bracket']"
-                    /></span>
-                    <span>Log Out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenuPortal>
-            </DropdownMenuRoot>
+                    <template v-if="currentUser?.is_admin">
+                      <DropdownMenuSeparator class="myst-menu-sep" />
+                      <DropdownMenuLabel class="myst-menu-label">
+                        <span class="mi-icon"
+                          ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']"
+                        /></span>
+                        <span>Admin</span>
+                      </DropdownMenuLabel>
+                      <DropdownMenuItem
+                        v-for="item in adminItems"
+                        :key="'admin-' + item.label"
+                        as-child
+                      >
+                        <router-link class="myst-menu-item" :to="item.to">
+                          <span class="mi-icon"
+                            ><FontAwesomeIcon :icon="byPrefixAndName.fas[item.icon]"
+                          /></span>
+                          <span>{{ item.label }}</span>
+                        </router-link>
+                      </DropdownMenuItem>
+                    </template>
 
-            <button
-              class="hamburger"
-              :class="{ 'is-open': burgerOpen }"
-              type="button"
-              aria-label="Toggle navigation menu"
-              :aria-expanded="burgerOpen ? 'true' : 'false'"
-              @click="burgerOpen = !burgerOpen"
-            >
-              <span></span><span></span><span></span>
-            </button>
+                    <DropdownMenuSeparator class="myst-menu-sep" />
+                    <DropdownMenuItem class="myst-menu-item" @select="doUserLogout">
+                      <span class="mi-icon"
+                        ><FontAwesomeIcon :icon="byPrefixAndName.fas['right-from-bracket']"
+                      /></span>
+                      <span>Log Out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenuPortal>
+              </DropdownMenuRoot>
+
+              <button
+                class="hamburger"
+                :class="{ 'is-open': burgerOpen }"
+                type="button"
+                aria-label="Toggle navigation menu"
+                :aria-expanded="burgerOpen ? 'true' : 'false'"
+                @click="burgerOpen = !burgerOpen"
+              >
+                <span></span><span></span><span></span>
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div class="mobile-menu" :class="{ 'is-open': burgerOpen }">
-          <div class="mobile-menu-inner">
-            <router-link
-              v-for="l in navLinks"
-              :key="'m-' + l.label"
-              :to="l.to"
-              exact-active-class="active"
-              @click="closeMenu"
-            >
-              {{ l.label }}
-            </router-link>
-
-            <button class="btn btn-quiet mm-code-btn" type="button" @click="openCodeDialog">
-              <span class="icon"
-                ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
-              /></span>
-              <span>View a Reading</span>
-            </button>
-
-            <template v-if="!isLoggedIn">
+          <div class="mobile-menu" :class="{ 'is-open': burgerOpen }">
+            <div class="mobile-menu-inner">
               <router-link
-                class="btn btn-login mm-login"
-                :to="{ name: 'login' }"
+                v-for="l in navLinks"
+                :key="'m-' + l.label"
+                :to="l.to"
+                exact-active-class="is-active"
                 @click="closeMenu"
               >
-                Log In
+                {{ l.label }}
               </router-link>
-            </template>
-            <template v-else>
-              <div class="mm-divider" aria-hidden="true"></div>
-              <router-link
-                v-for="item in accountItems"
-                :key="'m-' + item.label"
-                :to="item.to"
-                @click="closeMenu"
-              >
-                {{ item.label }}
-              </router-link>
-              <template v-if="currentUser?.is_admin">
+
+              <button class="btn btn-quiet mm-code-btn" type="button" @click="openCodeDialog">
+                <span class="icon"
+                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
+                /></span>
+                <span>View a Reading</span>
+              </button>
+
+              <template v-if="!isLoggedIn">
                 <router-link
-                  v-for="item in adminItems"
-                  :key="'m-admin-' + item.label"
+                  class="btn btn-login mm-login"
+                  :to="{ name: 'login' }"
+                  @click="closeMenu"
+                >
+                  Log In
+                </router-link>
+              </template>
+              <template v-else>
+                <div class="mm-divider" aria-hidden="true"></div>
+                <router-link
+                  v-for="item in accountItems"
+                  :key="'m-' + item.label"
                   :to="item.to"
                   @click="closeMenu"
                 >
-                  Admin · {{ item.label }}
+                  {{ item.label }}
                 </router-link>
+                <template v-if="currentUser?.is_admin">
+                  <router-link
+                    v-for="item in adminItems"
+                    :key="'m-admin-' + item.label"
+                    :to="item.to"
+                    @click="closeMenu"
+                  >
+                    Admin · {{ item.label }}
+                  </router-link>
+                </template>
+                <a
+                  class="mm-logout"
+                  role="button"
+                  tabindex="0"
+                  @click="doUserLogout"
+                  @keyup.enter="doUserLogout"
+                  @keydown.space.prevent="doUserLogout"
+                >
+                  Log Out
+                </a>
               </template>
-              <a
-                class="mm-logout"
-                role="button"
-                tabindex="0"
-                @click="doUserLogout"
-                @keyup.enter="doUserLogout"
-                @keydown.space.prevent="doUserLogout"
-              >
-                Log Out
-              </a>
-            </template>
+            </div>
           </div>
-        </div>
-      </nav>
+        </nav>
 
-      <main id="main-content" ref="mainContent" tabindex="-1">
-        <router-view />
-      </main>
+        <main id="main-content" ref="mainContent" tabindex="-1">
+          <router-view />
+        </main>
 
-      <ConfirmDialog />
-      <ToastContainer />
-      <CookieBanner />
+        <ConfirmDialog />
+        <ToastContainer />
+        <CookieBanner />
 
-      <footer class="footer mt-auto">
-        <div class="content has-text-centered">
-          <p>
-            Copyright &copy; {{ currentYear }}. Coded by
-            <a href="https://www.mathdad.me"><strong>MathDad</strong></a
-            >.<br />
-            This site is a tool for readers and those learning; it is not meant to replace the need
-            for a reader. Please use responsibly!<br />
-            <router-link :to="{ name: 'privacy-policy' }">Privacy Policy</router-link> |
-            <router-link :to="{ name: 'terms-of-service' }">Terms of Service</router-link> |
-            <router-link :to="{ name: 'contact' }">Contact Us</router-link>
-          </p>
-        </div>
-      </footer>
-    </div>
-  </TooltipProvider>
+        <footer class="footer mt-auto">
+          <div class="content has-text-centered">
+            <p>
+              Copyright &copy; {{ currentYear }}. Coded by
+              <a href="https://www.mathdad.me"><strong>MathDad</strong></a
+              >.<br />
+              This site is a tool for readers and those learning; it is not meant to replace the
+              need for a reader. Please use responsibly!<br />
+              <router-link :to="{ name: 'privacy-policy' }">Privacy Policy</router-link> |
+              <router-link :to="{ name: 'terms-of-service' }">Terms of Service</router-link> |
+              <router-link :to="{ name: 'contact' }">Contact Us</router-link>
+            </p>
+          </div>
+        </footer>
+      </div>
+    </TooltipProvider>
+  </ConfigProvider>
 </template>
 
 <style scoped>
@@ -372,7 +382,7 @@ function skipToContent() {
 .skip-link:focus-visible {
   transform: none;
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 /* ============ NAV (solid chrome) ============ */
@@ -476,11 +486,12 @@ function skipToContent() {
   background: rgb(255 255 255 / 40%);
 }
 
-.nav-links a.active {
+/* The current page: lit aqua, its underline lit with it. */
+.nav-links a.is-active {
   color: var(--aqua);
 }
 
-.nav-links a.active::after {
+.nav-links a.is-active::after {
   background: var(--aqua);
   box-shadow: 0 0 10px var(--aqua-glow);
 }
@@ -500,7 +511,7 @@ function skipToContent() {
 
 .code-dialog-input {
   background: var(--surface);
-  border: 1px solid var(--hair);
+  border: 1px solid var(--myst-control-border);
   color: var(--text);
   border-radius: 9px;
   font-family: var(--font-ui);
@@ -519,8 +530,8 @@ function skipToContent() {
 
 .code-dialog-input:focus {
   outline: none;
-  border-color: var(--hair-gold);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 12%, transparent);
+  border-color: var(--myst-focus-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-focus-ring) 12%, transparent);
 }
 
 .nav-code-label {
@@ -555,7 +566,7 @@ function skipToContent() {
 
 .btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 20%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 .btn-quiet {
@@ -621,7 +632,7 @@ function skipToContent() {
 
 .hamburger:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 .hamburger.is-open span:nth-child(1) {
@@ -678,8 +689,12 @@ function skipToContent() {
   background: rgb(255 255 255 / 3%);
 }
 
-.mobile-menu a.active {
+/* The current page, underlined as well as lit. */
+.mobile-menu a.is-active {
   color: var(--aqua);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.35em;
 }
 
 .mm-code-btn {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import RegisterView from '@/views/RegisterView.vue'
-import { mountWithApp, cleanup, stubApi, signIn } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, signIn, problem } from './helpers/app'
 
 const text = (el: Element) => el.textContent.replace(/\s+/g, ' ').trim()
 const pageText = () => text(document.body)
@@ -117,10 +117,15 @@ describe('RegisterView', () => {
     stubApi({
       'POST /auth/register': {
         status: 422,
-        body: {
-          error: 'Validation failed.',
-          errors: ['That email is already registered.', 'Password must be at least 12 characters.'],
-        },
+        body: problem(
+          'Please enter a valid email address. Password must be at least 12 characters.',
+          {
+            errors: [
+              { message: 'Please enter a valid email address.', location: 'body.email' },
+              { message: 'Password must be at least 12 characters.', location: 'body.password' },
+            ],
+          },
+        ),
       },
     })
     await mountWithApp(RegisterView, { path: '/register' })
@@ -129,7 +134,7 @@ describe('RegisterView', () => {
     await click(button('Create Account'))
 
     expect([...document.body.querySelectorAll('.notification li')].map(text)).toEqual([
-      'That email is already registered.',
+      'Please enter a valid email address.',
       'Password must be at least 12 characters.',
     ])
     expect(field('Email').value).toBe('new@example.test')

@@ -7,7 +7,7 @@ as interactive docs:
 
 | | |
 |---|---|
-| **Interactive reference (Scalar)** | [`GET /api/docs`](backend/api/Routes/Internal/ApiDocsController.php) |
+| **Interactive reference (Swagger UI)** | [`GET /api/docs`](backend/api/Routes/Internal/ApiDocsController.php) |
 | **Raw OpenAPI 3.1 spec** | [`GET /api/openapi.json`](backend/openapi.json) — committed at [`backend/openapi.json`](backend/openapi.json) |
 | **Where it comes from** | swagger-php (`#[OA\...]`) attributes on the controllers in [`backend/api/Routes/Internal/`](backend/api/Routes/Internal/) and the `#[OA\Schema]` Structure classes in [`backend/includes/Tarot/Structure/`](backend/includes/Tarot/Structure/) |
 | **Regenerate** | `cd backend && composer docs` (writes `openapi.json`); a PHPUnit test fails if the committed spec drifts |
@@ -50,24 +50,55 @@ action endpoints for operations that aren't a plain field-set.
 |-------|--------|
 | **Request body** | `POST`/`PUT`/`PATCH` send JSON (`Content-Type: application/json`); unknown fields are ignored. |
 | **Success body** | The requested resource, a list, or `{ "success": true, … }`. Creates return `201`; deletes return `204` with no body. |
-| **Error body** | Always `{ "error": "<message>" }`. Validation failures returning multiple messages use `{ "errors": ["…", "…"] }`. |
+| **Error body** | Always RFC 9457 problem details, `application/problem+json` (see [Errors](#errors)). |
 | **Caching** | Public, slow-changing reads send `Cache-Control: public, max-age=300`. Viewer-specific reads (a single reading) send `Cache-Control: private, no-store`. |
-| **Rate limiting** | Several public endpoints are IP-rate-limited and answer `429` when exceeded (noted per endpoint in the spec). |
+| **Rate limiting** | Several public endpoints are IP-rate-limited and answer `429` with `Retry-After` (seconds) when exceeded; each limit is noted on its endpoint in the spec. |
+
+### Errors
+
+Every error, the framework's own included (an unknown route, a method a route doesn't take, an uncaught exception), is an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem details body sent as `application/problem+json`, whatever the request's `Accept`. The spec's `ProblemDetails` schema describes it, and every operation's 4xx and 5xx responses reference it.
+
+```json
+{
+  "type": "about:blank",
+  "title": "Unprocessable Entity",
+  "status": 422,
+  "detail": "x must be a number from 0 to 100.",
+  "errors": [{ "message": "x must be a number from 0 to 100.", "location": "body.positions[0].x" }]
+}
+```
+
+- `type` is always `about:blank`, so the status says what kind of problem it is; `title` is the status's reason phrase.
+- `detail` is the message to show the user: it says why. The SPA reads it as `ApiResult.error`.
+- `errors` comes only with a failed validation (`422`): one entry per refused field, with the `message` to show beside it and its `location` as huma writes it (`body.email`, `body.positions[2].x`, `query.limit`, `path.deck_id`, or `body` for the body as a whole). The SPA reads them with `fieldErrors()`.
+- A problem may carry members of its own, named in the spec: a second daily card for one day (`409`) names the day's `reading_id` (`DailyCardTaken`), and a plugin code exchange's refusal carries OAuth's `error: "invalid_grant"` (`InvalidGrant`).
+- Outside production, an unexpected error (`500`) also carries `exception`, the exception chain. In production it says only "Something went wrong on our side. Please try again."
+
+| Status | When |
+|--------|------|
+| `400` | The server can't read the request: a JSON body that isn't JSON or isn't an object. Also a plugin code exchange (`POST /plugin/token`, `POST /plugin/draw-keys/token`) with a code or verifier that is wrong, expired or spent, which is RFC 6749's `invalid_grant`. |
+| `401` | Not signed in (or a plugin Bearer credential that no longer resolves); from the `/auth/*` sign-in operations, a sign-in that failed. |
+| `403` | Signed in but not allowed: a signed-in account that isn't an admin on `/admin/*`, a wrong **current** password when changing it or deleting the account, a reading that isn't yours to place or draw into, a wrong reading password, a protected account, a cross-origin state change. |
+| `404` | An unknown id, or anything the requester may not see (someone else's reading or spread, a submission awaiting approval), so ids can't be probed. |
+| `409` | A conflict with what is stored: a taken name, a passkey already registered, the last way to sign in, a final or custom reading, a day that already has its card, a ceremony with no challenge pending, an account already active. |
+| `422` | A failed validation: a missing field, a value out of range or over its length (refused, never clamped or cut), a reference to nothing (an unknown deck or category), a weak password, a failed captcha. |
+| `429` | A rate limit, with `Retry-After`. |
+| `500` | The server's own failure. |
+
+The Google sign-in start and callback (`GET /auth/google`, `GET /auth/google/callback`) are navigated to, not called, so they always answer `302`: a failure goes back to the page it came from (`/login`, `/register` or `/account/settings`) with the reason in `?oauth_error=`.
 
 ### Authentication & authorization
 
-A signed-in **browser** user is identified by the `PHPSESSID` **session cookie**
-(HttpOnly, SameSite=Lax, Secure in production) — the `sessionCookie` OpenAPI
-scheme. The first-party SPA uses only this; there are no API keys.
+A signed-in **browser** user is identified by the `__Host-tarotgen` **session cookie** (HttpOnly, SameSite=Lax, Secure, bound to the exact host by its `__Host-` prefix; `tarotgen` outside production, over plain HTTP) — the `sessionCookie` OpenAPI scheme. The first-party SPA uses only this; there are no API keys.
 
 The **Dalamud plugin** is the one non-browser client. Viewing readings needs no auth. Drawing one needs, when Turnstile is configured, a linked account or the plugin's **draw key** (`Authorization: Bearer tg_dk_…`), which opens nothing but draws (AGENTS.md §4, "Who may make a reading"). A linked account adds a per-account **plugin token** (`pluginToken` scheme, Bearer over HTTPS — a native `HttpClient` sends no `Origin`, which `OriginGuard` already permits) for the read-only account routes it may reach. The token and the draw key both come through a browser loopback + PKCE flow, and the token is individually revocable. (The per-install client token and share relay were removed — AUDIT.md §2.1.)
 
 | Audience | How a request authenticates | Guard |
 |----------|-----------------------------|-------|
 | Public | No session needed | — |
-| Signed-in user (`/account/*`) | `PHPSESSID` for an **active** account | `UserAuth` → `401 Not authenticated` |
-| Admin (`/admin/*`) | `PHPSESSID` for an active **`is_admin`** account | `AdminAuth` → `401 Unauthorized` |
-| Linked plugin (account routes it may reach) | session **or** a plugin Bearer token | `AccountAuth` → `401 Not authenticated` |
+| Signed-in user (`/account/*`) | The session cookie for an **active** account | `UserAuth` → `401` "Not authenticated" |
+| Admin (`/admin/*`) | The session cookie for an active **`is_admin`** account | `AdminAuth` → `401` "Not authenticated" signed out, `403` "Only an admin can do that." signed in |
+| Linked plugin (account routes it may reach) | session **or** a plugin Bearer token | `AccountAuth` → `401` "Not authenticated" |
 
 - **CSRF** — the `OriginGuard` middleware rejects state-changing requests
   (`POST`/`PUT`/`PATCH`/`DELETE`) from a foreign origin. Safe methods and the GET OAuth

@@ -19,6 +19,7 @@ import {
   testRouter,
   testUser,
   lazyLoad,
+  problem,
 } from './helpers/app'
 import type { Deck, LockedReading, Reading, ReadingInfo } from '@/types'
 
@@ -78,7 +79,7 @@ function reading(overrides: Partial<Reading> = {}): Reading {
   return {
     reading_id: 'abc123',
     reading_info: freeDrawInfo,
-    reading_time: '2026-10-01 12:30:00',
+    reading_time: '2026-10-01T12:30:00Z',
     reading_name: null,
     reading_notes: null,
     reader: 'Guest',
@@ -212,7 +213,7 @@ describe('ReadingView', () => {
       expect(meta(wrapper)).toEqual({
         'Reading ID': 'abc123',
         'Reading URL': 'https://tarotgen.io/reading/abc123 Copy',
-        Date: formatDateTime('2026-10-01 12:30:00'),
+        Date: formatDateTime('2026-10-01T12:30:00Z'),
         Spread: 'Free Draw',
         Reader: 'Guest',
         Deck: 'Rider-Waite Tarot · art by Pamela Colman Smith RWS',
@@ -240,7 +241,7 @@ describe('ReadingView', () => {
           id: 'abc123',
           deckName: 'Rider-Waite Tarot',
           summary: '2 cards',
-          at: '2026-10-01 12:30:00',
+          at: '2026-10-01T12:30:00Z',
         },
       ])
     })
@@ -554,7 +555,7 @@ describe('ReadingView', () => {
 
   describe('a reading that cannot be shown', () => {
     it('says so when there is no reading with that code', async () => {
-      loads(reading(), { 'GET /readings/abc123': { status: 404, body: { error: 'Not found' } } })
+      loads(reading(), { 'GET /readings/abc123': { status: 404, body: problem('Not found') } })
       const { wrapper, router } = await openReading()
 
       expect(wrapper.get('h1').text()).toBe('Reading not found')
@@ -568,7 +569,7 @@ describe('ReadingView', () => {
 
     it("says what went wrong when it isn't a missing reading", async () => {
       loads(reading(), {
-        'GET /readings/abc123': { status: 429, body: { error: 'Too many requests.' } },
+        'GET /readings/abc123': { status: 429, body: problem('Too many requests.') },
       })
       await openReading()
 
@@ -634,7 +635,7 @@ describe('ReadingView', () => {
 
     it("shows the server's message for a wrong password, and lets the user retry", async () => {
       loads(locked, {
-        'POST /readings/abc123/unlock': { status: 401, body: { error: 'Incorrect password.' } },
+        'POST /readings/abc123/unlock': { status: 403, body: problem('Incorrect password.') },
       })
       const { wrapper } = await openReading()
 
@@ -666,7 +667,7 @@ describe('ReadingView', () => {
         fileName: 'tarot-reading-abc123.png',
         readingId: 'abc123',
         title: 'Past, Present, Future',
-        subtitle: 'Rider-Waite Tarot  ·  ' + formatDateTime('2026-10-01 12:30:00'),
+        subtitle: 'Rider-Waite Tarot  ·  ' + formatDateTime('2026-10-01T12:30:00Z'),
         cards: spreadInfo.draw.map((c) => ({
           imgUrl: cardImageUrls(1, c.card_id).display,
           fallbackUrl: cardImageUrls(1, c.card_id).png,
@@ -917,7 +918,7 @@ describe('ReadingView', () => {
     it("keeps the draw form open and shows the server's error when the draw fails", async () => {
       signIn(testUser())
       loads(owned(), {
-        'POST /readings/abc123/draw': { status: 409, body: { error: 'This reading is final.' } },
+        'POST /readings/abc123/draw': { status: 409, body: problem('This reading is final.') },
       })
       await openReading()
 
@@ -963,7 +964,7 @@ describe('ReadingView', () => {
     it("shows the server's error when the reading can't be finalized", async () => {
       signIn(testUser())
       loads(owned(), {
-        'POST /readings/abc123/finalize': { status: 403, body: { error: 'Not your reading.' } },
+        'POST /readings/abc123/finalize': { status: 403, body: problem('Not your reading.') },
       })
       await openReading()
 
@@ -1057,11 +1058,11 @@ describe('ReadingView', () => {
     })
 
     it('says when a guest reading will be deleted, to anyone looking', async () => {
-      loads(reading({ expires_at: '2026-10-08 12:30:00' }))
+      loads(reading({ expires_at: '2026-10-08T12:30:00Z' }))
       const { wrapper } = await openReading()
 
       expect(wrapper.get('.reading-expiry').text()).toBe(
-        `This reading will be deleted on ${formatDateTime('2026-10-08 12:30:00')}. Its link stops working then.`,
+        `This reading will be deleted on ${formatDateTime('2026-10-08T12:30:00Z')}. Its link stops working then.`,
       )
     })
 
@@ -1081,7 +1082,7 @@ describe('ReadingView', () => {
             ...(sent as object),
             reading_id: 'abc123',
             reading_info: freeDrawInfo,
-            reading_time: '2026-10-01 12:30:00',
+            reading_time: '2026-10-01T12:30:00Z',
             user_id: 7,
             is_final: false,
             password_protected: false,
@@ -1125,7 +1126,7 @@ describe('ReadingView', () => {
       loads(mine(), {
         'PATCH /account/readings/abc123': {
           status: 422,
-          body: { error: 'Choose a password of at least 4 characters for this reading.' },
+          body: problem('Choose a password of at least 4 characters for this reading.'),
         },
       })
       await openReading()

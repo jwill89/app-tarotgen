@@ -334,7 +334,7 @@ onMounted(async () => {
 
 .app-version:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 /* ── Console layout: side-menu launcher + insights ─────────── */
@@ -427,9 +427,14 @@ onMounted(async () => {
   color: var(--myst-text-strong);
 }
 
+/* The gold wash is lighter than the panel: the count steps up a tier to stay at 7:1. */
+.admin-nav-item:hover .nav-count {
+  color: var(--myst-text-muted);
+}
+
 .admin-nav-item:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 .admin-insights {

@@ -31,6 +31,13 @@ describe('renderMarkdown', () => {
     const html = renderMarkdown('<img src="x" onerror="alert(1)">')
     expect(html.toLowerCase()).not.toContain('onerror')
   })
+
+  // The page's policy refuses inline style attributes; none reach the DOM.
+  it('strips style attributes and keeps their element', () => {
+    const html = renderMarkdown('<span style="color: red">red</span> text')
+    expect(html).toContain('<span>red</span>')
+    expect(html).not.toContain('style')
+  })
 })
 
 describe('markdownExcerpt', () => {

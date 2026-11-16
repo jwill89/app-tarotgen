@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\CardReportRepository;
@@ -71,8 +72,8 @@ class AdminCardReportController extends AbstractController
                 description: 'Updated',
                 content: new OAS\MediaType\Json(required: ['success'], properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
             ),
-            new OAS\Response(response: 400, description: 'Invalid report ID'),
             new OAS\Response(response: 404, description: 'Report not found'),
+            new OAS\Response(response: 422, description: 'Invalid report ID'),
         ]
     )]
     public function updateCardReport(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -80,11 +81,11 @@ class AdminCardReportController extends AbstractController
         $reportId = (int) ($args['report_id'] ?? 0);
 
         if ($reportId < 1) {
-            return $response->withJson(['error' => 'Invalid report ID'], 400);
+            return Problem::invalid($response, 'path.report_id', 'Invalid report ID');
         }
 
         if (!$this->cardReports->exists($reportId)) {
-            return $response->withJson(['error' => 'Report not found'], 404);
+            return Problem::respond($response, 404, 'Report not found');
         }
 
         $params = $this->parsedBody($request);
@@ -118,9 +119,9 @@ class AdminCardReportController extends AbstractController
                 description: 'Images rebuilt and the report resolved',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/CardReport')
             ),
-            new OAS\Response(response: 400, description: 'Invalid report ID'),
             new OAS\Response(response: 404, description: 'Report (or its deck) not found'),
             new OAS\Response(response: 409, description: 'Already resolved, or the card has no master scan on the server'),
+            new OAS\Response(response: 422, description: 'Invalid report ID'),
             new OAS\Response(response: 500, description: 'The scan could not be turned into web images; the report stays open'),
         ]
     )]
@@ -129,39 +130,41 @@ class AdminCardReportController extends AbstractController
         $reportId = (int) ($args['report_id'] ?? 0);
 
         if ($reportId < 1) {
-            return $response->withJson(['error' => 'Invalid report ID'], 400);
+            return Problem::invalid($response, 'path.report_id', 'Invalid report ID');
         }
 
         $report = $this->cardReports->find($reportId);
 
         if ($report === null) {
-            return $response->withJson(['error' => 'Report not found'], 404);
+            return Problem::respond($response, 404, 'Report not found');
         }
 
         // A report row can name a deck that is gone (rows written without the foreign key).
         if (!$this->decks->get($report->deck_id) instanceof Deck) {
-            return $response->withJson(['error' => 'Deck not found'], 404);
+            return Problem::respond($response, 404, 'Deck not found');
         }
 
         // Someone already closed it (another tab, a second click): resolving it
         // again would only move its date, so say so rather than claim a new fix.
         if ($report->resolved_at !== null) {
-            return $response->withJson(['error' => 'This report is already resolved.'], 409);
+            return Problem::respond($response, 409, 'This report is already resolved.');
         }
 
         $scan = CardImageService::scanFileName($report->card_id);
 
         if (!$this->cardImages->hasScan($report->deck_id, $report->card_id)) {
-            return $response->withJson(
-                ['error' => "There is no master scan for this card on the server. Upload {$scan} to deck {$report->deck_id}'s folder, then try again."],
-                409
+            return Problem::respond(
+                $response,
+                409,
+                "There is no master scan for this card on the server. Upload {$scan} to deck {$report->deck_id}'s folder, then try again."
             );
         }
 
         if (!$this->cardImages->regenerateCard($report->deck_id, $report->card_id)) {
-            return $response->withJson(
-                ['error' => "Couldn't make web images from {$scan}; is it a valid PNG? The report is still open."],
-                500
+            return Problem::respond(
+                $response,
+                500,
+                "Couldn't make web images from {$scan}; is it a valid PNG? The report is still open."
             );
         }
 
@@ -171,7 +174,7 @@ class AdminCardReportController extends AbstractController
         $resolved = $this->cardReports->find($reportId);
 
         if ($resolved === null) {
-            return $response->withJson(['error' => 'Report not found'], 404);
+            return Problem::respond($response, 404, 'Report not found');
         }
 
         return $response->withJson($resolved);

@@ -74,13 +74,13 @@ final class AdminDeckSystemsTest extends HttpTestCase
 
     public function testASystemThatDoesNotExistIsNotFound(): void
     {
-        $notFound = ['error' => 'Deck system not found'];
+        $notFound = 'Deck system not found';
 
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->get('/admin/deck-systems/999')));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->get('/admin/deck-systems/lenormand')));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->post('/admin/deck-systems/999/approve')));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('PUT', '/admin/deck-systems/999', ['name' => 'Ghost'])));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('DELETE', '/admin/deck-systems/999')));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->get('/admin/deck-systems/999')));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->get('/admin/deck-systems/lenormand')));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->post('/admin/deck-systems/999/approve')));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->request('PUT', '/admin/deck-systems/999', ['name' => 'Ghost'])));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->request('DELETE', '/admin/deck-systems/999')));
         $this->assertSame(0, $this->rowCount('deck_systems'));
     }
 
@@ -120,7 +120,7 @@ final class AdminDeckSystemsTest extends HttpTestCase
         ]);
 
         // A duplicate name is refused with a 409, not a 500 from the UNIQUE constraint.
-        $this->assertSame(['error' => 'A deck system with that name already exists'], $this->assertJsonResponse(409, $response));
+        $this->assertSame('A deck system with that name already exists', $this->assertProblem(409, $response));
         $this->assertSame(
             [['name' => 'Rider-Waite-Smith', 'short_name' => 'RID'], ['name' => 'Lenormand', 'short_name' => 'LEN']],
             $this->rows('SELECT name, short_name FROM deck_systems ORDER BY deck_system_id')
@@ -135,8 +135,8 @@ final class AdminDeckSystemsTest extends HttpTestCase
         $system = $this->system('Lenormand', approved: true);
         $path = "/admin/deck-systems/{$system->deck_system_id}";
 
-        $this->assertSame(['error' => 'Name is required'], $this->assertJsonResponse(400, $this->request('PUT', $path, ['name' => '  '])));
-        $this->assertSame(['error' => 'Short name is required'], $this->assertJsonResponse(400, $this->request('PUT', $path, ['short_name' => ''])));
+        $this->assertSame('Name is required', $this->assertProblem(422, $this->request('PUT', $path, ['name' => '  '])));
+        $this->assertSame('Short name is required', $this->assertProblem(422, $this->request('PUT', $path, ['short_name' => ''])));
         $this->assertSame(
             [['name' => 'Lenormand', 'short_name' => 'LEN']],
             $this->rows('SELECT name, short_name FROM deck_systems')

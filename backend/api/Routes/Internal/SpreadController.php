@@ -3,12 +3,15 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\PendingSpreadRepository;
 use Tarot\Repository\SpreadRepository;
+use Tarot\Exception\ApiException;
 use Tarot\Repository\UserRepository;
 use Tarot\Service\SpreadCopyService;
+use Tarot\Service\SpreadInput;
 use Tarot\Structure\Spread;
 use Tarot\Structure\UserSpread;
 use Tarot\Utility\RateLimiter;
@@ -63,21 +66,13 @@ class SpreadController extends AbstractController
     {
         $spread_id = $args['spread_id'] ?? null;
 
-        $status = 200;
-        $data   = $this->spreads->get($spread_id !== null ? (int) $spread_id : null);
+        $data = $this->spreads->get($spread_id !== null ? (int) $spread_id : null);
 
         if ($spread_id !== null && !($data instanceof Spread)) {
-            $data   = ['error' => 'InvalidSpreadID'];
-            $status = 404;
+            return Problem::respond($response, 404, 'InvalidSpreadID');
         }
 
-        $response = $response->withJson($data, $status);
-
-        if ($status === 200) {
-            $response = $response->withHeader('Cache-Control', 'public, max-age=300');
-        }
-
-        return $response;
+        return $response->withJson($data)->withHeader('Cache-Control', 'public, max-age=300');
     }
 
     #[OAS\Operation\Post(
@@ -101,8 +96,8 @@ class SpreadController extends AbstractController
                 description: 'Accepted into the pending queue',
                 content: new OAS\MediaType\Json(required: ['success'], properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
             ),
-            new OAS\Response(response: 400, description: 'Validation failure'),
-            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
+            new OAS\Response(response: 422, description: 'Validation failure: a name (of at most 200 characters) and at least one position are required, and each position must be within the limits'),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded: 5 submissions/IP/hour'),
         ]
     )]
     /**
@@ -116,27 +111,33 @@ class SpreadController extends AbstractController
         $limiter = new RateLimiter('spread_submit', self::SUBMIT_MAX_PER_WINDOW, self::SUBMIT_WINDOW_SECONDS);
 
         if ($limiter->isLimited($ip)) {
-            return $response->withJson(
-                ['error' => 'You have submitted too many spreads recently. Please try again later.'],
-                429
+            return Problem::tooManyRequests(
+                $response,
+                'You have submitted too many spreads recently. Please try again later.',
+                $limiter->retryAfter($ip)
             );
         }
 
         $params    = $this->parsedBody($request);
-        $name      = trim((string) ($params['name'] ?? ''));
         $positions = $params['positions'] ?? [];
 
-        if ($name === '' || !is_array($positions) || count($positions) === 0) {
-            return $response->withJson(
-                ['error' => 'A spread name and at least one card position are required.'],
-                400
-            );
+        try {
+            $name = SpreadInput::name($params['name'] ?? null);
+            if ($name === '') {
+                return Problem::invalid($response, 'body.name', 'A spread name and at least one card position are required.');
+            }
+            if (!is_array($positions) || count($positions) === 0) {
+                return Problem::invalid($response, 'body.positions', 'A spread name and at least one card position are required.');
+            }
+            SpreadInput::positions($positions);
+        } catch (ApiException $e) {
+            return Problem::fromException($response, $e);
         }
 
         $created = $this->pending->create($params, $this->currentUserId());
 
         if ($created === null) {
-            return $response->withJson(['error' => 'Failed to submit the spread. Please try again.'], 500);
+            return Problem::respond($response, 500, 'Failed to submit the spread. Please try again.');
         }
 
         // Only count successful submissions against the limit.
@@ -172,7 +173,7 @@ class SpreadController extends AbstractController
         $copy = $this->copies->copyToAccount((int) ($args['spread_id'] ?? 0), $this->authUserId($request));
 
         if (!($copy instanceof UserSpread)) {
-            return $response->withJson(['error' => 'Spread not found.'], 404);
+            return Problem::respond($response, 404, 'Spread not found.');
         }
 
         return $response->withJson($copy, 201);

@@ -4,7 +4,7 @@ Operational guide for AI agents and developers working in this repository. Read
 this first to understand how the project is laid out, how the pieces fit
 together, and the conventions to follow when making changes.
 
-This file holds only what is specific to TarotGen.io. The rules every project follows are in [`shared/standards/README.md`](shared/standards/README.md) and the topic files it lists; where this file says nothing, or says something older, those rules win. Where the code still departs from them, [§13](#13-where-this-project-departs-from-the-standards) says so.
+This file holds only what is specific to TarotGen.io. The rules every project follows are in [`shared/standards/README.md`](shared/standards/README.md) and the topic files it lists; where this file says nothing, or says something older, those rules win. Where this project differs from them on purpose, [§13](#13-departures-from-the-standards) says so and why; [§14](#14-not-yet-meeting-the-standards) lists what doesn't meet them yet.
 
 ---
 
@@ -34,8 +34,8 @@ It is a **single-page app (SPA) frontend + REST API backend**:
 |-------------|---------|
 | Frontend    | Vue `^3.5`, vue-router `^5.1`, TypeScript `~6.0` (`vue-tsc 3.3.13`, held: §10), Vite `^8`, Bulma `^1.0`, Reka UI `^2.10` |
 | Editor/MD   | TipTap `^3.25` (`@tiptap/*`), `marked`, `dompurify`, `turndown` |
-| Shared      | **shared-tooling v2.1.0**, the git submodule at `shared/` (`shared/README.md`): the lint configs, test settings, CI workflows, repo files, the deploy module (`SharedDeploy`) and the standards (`shared/standards/`) every jwill89 project shares. |
-| Icons       | FontAwesome **Pro v7**, self-hosted via the per-style packages (`@fortawesome/pro-{solid,regular,duotone}-svg-icons` + free `@fortawesome/free-brands-svg-icons`) + `@fortawesome/fontawesome-svg-core` (the kit package is a follow-up, §13). Needs the Font Awesome token in `~/.npmrc` to install — see §6. |
+| Shared      | **shared-tooling v2.15.2**, the git submodule at `shared/` (`shared/README.md`): the lint configs, test settings, CI workflows, repo files, the deploy module (`SharedDeploy`) and the standards (`shared/standards/`) every jwill89 project shares. |
+| Icons       | FontAwesome **Pro v7**, self-hosted from the site's own kit package, `@awesome.me/kit-91d12dd2d3` (classic solid and regular, duotone solid, brands), through `@fortawesome/fontawesome-svg-core`. Needs the Font Awesome token in `~/.npmrc` to install — see §6. |
 | FE testing  | Vitest `^5` on `jsdom` with shared-tooling's settings (`vitestDefaults`) + `@vue/test-utils` (components/views), coverage via `@vitest/coverage-v8` (floor in `vite.config.ts`); Playwright `^1` end-to-end suite (`e2e/`) on shared-tooling's settings, with axe (`@jwill89/test-a11y`) |
 | FE linting  | ESLint `^10`, Prettier, Stylelint `^18` and the tsconfigs all extend shared-tooling's `@jwill89/lint-web` (`shared/lint/web`: ESLint with `eslint-plugin-vue`, typescript-eslint's strict type-checked set, `eslint-plugin-vuejs-accessibility` and `curly`; Stylelint's standard + Vue configs; tsconfigs with `noUncheckedIndexedAccess`), plus this app's own rules (SCSS, the palette rule); Knip (unused code/deps) |
 | Backend     | PHP `>=8.5`, Slim 4 (`slim/slim`, `slim/http`, `slim/psr7`), `php-di/slim-bridge` |
@@ -49,10 +49,7 @@ It is a **single-page app (SPA) frontend + REST API backend**:
 
 ## 3. Repository layout
 
-The repo is split into **`frontend/`** (Vue/Vite, the npm project root) and
-**`backend/`** (PHP, the composer project root). All frontend paths below are under
-`frontend/`, all backend paths under `backend/`. The deploy script (`scripts/deploy.ps1`)
-flattens both into the live server's single flat web root.
+The repo is split into **`frontend/`** (Vue/Vite, the npm project root) and **`backend/`** (PHP, the composer project root). All frontend paths below are under `frontend/`, all backend paths under `backend/`. The deploy script (`scripts/deploy.ps1`) lays both out in the site's folder on the server: the backend's code, with its `public/` as Apache's document root and the SPA's `dist/` inside it.
 
 ```text
 /
@@ -60,7 +57,7 @@ flattens both into the live server's single flat web root.
 │   ├── index.html          # SPA entry HTML (Vite).
 │   ├── package.json        # Frontend scripts & deps.
 │   ├── vite.config.ts      # Vite + Vitest config (alias @ -> src, /api + /assets proxy, manualChunks).
-│   ├── config/             # Vite plugins: changelog-plugin.ts serves the root CHANGELOG.md as `virtual:changelog`.
+│   ├── config/             # Vite plugins: changelog-plugin.ts serves the root CHANGELOG.md as `virtual:changelog`; swagger-ui-plugin.ts copies Swagger UI into dist/swagger-ui/ (§4).
 │   ├── eslint.config.ts    # ESLint flat config: the shared @jwill89/lint-web (shared/lint/web) + project rules.
 │   ├── prettier.config.js  # Prettier: the shared settings, as they are.
 │   ├── stylelint.config.js # Stylelint: the shared config + SCSS and the palette rule (§5).
@@ -69,7 +66,7 @@ flattens both into the live server's single flat web root.
 │   ├── .nvmrc              # Node version (CI reads it too).
 │   ├── tsconfig*.json       # TS project config, extending the shared @jwill89/lint-web ones.
 │   ├── .npmrc              # Font Awesome registry scopes + install-links (tracked; the token is in ~/.npmrc, §6).
-│   ├── public/             # PWA assets (manifest, sw, icons), robots.txt, sitemap.xml, fonts/.
+│   ├── public/             # PWA assets (manifest, sw, icons), robots.txt, sitemap.xml, fonts/, swagger-ui/api-docs.js (starts /api/docs).
 │   └── src/                # Frontend source (alias `@` -> src).
 │       ├── main.ts         #   App bootstrap (mounts after session revalidation).
 │       ├── App.vue         #   Root component (nav/layout).
@@ -85,9 +82,12 @@ flattens both into the live server's single flat web root.
 │       └── __tests__/      #   Vitest specs (*.spec.ts).
 │
 ├── backend/                # PHP API — run composer from here
-│   ├── og.php              # Serves the SPA shell for every page: per-response CSP nonce + /reading/{id} share meta.
-│   ├── dev-router.php      # Local PHP built-in-server router (composer dev); mimics .htaccess.
-│   ├── .htaccess           # Web-root rewrites (api/ → static files → every page via og.php).
+│   ├── public/             # The document root. Nothing outside it is reachable by URL.
+│   │   ├── og.php          #   Serves the SPA shell for every page: per-response CSP nonce + /reading/{id} share meta.
+│   │   ├── .htaccess       #   Rewrites (api/ → static files → every page via og.php), cache headers.
+│   │   ├── api/            #   index.php, the API's front controller (env, session cookie, container), + its .htaccess.
+│   │   └── assets/ dist/   #   The images (card scans; gitignored, host-only) and, on the host and in the e2e run, the built SPA.
+│   ├── dev-router.php      # Local PHP built-in-server router (composer dev, document root public/); mimics .htaccess.
 │   ├── composer.json       # Backend deps, PSR-4 autoload, `composer test`/`stan`/`dev`/`migrate`.
 │   ├── phinx.php           # Phinx config: db/migrations/ against Paths::database() (§7).
 │   ├── phpunit.xml         # PHPUnit config (unit + http suites).
@@ -96,20 +96,18 @@ flattens both into the live server's single flat web root.
 │   ├── rector.php          # Rector: the shared dead-code set + PHP 8.5 (`composer rector`, `rector:check`).
 │   ├── composer-require-checker.json # Symbols used but deliberately not required (swagger-php, dev-only).
 │   ├── .env / .env.example # Environment (gitignored / template).
-│   ├── api/                # HTTP API entry point (Slim).
-│   │   ├── index.php       #   Bootstrap: env, session cookie params, container; runs app.php's app.
+│   ├── api/                # The Slim app, outside the document root (public/api/index.php runs it).
 │   │   ├── app.php         #   Builds the app: middleware, error handling, ALL route definitions.
 │   │   ├── dependencies.php #  PHP-DI definitions (only PDO; rest autowired).
-│   │   ├── .htaccess       #   Rewrites non-file requests to index.php.
 │   │   └── Routes/{Internal,Middleware}/  # Controllers + AbstractController; UserAuth/AdminAuth/OriginGuard.
 │   ├── includes/Tarot/     # Domain code (PSR-4 `Tarot\`): Config, Database, Data,
 │   │                       #   Repository, Service, Structure, Exception, Utility.
 │   ├── tests/{Unit,Http}/  # PHPUnit tests (namespace `Tarot\Tests\`) — see §8.
 │   ├── bin/                # Dev-only, not deployed: openapi.php (`composer docs`).
-│   ├── scripts/            # PHP/Python CLI utils (make_admin.php, gen_icons.php, indexnow.php, *.py).
+│   ├── scripts/            # PHP/Python CLI utils (make_admin.php, gen_icons.php, indexnow.php, retention.php,
+│   │                       #   generate_card_images.php, clean_deck_images.py with its requirements.in/.txt).
 │   ├── db/                 # migrations/ (Phinx) + schema.sql (generated from them); the SQLite DB
 │   │                       #   and the retired one-off scripts beside them are gitignored (§7).
-│   ├── assets/decks/{id}/  # Per-deck card images (Card_XXXX.png, Card_Back.png) (gitignored).
 │   └── vendor/             # Composer deps (generated).
 │
 ├── plugin/                 # FFXIV Dalamud plugin — self-contained C# subproject (§12).
@@ -117,14 +115,16 @@ flattens both into the live server's single flat web root.
 │   ├── Directory.Build.props #  Imports the shared analyzers and C# code style (shared/lint/dotnet).
 │   └── TarotGen.Plugin/    #   C# project (net10.0-windows, Dalamud.NET.Sdk); packaged by DalamudPackager.
 │
-├── shared/                 # Git submodule: shared-tooling v2.1.0 (`git submodule update --init`).
-├── deploy/apache-vhost.conf # The site's one vhost (port 80 and 443), a template every deploy of the site fills and ships (§6).
+├── shared/                 # Git submodule: shared-tooling v2.15.2 (`git submodule update --init`).
+├── deploy/                 # Templates every deploy fills from its settings and ships (§6):
+│   ├── apache-vhost.conf   #   the site's one vhost (ports 80 and 443);
+│   └── tarotgen.cron       #   /etc/cron.d/tarotgen (retention).
+├── docs/                   # ops.md (the live site's runbook) and decisions.md (dated decisions, the contrast exceptions among them).
 ├── scripts/deploy.ps1      # Build & deploy orchestration (frontend + backend + plugin), on shared/deploy/pwsh.
-├── scripts/server/tarotgen.cron # /etc/cron.d/tarotgen (retention); the backend deploy installs it.
 ├── Taskfile.yml            # `task` commands; includes shared/repo/Taskfile.yml as shared:*.
 ├── .editorconfig / .gitattributes # From shared/repo; the repo's own lines go below the project marker.
 ├── .markdownlint-cli2.jsonc # markdownlint: the shared config (shared/lint/markdown) + this repo's ignores.
-├── .github/                # CI, plugin, CodeQL workflows; dependabot.yml.
+├── .github/                # CI and plugin workflows; dependabot.yml.
 ├── README.md               # Human-facing quick orientation.
 ├── CLAUDE.md               # Imports this file and shared/standards/README.md for Claude Code.
 ├── .gitignore
@@ -150,8 +150,7 @@ HTTP Request
 
 - **Controllers** extend `AbstractController`. Dependencies are **constructor-
   injected** (PHP-DI autowiring resolves concrete classes from type-hints).
-  Return Slim responses via `$response->withJson([...], $status)`. Error bodies
-  use the shape `['error' => '...']` (RFC 9457 is a follow-up, §13).
+  Return Slim responses via `$response->withJson([...], $status)`. **Every error is an RFC 9457 problem** (`application/problem+json`: `type`, `title`, `status`, `detail`, and `errors: [{message, location}]` on a failed validation), built by `Routes\Problem` alone: `respond()`, `invalid($r, 'body.field', $msg)` (a 422 for one field), `tooManyRequests()` (with `Retry-After`) and `fromException()` for an `ApiException` (422 by default, with an optional `location`). Text input goes through `Input::text()` / `nullableText()`, which refuse a value over its length with a 422 naming the field rather than cutting it. Slim's own 404, 405 (with `Allow`) and 500 answer as problems whatever the `Accept` (`Routes\ProblemErrorHandler`; a 500 says only something generic in production), and `Routes\Middleware\JsonBodyParsing` answers 400 for a body that isn't a JSON object. In the spec, `Routes\ProblemResponses` gives every 4xx/5xx response the `ProblemDetails` schema and every 429 its `Retry-After`, so an operation declares only its statuses and their descriptions.
 - **Data classes** extend `AbstractData`, which provides `fetchOne()`,
   `fetchAllAs()`, and `applyUpdate()` (dynamic, allow-listed UPDATE). The `PDO`
   handle is **injected**, never fetched from a global, so tests can pass an
@@ -181,13 +180,13 @@ The API's paths and methods follow the guide's [api-and-realtime.md](shared/stan
 
 Public catalog reads (decks, deck systems, spreads) send `Cache-Control: public, max-age=300`, since the catalog changes slowly; viewer-specific reads, such as a single reading, send `private, no-store`.
 
-### API docs (OpenAPI + Scalar)
+### API docs (OpenAPI + Swagger UI)
 
 Endpoints are documented with **swagger-php 7** spec attributes
 (`use OpenApi\Spec as OAS`; `#[OAS\Operation\Get(...)]`, `new OAS\MediaType\Json(...)`)
 on the controllers, plus `#[OAS\Schema]` on the `Structure` classes. `composer docs`
 (`bin/openapi.php`) regenerates the committed `backend/openapi.json` (OpenAPI 3.1); it's
-served raw at `GET /api/openapi.json` and rendered by **Scalar** at `GET /api/docs` (both
+served raw at `GET /api/openapi.json` and rendered by **Swagger UI** at `GET /api/docs` (both
 public, served by `ApiDocsController`). `OpenApiSpecTest` fails if the committed spec
 drifts from the attributes — so **after changing a route or a response shape, run
 `composer docs` and commit `openapi.json`** (and `npm run gen:types` for the frontend
@@ -204,20 +203,16 @@ endpoints strip with `jsonSerializeWithout()` (`submitted_by`).
 at it (`ref: '#/components/schemas/…'`), never at a bare `type: 'object'`.
 `HttpTestCase::assertDocumented()` checks a real response against the committed spec
 (`$ref`, `oneOf`, `allOf`, arrays, nested refs).
-The Scalar bundle is pinned to one version with Subresource Integrity, and `/api/docs`
-sends its own enforced CSP (`SCALAR_BUNDLE` / `SCALAR_SRI` on `ApiDocsController`); to
-upgrade, change the version and recompute the sha384 of that exact file.
+Swagger UI is self-hosted: `swagger-ui-dist` is a pinned dependency of the frontend (it ships in the build, so `npm audit --omit=dev` sees it; its Scarf telemetry is off in `package.json`), `frontend/config/swagger-ui-plugin.ts` copies its bundle and stylesheet into `dist/swagger-ui/` (and `vite dev` serves them), and `frontend/public/swagger-ui/api-docs.js` starts it from a file of its own, with the validator off so the spec's address goes nowhere. `/api/docs` is a static page that loads only those files, under its own enforced policy with no inline script or style and no `eval` (`ApiDocsController::reference()`). To upgrade, raise `swagger-ui-dist` in `frontend/package.json`; there is no hash to recompute. The files keep their names across releases, so `.htaccess` sends them `no-cache`.
 
 ### Auth & security
 
-- Sessions are PHP sessions, with the cookie's flags set in `index.php`. Admin is the `is_admin` flag on a user account, granted with `php scripts/make_admin.php you@example.com`. `AccountProtection` stops an admin demoting or deleting themselves, and guards the owner accounts named in `PROTECTED_ADMIN_EMAILS`.
-- Each `sessions` row records its `user_id` (`DbSessionHandler`), so a password
-  change ends the user's other sessions, a reset ends all of them, and deleting
-  an account ends its sessions (`DbSessionHandler::destroyForUser`).
+- Sessions are PHP sessions stored in the database, keyed by a SHA-256 hash of the id. The cookie's name and flags come from `Session::cookieSettings()`, applied by `public/api/index.php`: HttpOnly, SameSite=Lax, for the whole site, and in production Secure under the name `__Host-tarotgen` (outside production, over plain HTTP, `tarotgen`). Admin is the `is_admin` flag on a user account, granted with `php scripts/make_admin.php you@example.com`. `AccountProtection` stops an admin demoting or deleting themselves, and guards the owner accounts named in `PROTECTED_ADMIN_EMAILS`.
+- Each `sessions` row records its `user_id` (`DbSessionHandler`), so a password change ends the user's other sessions, a reset ends all of them, and deleting an account ends its sessions (`DbSessionHandler::destroyForUser`). A password change or reset also revokes every linked plugin's token (`AuthService::changePassword()`, `resetPassword()`), so a plugin links again afterwards; deleting the account takes its tokens with it (`ON DELETE CASCADE`). "Sign out of other devices" ends sessions only.
 - **Always one way to sign in** (`SignInMethods`): password (set and not
   switched off), passkeys, Google. Switching password login off, deleting the
   last passkey or unlinking Google is refused (409) when it would leave none.
-- No account enumeration: the stand-in passkey credential ids come from `PasskeyDecoys`, keyed by `<TAROT_DATA_DIR>/db/passkey-decoy.key` (created on first use). The sign-up and password-reset emails go out **after the response** under PHP-FPM (`Tarot\Utility\AfterResponse`, run by `api/index.php`), so neither answer waits on SMTP only when an address has an account; where a response can't be finished early (CLI, the dev server) they are sent inline. An admin's resend stays inline (it reports whether the email went).
+- No account enumeration: the stand-in passkey credential ids come from `PasskeyDecoys`, keyed by `<TAROT_DATA_DIR>/db/passkey-decoy.key` (created on first use). The sign-up and password-reset emails go out **after the response** under PHP-FPM (`Tarot\Utility\AfterResponse`, run by `public/api/index.php`), so neither answer waits on SMTP only when an address has an account; where a response can't be finished early (CLI, the dev server) they are sent inline. An admin's resend stays inline (it reports whether the email went).
 - **Who may make a reading** (`POST /readings/generate`, `POST /readings`;
   `ReadingController::refuseDraw()`): with Turnstile configured, a request with
   no signed-in user (session, or a linked plugin's `tg_pat_` token) needs a
@@ -226,11 +221,12 @@ upgrade, change the version and recompute the sha384 of that exact file.
   from the `/draw-key` page (Turnstile, then PKCE to the plugin's loopback
   listener: `POST /plugin/draw-keys/authorize` → `/token`), are stored hashed in
   `plugin_draw_keys`, open nothing but draws (their readings are guests') and
-  are rate-limited per key and per IP (`DrawKeyService`). Without Turnstile (dev,
+  are rate-limited per key and per address (`DrawKeyService`). Without Turnstile (dev,
   the tests, the end-to-end suite) nothing more is needed.
 - `OriginGuard` middleware is CSRF defense-in-depth (rejects cross-origin
   state-changing requests). Added last so it runs outermost.
 - CORS is **opt-in** via `APP_ORIGIN`.
+- **The visitor's address** is what Apache puts in `REMOTE_ADDR`: the vhost's `mod_remoteip` takes Cloudflare's `CF-Connecting-IP`, trusted only from Cloudflare's ranges (`/etc/apache2/cloudflare-ips.txt`). The app never reads that header itself. `Tarot\Utility\ClientIp` gives the rate limiters `REMOTE_ADDR`, with an IPv6 client counted by its /64.
 - Passkeys/WebAuthn via `lbuchs/webauthn`; optional Google OAuth.
 - In production the DI container is compiled to disk and error detail is hidden.
 
@@ -244,8 +240,16 @@ little PHP per navigation):
   (`Tarot\Utility\ContentSecurityPolicy`). Cloudflare injects scripts into our pages —
   Bot Fight Mode's JS detection (an inline script that differs on every request) and
   the Web Analytics beacon — and stamps the header's nonce onto them, so `script-src`
-  needs no `'unsafe-inline'`. Our own code needs no nonce (one external module
-  script). A new third-party script host must be added to that class, or it is blocked.
+  needs no `'unsafe-inline'`. `style-src` takes the same nonce and nothing inline
+  either: Vite writes `nonce="__CSP_NONCE__"` on the shell's own tags (the boot
+  loader's `<style>`, the entry script, its CSS) and a `csp-nonce` meta tag
+  (`html.cspNonce` in `vite.config.ts`), and `og.php` stamps the response's nonce over
+  the placeholder (`ContentSecurityPolicy::stampNonce()`). Code that adds a `<style>`
+  element passes `cspNonce()` (`src/utils/cspNonce.ts`): TipTap's `injectNonce`, and
+  Reka's own (its select and combobox viewports) through the `ConfigProvider` in
+  `App.vue`. `:style` bindings go through the CSSOM and need nothing, and
+  `renderMarkdown()` strips `style` attributes. A new third-party script host must be
+  added to that class, or it is blocked.
   `CSP_MODE=report-only` in the live `.env` downgrades to report-only without a deploy.
   `/index.html` and `/dist/index.html` also go through `og.php` (a static copy would
   be a CSP-free bypass). `/api/docs` sends its own policy.
@@ -261,16 +265,11 @@ little PHP per navigation):
   (re-exported from `useApi.ts`, so import either). Pick by how much you need to
   know about failures:
   - `apiFetch<T>()` — returns the data or `null`; for "just give me the list".
-  - `apiRequest<T>()` — returns a discriminated `ApiResult<T>` with `ok`,
-    `status`, the server's `error` message, the parsed `data` (read structured
-    fields like a validation `errors` array), and `networkError`. Use it when a
-    caller must tell failures apart or show *why* something failed (`useUser` does).
+  - `apiRequest<T>()` — returns a discriminated `ApiResult<T>` with `ok`, `status`, `error` (the problem's `detail`), the parsed `data` (a problem's own fields; `fieldErrors(result)` lists a failed validation's `errors[]`), and `networkError`. Use it when a caller must tell failures apart or show *why* something failed (`useUser` does).
   - `useAdminApi()` — Vue-aware admin wrapper (auto 401→login, toasts errors).
 
   All paths are relative to `/api`; build bodies with `sendJson(method, body)` (or
-  `sendForm(params)` for the two form-encoded reading calls). The backend returns
-  `{ error: '...' }` on failure and `ApiResult.error` carries it, with your fallback
-  when there is none. Note
+  `sendForm(params)` for the two form-encoded reading calls). The backend answers a failure with problem details, and `ApiResult.error` carries its `detail`, with your fallback when there is none. Note
   `apiClient.ts` imports nothing local (so `useUser` can use it without an import
   cycle); the Vue-aware `useAdminApi` stays in `useApi.ts`.
 
@@ -295,14 +294,8 @@ little PHP per navigation):
   have user state immediately; the router periodically revalidates.
 - **Constants/storage:** keys live in `src/constants.ts` under the `tarot.`
   namespace.
-- **Icons:** FontAwesome is self-hosted and registered in `src/fontawesome.ts`.
-  Only the icons actually used are imported (tree-shakeable) and collected into a
-  `byPrefixAndName` lookup; templates render them with the `<FontAwesomeIcon>`
-  component, e.g. `:icon="byPrefixAndName.fas['house']"`. **Footgun:** if you use a
-  new icon in a template without adding its import + `index(...)` entry here, the
-  lookup is `undefined` and it won't render — always register it. Icons come from
-  the per-style Pro packages, so there are no CDN requests.
-- **Styling:** Bulma utility classes + CSS custom properties (`--myst-*`) in `src/assets/tokens.css` (the palette source of truth, mapped onto Bulma's own variables). Layout and spacing come from Bulma's helpers (§13). The theme is dark only (`data-theme="dark"` on `<html>`). Stylelint's palette rule takes `tokens.css` as the token file, and this app's own rule also refuses any `rgb()` but pure white or black, so a tint is always `color-mix()` over a token. Text on a gold fill (an `is-link` button) is dark ink, as on the aqua primary (`--bulma-link-invert-l` in `tokens.css`): Bulma's white read at 2.4:1. The quietest text, Bulma's `.has-text-grey` (hints, empty states), reads `--myst-text-grey` (`tokens.css` overrides the class): Bulma's fixed `#69748c` read 2.7–4.2:1 here, and the token reaches 4.5:1 on every surface, a hovered `--myst-surface-3` included; print has its own, darker value. The end-to-end suite holds the main pages to WCAG 2.2 AA (§8; the AAA target is a follow-up, §13). Bulma is a modular build (`src/assets/bulma.scss`): only the modules in use, and only the dark theme's variables; a Bulma class that does nothing is probably a module that isn't imported (see that file's header).
+- **Icons:** FontAwesome is self-hosted from the site's kit package (`@awesome.me/kit-91d12dd2d3`, whose four styles are classic solid and regular, duotone solid and brands; each style is a module, `@awesome.me/kit-91d12dd2d3/icons/<family>/<style>`) and registered in `src/fontawesome.ts`. Only the icons actually used are imported (tree-shakeable) and collected into a `byPrefixAndName` lookup; templates render them with the `<FontAwesomeIcon>` component, e.g. `:icon="byPrefixAndName.fas['house']"`. **Footgun:** if you use a new icon in a template without adding its import + `index(...)` entry here, the lookup is `undefined` and it won't render — always register it. An icon in a style the kit lacks has no module to import: the owner adds the style to the kit on fontawesome.com first, and the kit's new version comes in through npm. There are no CDN requests.
+- **Styling:** Bulma utility classes + CSS custom properties (`--myst-*`) in `src/assets/tokens.css` (the palette source of truth, mapped onto Bulma's own variables). Layout and spacing come from Bulma's helpers (§13). The theme is dark only (`data-theme="dark"` on `<html>`). Stylelint's palette rule takes `tokens.css` as the token file, and this app's own rule also refuses any `rgb()` but pure white or black, so a tint is always `color-mix()` over a token. Text on a gold fill (an `is-link` button) is dark ink, as on the aqua primary (`--bulma-link-invert-l` in `tokens.css`): Bulma's white read at 2.4:1. The quietest text, Bulma's `.has-text-grey` (hints, empty states), reads `--myst-text-grey` (`tokens.css` overrides the class, as it does `.has-text-success/info/warning/danger`, which read the `--myst-*-text` tokens). **Every text colour reaches WCAG 2.2 AAA, 7:1, on every surface it sits on**, a hovered `--myst-surface-3` included, and print has its own, darker values; field edges (`--myst-control-border`) and the focus ring (`--myst-focus-ring`, a solid 2px ring) reach 3:1. `contrast.spec.ts` holds every pair (§8) and the end-to-end suite runs axe's AAA rules on the main pages; a new colour or pair goes into the spec, and one that can only reach AA is a dated exception in `docs/decisions.md`. The current page in the navigation is `is-active`, and underlined as well as lit (desktop and the mobile menu). Bulma is a modular build (`src/assets/bulma.scss`): only the modules in use, and only the dark theme's variables; a Bulma class that does nothing is probably a module that isn't imported (see that file's header).
 - **Admin list pages** sit in `components/admin/AdminListPage.vue` (column width,
   back-to-dashboard link, `PageHeader` with an `#actions` slot) and use
   `AdminSearchField` for the search box; the view keeps its own tables.
@@ -355,7 +348,7 @@ npm run gen:check      # gen:types, then fail if the committed api.generated.ts 
 ```powershell
 cd backend
 composer install       # install PHP deps
-composer dev           # PHP built-in server on :80 via dev-router.php (the API backend)
+composer dev           # PHP built-in server on :80, document root public/, via dev-router.php (the API backend)
 composer test          # run PHPUnit (auto-discovers backend/phpunit.xml)
 composer test:coverage # PHPUnit + coverage; fails below 95% of lines or 88% of methods (shared/test/php/coverage-check.php)
 composer stan          # PHPStan static analysis (backend/phpstan.neon, level 8, --memory-limit=512M baked in)
@@ -384,10 +377,7 @@ vendor\bin\phpunit     # run PHPUnit directly
 To serve the full app locally, run **two processes in two terminals**: from
 `backend/` run `composer dev` (the PHP backend on port 80) and from `frontend/` run
 `npm run dev` (the Vite SPA on :5173); `task dev` starts both. The Vite proxy forwards `/api` and `/assets`
-to `http://localhost:80`, where `dev-router.php` reproduces the production
-`.htaccess` routing (`/api/*` → `api/index.php`, files under `/assets/*` served from
-disk) for PHP's built-in server, which has no `.htaccess`. Any PHP host serving
-`/api` on port 80 (e.g. Apache) works too.
+to `http://localhost:80`, where `dev-router.php` reproduces the production `.htaccess` routing (`/api/*` → `public/api/index.php`, files under `/assets/*` served from `public/assets`) for PHP's built-in server, which has no `.htaccess`. Any PHP host serving `backend/public` on port 80 (e.g. Apache) works too. Each backend deploy brings `backend/public/assets` up to date from the live images (§6), so local pages show the real card scans.
 
 > **swagger-php is dev-only on purpose.** PHP never loads an attribute's class
 > unless something reads the attribute, and only `composer docs` (and
@@ -406,177 +396,59 @@ disk) for PHP's built-in server, which has no `.htaccess`. Any PHP host serving
 
 ### Always do after changes
 
-- After editing **frontend** TS/Vue: run `npm run type-check`, `npm run lint`,
-  `npm run lint:css` (styles), `npm run knip`, and the relevant `npm test` specs.
-- After editing **backend** PHP: run `composer test`, `composer stan`,
-  `composer lint`, and `composer rector:check`; after touching `composer.json` or
-  adding a dependency, `composer deps:check` and `composer normalize`.
-- After editing **`scripts/*.ps1`**: `task lint:scripts`, which runs `shared:lint:scripts` (`shared/lint/pwsh/Invoke-ScriptLint.ps1`: PSScriptAnalyzer with the shared settings on every tracked PowerShell file; CI's `scripts` job runs the same script). Install PSScriptAnalyzer once with `Install-PSResource PSScriptAnalyzer -Version 1.25.0 -Scope CurrentUser -TrustRepository`. The deploy script needs PowerShell 7.4 (`pwsh`).
-- After editing **Markdown**: `task shared:lint:md` (`npx --yes
-  markdownlint-cli2@0.24.0` from the repo root, CI's `docs` job).
-- `task lint` also runs the plugin's `dotnet format`.
+- Before a change is done, `task check` passes: it runs what CI runs, in CI's order (the generated files, then lint with the shared docs checks, the specs' type-check, every test with its coverage floor, the plugin's tests and the audits at once, then the end-to-end suite). Log it to a file and read the failures.
+- While working, the narrower checks: after **frontend** TS/Vue, `npm run type-check`, `npm run lint`, `npm run lint:css` (styles), `npm run knip` and the relevant `npm test` specs; after **backend** PHP, `composer test`, `composer stan`, `composer lint` and `composer rector:check` (after touching `composer.json`, `composer deps:check` and `composer normalize`); after a route or response shape, `task gen`; after the **plugin**, `task test:plugin`, `task preview:plugin` (look at the pictures) and `task lint:plugin`.
+- After editing **`scripts/*.ps1`**: `task lint:scripts`, which runs `shared:lint:scripts` (`shared/lint/pwsh/Invoke-ScriptLint.ps1`: PSScriptAnalyzer with the shared settings on every tracked PowerShell file; CI's `scripts` job runs the same script). Install PSScriptAnalyzer once with `Install-PSResource PSScriptAnalyzer -Version 1.25.0 -Scope CurrentUser -TrustRepository`. The deploy script needs PowerShell 7.4 (`pwsh`). Shell the deploy runs on the host is replayed in WSL Ubuntu (`wsl.exe -d Ubuntu -u root --exec bash …`), never Git Bash, and an Apache test runs on a copy of `/etc/apache2` on spare ports.
+- After editing **Markdown**: `task shared:lint:md` (part of `shared:docs:check`, CI's `docs` job).
 
 ### Deployment
 
-The site runs on a DigitalOcean droplet (Apache on the event MPM + **PHP 8.5
-FPM**, since 2026-11-03; one pool shared with the droplet's other PHP sites) at
-`/var/www/tarotgen.io`, a single **flat** web root. OPcache re-checks files every
-2 s, so a deploy needs no FPM reload; `SetEnv TAROT_DATA_DIR` in the vhost
-(`deploy/apache-vhost.conf`, shipped by the deploy) reaches FPM; `.htaccess`
-`php_value` lines would be ignored under FPM (there are none).
-PHP errors land in `/var/log/apache2/error.log` (`AH01071 … PHP message:`) and
-`/var/log/php8.5-fpm.log`, beside the other sites': filter by `/var/www/tarotgen.io`. `scripts/deploy.ps1` flattens
-`frontend/dist` and the `backend/` runtime files into it. It is built on
-shared-tooling's **SharedDeploy** module (`shared/deploy/pwsh`, whose README
-describes each function) and needs PowerShell 7.4 and PuTTY's `plink` 0.85 or
-later (`pscp` is no longer used), with the DigitalOcean `.ppk` key, loaded into
-Pageant first if it has a passphrase. The deploy config names its SSH user (`VpsUser`, with no default); the backend steps run `runuser` and install cron and systemd files, so that user needs root's rights.
+The site runs on a DigitalOcean droplet: Apache on the event MPM and **PHP 8.5 FPM** (since 2026-11-03; one pool shared with the droplet's other PHP sites). It lives in one folder (the `WebRoot` setting): the PHP code, `vendor/` and the scripts, beside `public/`, which is Apache's document root and holds `og.php`, the API's front controller, the built SPA (`dist/`), the plugin repository (`plugin/`) and the images (`assets/`). The `.env` and the database live in the private data folder (`DataDir`, `TAROT_DATA_DIR`, §9). OPcache re-checks files every 2 s, so a deploy needs no FPM reload; `SetEnv TAROT_DATA_DIR` in the vhost reaches FPM, where `.htaccess` `php_value` lines would be ignored (there are none). [`docs/ops.md`](docs/ops.md) is the runbook for the live site: host setup, backups and restores, the production-only checks, each release's upgrade steps, rolling back, logs and retention.
+
+`scripts/deploy.ps1` is built on shared-tooling's **SharedDeploy** module (`shared/deploy/pwsh`, whose README describes each function) and needs PowerShell 7.4 and PuTTY's `plink` 0.85 or later, with the key loaded into Pageant first if it has a passphrase. The deploy config names its SSH user (`VpsUser`, with no default); the backend steps run `runuser` and install cron and systemd files, so that user needs root's rights.
 
 ```powershell
 .\scripts\deploy.ps1                    # both (default): backend, then frontend, in one upload and one remote run
-.\scripts\deploy.ps1 -Target frontend   # npm build + dist swapped in by renames
-.\scripts\deploy.ps1 -Target backend    # PHP code built whole on the droplet, DB snapshot, swap, then phinx migrate
+.\scripts\deploy.ps1 -Target frontend   # npm build + public/dist swapped in by renames
+.\scripts\deploy.ps1 -Target backend    # PHP code built whole on the droplet, DB snapshot, swap, then phinx migrate and the cron file
 .\scripts\deploy.ps1 -Target plugin     # build the plugin (Release) + publish to its custom Dalamud repo (§12)
 .\scripts\deploy.ps1 -Force             # the release again, though the droplet runs it
 .\scripts\deploy.ps1 -Preview           # try the working tree, untagged, stamped preview-<date-time>
-.\scripts\deploy.ps1 -Target backend -NoDbPull # don't copy the live DB into backend/db/tarotdb.db afterwards
+.\scripts\deploy.ps1 -Target backend -NoDbPull # don't pull the live DB and the images afterwards
 ```
 
-Settings resolve from the parameter, then `$env:DEPLOY_*`, then the gitignored
-`scripts/deploy.config.ps1` (copy `scripts/deploy.config.example.ps1`; `-ConfigPath`
-names another file): `VpsHost`, `VpsUser` (no default: it must be set somewhere),
-`KeyPath`, `WebRoot`, and `SiteUrl`, the public address the smoke check fetches and
-the plugin's download links are built from (default `https://tarotgen.io`). The
-vhost's settings, which a plugin-only run doesn't need: `ServerAdmin` and `CertName`
-(the folder under `/etc/letsencrypt/live` whose certificate covers every name), with
-no defaults, and the optional `ServerName` (the host of `SiteUrl` unless set; it also
-names the vhost file) and `ServerAlias` (more names, space-separated).
-`-NoBackup` removes the rollback copies once the run succeeds on the host, so a
-failed smoke check then only stops the run; the database snapshot is still taken.
-`Get-Help .\scripts\deploy.ps1 -Full` walks through the whole run.
+Settings resolve from the parameter, then `$env:DEPLOY_*`, then the gitignored `scripts/deploy.config.ps1` (copy `scripts/deploy.config.example.ps1`; `-ConfigPath` names another file): `VpsHost`, `VpsUser` (no default: it must be set somewhere), `KeyPath`, `WebRoot` (the site's folder), and `SiteUrl`, the public address the smoke check fetches and the plugin's download links are built from (default `https://tarotgen.io`). A backend or frontend run also needs `DataDir` (the private data folder, `TAROT_DATA_DIR`, which the vhost, the cron file and the migrations name; this project's own setting) and the vhost's `ServerAdmin` and `CertName` (the folder under `/etc/letsencrypt/live` whose certificate covers every name), with no defaults, and takes the optional `ServerName` (the host of `SiteUrl` unless set; it also names the vhost file) and `ServerAlias` (more names, space-separated). `-NoBackup` removes the rollback copies once the run succeeds on the host, so a failed smoke check then only stops the run; the database snapshot is still taken. `Get-Help .\scripts\deploy.ps1 -Full` walks through the whole run.
 
-The script flattens the repo into the server layout and **never** uploads the
-server-side data: `.env` and the database (which live **outside the web root**, in
-`TAROT_DATA_DIR` = `/var/lib/tarotgen` — see §9), `assets/decks/` or the retired
-one-off scripts in `db/`. Everything the script does upload lands in the document
-root, so `backend/.htaccess` must keep refusing `db/`, `includes/`, `vendor/`,
-`scripts/`, `.deploy/`, `.env*`, `composer.*` and `phinx.php` (they were once
-served verbatim); the deploy swaps the `.htaccess` in first, so its rules are in
-place before the files they guard.
+The deploy **never** uploads the server-side data: the `.env`, the database, `public/assets` or the retired one-off scripts in `db/`. Nothing it ships outside `public/` is reachable by URL, so the `.htaccess` refuses only dotted names and the rollback copies (`dist.old`, `plugin.old`).
 
 **One archive, one connection, one remote run**, as the shared module does it (Windows `tar.exe`, ustar; `plink -share`). The one held connection, plus one more only if it drops and reconnects, keeps the run under the droplet's `ufw limit ssh` (6 connections in 30 s). The archive streams to the SSH user's home, and the remote run takes each target's step, API first:
 
-- **the vhost** (`deploy/apache-vhost.conf`, filled from the settings when the archive
-  is packed) goes in with the first of the backend and frontend steps, before that step
-  changes anything. SharedDeploy installs it as
-  `/etc/apache2/sites-available/<ServerName>.conf` where it differs (the previous kept
-  as `.conf.old`), enables it, and disables every other enabled site serving its names,
-  such as certbot's `-le-ssl` file; those stay in `sites-available`. It tries Apache
-  with the change on a copy of its config first and refuses, changing nothing, if
-  Apache would; Apache reloads once the rest of the run has succeeded, and a rollback
-  puts the file and those sites back. Nobody edits the vhost on the host: a change
-  goes in the template.
-- **backend:** the database and the host's tools (`composer`, `php`, `sqlite3`,
-  `gzip`, `runuser`) are checked first. The new code is built whole in
-  `.deploy/next`: the upload, a copy of the live `vendor/` with `composer install
-  --no-dev --optimize-autoloader` run on it (every deploy, so new code never runs
-  on an old vendor; starting from the copy, it fetches only what `composer.lock`
-  changed), and the retired scripts in `db/` carried over (§7). Then the database
-  is snapshotted (below) and every entry swapped in by renames, the previous ones
-  kept in `.deploy/backend-prev`. Then, from the web root:
-  `runuser -u www-data -- env TAROT_DATA_DIR=/var/lib/tarotgen php vendor/bin/phinx migrate`.
-  If it fails, the previous code goes back, and Phinx's message, the snapshot and
-  the exact `gunzip -c` command that restores it are printed. The database itself
-  is never put back automatically.
-- **frontend:** `dist` swapped in by renames, the previous kept as `dist.old`.
-- **plugin:** refuses a version not higher than the published `repo.json`'s
-  (checked here before the build, too), then swaps `$WebRoot/plugin` in, the
-  previous kept as `plugin.old`.
+- **the vhost** (`deploy/apache-vhost.conf`, filled from the settings when the archive is packed) goes in with the first of the backend and frontend steps, before that step changes anything. SharedDeploy installs it as `/etc/apache2/sites-available/<ServerName>.conf` where it differs (the previous kept as `.conf.old`), enables it, and disables every other enabled site serving its names, such as certbot's `-le-ssl` file; those stay in `sites-available`. It tries Apache with the change on a copy of its config first and refuses, changing nothing, if Apache would; Apache reloads once the rest of the run has succeeded, and a rollback puts the file and those sites back. Its port-443 site carries HSTS and the two lines that take the visitor's address from Cloudflare. Nobody edits the vhost on the host: a change goes in the template.
+- **backend:** the database and the host's tools (`composer`, `php`, `sqlite3`, `gzip`, `runuser`) are checked first. The new code is built whole in `.deploy/next`: the upload, a copy of the live `vendor/` with `composer install --no-dev --optimize-autoloader` run on it (every deploy, so new code never runs on an old vendor; starting from the copy, it fetches only what `composer.lock` changed), the retired scripts in `db/` carried over (§7), and the folders of `public/` the backend doesn't ship (`dist`, `plugin`, `assets`) carried over as **hard links** (`cp -al`): nothing is copied, and the live ones stay as they are until the swap. Then the database is snapshotted (below) and every entry swapped in by renames, the previous ones kept in `.deploy/backend-prev`. Then, from the site's folder, `runuser -u www-data -- env TAROT_DATA_DIR=<DataDir> php vendor/bin/phinx migrate`; if it fails, the previous code goes back, and Phinx's message, the snapshot and the exact `gunzip -c` command that restores it are printed (the database itself is never put back automatically). Then SharedDeploy's `Install-HostConfig` installs `/etc/cron.d/tarotgen` from `deploy/tarotgen.cron` (filled from `WebRoot` and `DataDir` by `Expand-DeployTemplate`) where it differs, its previous copy kept in `/var/lib/shared-deploy/tarotgen`.
+- **frontend:** `public/dist` swapped in by renames, the previous kept as `public/dist.old`. A frontend or plugin run on a site with no `public/` yet refuses before anything changes.
+- **plugin:** refuses a version not higher than the published `repo.json`'s (checked here before the build, too), then swaps `public/plugin` in, the previous kept as `public/plugin.old`.
 
-**The snapshot** before the migrations is
-`/var/lib/tarotgen/db/tarotdb.db.pre-<yyyyMMdd-HHmmss, UTC>.gz`, written as
-www-data: `sqlite3 .backup` to a partial file, `PRAGMA integrity_check`, gzip,
-`gzip -t`, then the rename; the newest three are kept. It is taken before the
-swap, so a snapshot that fails changes nothing. The restore command the deploy
-prints, with the site's writes stopped:
-`runuser -u www-data -- sh -c 'rm -f <db>-wal <db>-shm && gunzip -c <snapshot> > <db>'`,
-where `<db>` is `/var/lib/tarotgen/db/tarotdb.db`.
+**The snapshot** before the migrations is `<DataDir>/db/tarotdb.db.pre-<yyyyMMdd-HHmmss, UTC>.gz`, written as www-data: `sqlite3 .backup` to a partial file, `PRAGMA integrity_check`, gzip, `gzip -t`, then the rename; the newest three are kept. It is taken before the swap, so a snapshot that fails changes nothing.
 
-**The smoke check** then fetches the site from this machine, through Cloudflare
-(`SiteUrl`), each URL with a fresh `?deploy=` token so no edge-cached answer
-stands in for the origin's. With the backend, `/api/decks` must list a deck (the
-API and the database answer). `/` must answer; with the frontend it must name this
-build's entry script, which must load. With the plugin, `repo.json` must carry
-this release's `?v=`. If a check fails, what the run changed goes back, the plugin
-and the frontend first, then the code. The database stays as the migrations left
-it, and the snapshot's restore line is printed.
+**The smoke check** then fetches the site from this machine, through Cloudflare, each request carrying SharedDeploy's own fresh `?deploy=` token (`Invoke-SmokeCheck`) so no edge-cached answer stands in for the origin's. With the backend, `/api/decks` must list a deck (the API and the database answer). `/` must answer; with the frontend it must name this build's entry script (`-EntryScript`), which must load. With the plugin, `repo.json` must carry this release's `?v=`. If a check fails, what the run changed goes back, the plugin and the frontend first, then the code and the cron file (`Restore-HostConfig`). The database stays as the migrations left it, and the snapshot's restore line is printed.
 
-**After it passes**, a backend deploy takes three more steps on the same
-connection:
+**After it passes**, a backend deploy takes two more steps on the same connection: the daily backup timer is installed, or found unchanged (`Install-BackupTimer`; ops.md, Backups), and unless `-NoDbPull` the live database is pulled into `backend/db/tarotdb.db` (three previous local copies kept) and the images (`public/assets`, 5 GB, over the size the host archives) are brought up to date in `backend/public/assets` (`Sync-LiveFolder`, fetching only what is new or changed and leaving out the WebP copies the site derives). That copy is the images' backup.
 
-1. **The daily backup** is installed, or found unchanged (see "Backups").
-2. **The old nightly backup is retired:** `/etc/cron.d/tarotgen` becomes
-   `scripts/server/tarotgen.cron` where it differs, and
-   `/usr/local/sbin/tarotgen-backup` is removed.
-3. **The live database is pulled** into `backend/db/tarotdb.db`, the one the app
-   opens locally, keeping the three previous local copies (`-NoDbPull` skips it).
+**Automation.** `.github/workflows/ci.yml` calls shared-tooling's reusable workflows at the release the submodule holds:
 
-**Automation.** `.github/workflows/ci.yml` calls shared-tooling's reusable
-workflows at `@v2.1.0`, the release the submodule holds:
-
-- `frontend` (`web.yml`): an `npm audit` of what ships, then `gen:check`,
-  `type-check`, `lint`, `lint:css`, `knip`, `format:check`, `test:coverage` and
-  `build`;
-- `backend` (`php.yml`): `audit`, `validate`, `docs:check`, `normalize:check`,
-  `deps:check`, `lint`, `rector:check`, `test:coverage` (pcov) and `stan`;
+- `frontend` (`web.yml`): an `npm audit` of what ships, then `gen:check`, `type-check`, `lint`, `lint:css`, `knip`, `format:check`, `test:coverage` and `build`, and the specs' type-check under `tsconfig.vitest.json`;
+- `backend` (`php.yml`): `audit`, `validate`, `docs:check`, `normalize:check`, `deps:check`, `lint`, `rector:check`, `test:coverage` (pcov) and `stan`;
 - `e2e` (`e2e.yml`, after those two): the Playwright suite (§8);
-- `plugin` (`dotnet.yml`): the Release build with warnings as errors, and
-  `dotnet format` (§12);
+- `plugin` (`dotnet.yml`): the plugin and its preview built in Release with warnings as errors, the tests, and `dotnet format` (§12);
 - `scripts` (`pwsh.yml`): PSScriptAnalyzer on every tracked script;
-- `docs` (`docs.yml`): markdownlint, `.editorconfig` and `.gitattributes` against
-  `shared/repo`, and every workflow ref against the submodule's release.
+- `docs` (`docs.yml`): markdownlint, `.editorconfig`, `.gitattributes` and `CLAUDE.md` against `shared/repo`, every workflow ref against the submodule's release, and the CHANGELOG's compare links;
+- `osv` (`osv.yml`): OSV-Scanner over every lockfile and requirements file.
 
-TarotGen's own `release` job waits for all six. `plugin.yml` only packages the plugin (`latest.zip` + manifest, kept a week) when `plugin/`, `shared`, `.editorconfig` or the workflow itself changes, and `codeql.yml` covers the frontend, the plugin and the workflows (CodeQL has no PHP). `.github/dependabot.yml` opens weekly grouped updates for npm, Composer, NuGet and Actions; it skips TypeScript's major, vue-tsc 3.3.14 and the majors of the tools `lint/web` owns, and Composer's `conflict` holds PHPStan (§10). `FONTAWESOME_NPM_TOKEN` is also a **Dependabot** secret, for its npm job and for CI on its pull requests. The Font Awesome registry is declared there with no `scope:`, because with one Dependabot writes its own `.npmrc`, which loses `install-links=true`.
+TarotGen's own `release` job waits for all seven. `plugin.yml` only packages the plugin (`latest.zip` + manifest, kept a week) when `plugin/`, `shared`, `.editorconfig` or the workflow itself changes. `.github/dependabot.yml` opens weekly grouped updates for npm, Composer, NuGet, the card-scan script's Python requirements (`uv`) and Actions; it skips TypeScript's major, vue-tsc 3.3.14 and the majors of the tools `lint/web` owns, and Composer's `conflict` holds PHPStan (§10). `FONTAWESOME_NPM_TOKEN` is also a **Dependabot** secret, for its npm job and for CI on its pull requests. The Font Awesome registry is declared there with no `scope:`, because with one Dependabot writes its own `.npmrc`, which loses `install-links=true`.
 
-**A release with a migration** needs nothing by hand: the backend deploy
-snapshots the database and runs `phinx migrate` as above (§7, §10 "Schema
-changes"), once the release's `phinx.php`, `db/migrations/` and a `vendor/` with
-Phinx are in place.
+**A release with a migration** needs nothing by hand: the backend deploy snapshots the database and runs `phinx migrate` as above (§7, §10 "Schema changes"). A release that needs a step beyond the deploy lists it in `docs/ops.md` under `Upgrading to x.y.z`, and its CHANGELOG entry points there.
 
-**Backups.** `tarotgen-backup.timer`, installed and kept by the backend deploy
-(SharedDeploy's `Install-BackupTimer`), runs `tarotgen-backup.service` as
-www-data at 10:00 UTC daily (up to 15 minutes' spread; a missed run happens at the
-next boot). Its job (`/usr/local/libexec/shared-deploy/tarotgen-backup`) copies
-the live DB with `VACUUM INTO`, checks it with `PRAGMA integrity_check`, gzips it
-(`gzip -t`) and keeps it as
-`/var/lib/tarotgen/db/backups/tarotgen-YYYY-MM-DD.db.gz` (UTC date) for **28
-days**. Check runs with `journalctl -u tarotgen-backup`. Take one by hand (before
-a migration run by hand, say) with `sudo systemctl start tarotgen-backup`, which
-replaces that day's copy. Restore: stop writes, then as www-data delete
-`tarotdb.db-wal`/`-shm` beside the DB and `gunzip -c <copy> >
-/var/lib/tarotgen/db/tarotdb.db` (the job's header on the host has the line with
-its paths). The copies stay on the droplet; the copy off it is each deploy's
-database pull. The old nightly copies in `/var/backups/tarotgen/nightly` stay
-until the owner deletes them: check `journalctl -u tarotgen-backup` first, then
-`sudo rm -r /var/backups/tarotgen/nightly`.
-
-**Retention.** `/etc/cron.d/tarotgen` (`scripts/server/tarotgen.cron`, root:root
-644, LF; the backend deploy installs it whenever it differs) runs
-`backend/scripts/retention.php` as www-data at 10:30 UTC, after the backup's
-window, and only if today's backup exists, so there is always a copy from before
-it; otherwise it logs that it skipped. (`scripts/` ships with `-Target backend`;
-the deploy stops before changing anything if the cron file doesn't name the web
-root's `scripts/retention.php` and the backups' folder.) It deletes **guest** readings (`user_id IS NULL`) older than 365 days —
-readings made while signed in, on the site or via a linked plugin, are never
-touched — and those past the earlier expiry a guest chose; deletes plugin draw-key
-codes that expired unredeemed (`plugin_draw_keys` rows with no key; issued keys
-stay); then runs `ANALYZE` (not `PRAGMA optimize`: prod's SQLite 3.45 ignores its
-check-every-table bit). The window and the backups' period are stated on the
-privacy page (`PrivacyPolicyView.vue`, "Data Retention"); `PrivacyPolicyView.spec.ts`
-checks them against `retention.php` and the deploy's `Install-BackupTimer` (its
-`-Keep`, else the module's 28 days), so change them together. Check runs with
-`journalctl -t tarotgen-retention`; preview with `runuser -u www-data -- php
-scripts/retention.php --dry-run`.
+**Backups and retention** are in [`docs/ops.md`](docs/ops.md): the daily database copy (`tarotgen-backup.timer`, 10:00 UTC, 28 days), the snapshots, the pulls to the owner's PC, the restore commands, and retention (`/etc/cron.d/tarotgen`, 10:30 UTC, only once that day's backup exists: guest readings older than 365 days or past the expiry a guest chose, unredeemed draw-key codes, then `ANALYZE`). The retention window and the backups' period are stated on the privacy page (`PrivacyPolicyView.vue`, "Data Retention"); `PrivacyPolicyView.spec.ts` checks them against `retention.php` and the deploy's `Install-BackupTimer` (its `-Keep`, else the module's 28 days), so change them together.
 
 ---
 
@@ -618,9 +490,7 @@ scripts/retention.php --dry-run`.
   creation order, then each table's seed rows). It never reads your local DB, so
   local drift can't leak into it. The tests load it; `SchemaTest` fails when it
   isn't exactly what the migrations build.
-- **On the droplet** the backend deploy runs them, after its snapshot (§6
-  "Deployment"): from the web root,
-  `runuser -u www-data -- env TAROT_DATA_DIR=/var/lib/tarotgen php vendor/bin/phinx migrate`.
+- **On the droplet** the backend deploy runs them, after its snapshot (§6 "Deployment"): from the site's folder, `runuser -u www-data -- env TAROT_DATA_DIR=<DataDir> php vendor/bin/phinx migrate`.
   By hand, run the same line after a backup (`sudo systemctl start
   tarotgen-backup`); `TAROT_DATA_DIR` also comes from `/etc/environment` in SSH
   sessions, but pass it explicitly anywhere else.
@@ -639,21 +509,22 @@ scripts/retention.php --dry-run`.
 - **End-to-end suite (Playwright, `npm run test:e2e`, CI job `e2e`):** 18 tests on
   the built app and the real API. `e2e/pages.spec.ts` opens each of the main
   pages by its address, checks its heading and what the server sent for it, and
-  requires it to pass axe at WCAG 2.2 AA (`@jwill89/test-a11y`) with no page error
+  requires it to pass axe at WCAG 2.2 AA with axe's AAA rules added (`[...WCAG_22_AA, 'wcag2aaa']`, `@jwill89/test-a11y`) with no page error
   or CSP refusal (`e2e/breakage.ts`). `e2e/smoke.spec.ts` draws a reading as a
   guest, reports a card and finds the report as admin. `playwright.config.ts`
   spreads shared-tooling's `playwrightDefaults`. Its web server builds the SPA (`vite
   build`, so no `npm run build` first), runs `e2e/server/prepare.php`, then
   starts PHP's built-in server on `127.0.0.1:8123` with `e2e/server/router.php`
-  (`backend/.htaccess`'s routing: the SPA through `og.php` and its CSP, `/api`
+  (`backend/public/.htaccess`'s routing: the SPA through `og.php` and its CSP, `/api`
   through the Slim app). `prepare.php` makes a throwaway `TAROT_DATA_DIR` in the
   OS temp dir (`tarotgen-e2e`; it refuses a path inside `backend/db/`) with a
   `.env` and a database the migrations build, seeded with a deck system, a deck,
   a spread, a guest's reading and an admin, and copies `dist/` to
-  `backend/dist/` (gitignored), where `og.php` reads the shell. The server runs
+  `backend/public/dist/` (gitignored), where `og.php` reads the shell. The server runs
   with `sys_temp_dir` inside that data dir, so the file-backed rate limiters
   start empty each run (earlier local runs can't trip them).
-- **Backend (PHPUnit):** namespace `Tarot\Tests\`, two suites (`phpunit.xml`).
+- **Contrast (`src/__tests__/contrast.spec.ts`):** builds the live theme on each run (compiles `src/assets/bulma.scss`, then lays `tokens.css` and `bulma-helpers.css` over it, print's `@media print` block included), resolves `var()`, `calc()`, `hsl()`/`rgb()` and `color-mix()` as the browser does, and holds about 200 pairs to their level: text 7:1 (large text 4.5:1), field edges, the focus ring, selected states and state icons 3:1. A pair that can only reach AA goes in its `exceptions` map with a dated line in `docs/decisions.md` (none today), and a `--myst-*` colour token in no pair fails it. A new colour or a new pair is added there.
+- **Backend (PHPUnit):** namespace `Tarot\Tests\`, two suites (`phpunit.xml`), run under `date.timezone=Pacific/Kiritimati` (UTC+14).
   - `tests/Unit/` — one class at a time. Service-layer tests pass an **in-memory
     SQLite PDO** to Data classes for isolation.
   - `tests/Http/` — whole requests through the real app: extend `HttpTestCase`,
@@ -683,12 +554,8 @@ scripts/retention.php --dry-run`.
 
 ## 9. Configuration / environment
 
-- Copy `.env.example` to `.env` and fill in values. Loaded by `Tarot\Config\Env`
-  in `api/index.php` from `Tarot\Config\Paths::envFile()`.
-- **`TAROT_DATA_DIR`** (process/Apache environment, not `.env`) names the private
-  directory holding `.env` and `db/tarotdb.db`. Production: `/var/lib/tarotgen`,
-  set by `SetEnv` in the Apache vhost (web), `/etc/environment` (SSH sessions) and
-  `/etc/cron.d/tarotgen` (cron). Unset locally, where it falls back to `backend/`.
+- Copy `.env.example` to `.env` and fill in values. Loaded by `Tarot\Config\Env` in `public/api/index.php` and `public/og.php` from `Tarot\Config\Paths::envFile()`.
+- **`TAROT_DATA_DIR`** (process/Apache environment, not `.env`) names the private directory holding `.env` and `db/tarotdb.db`. In production it is the deploy config's `DataDir`, outside the site's folder, set by `SetEnv` in the Apache vhost (web), `/etc/environment` (SSH sessions) and `/etc/cron.d/tarotgen` (cron), the last two filled from the same setting. Unset locally, where it falls back to `backend/`.
 - Read a setting through `Tarot\Config\Env`, never `getenv()` directly; only `Paths` reads `TAROT_DATA_DIR` from the process environment.
 - Key vars: `APP_ENV` (`development`/`production`, case-insensitive),
   `APP_ORIGIN` (CORS), `APP_URL` (links in emails), `SMTP_*` / `MAIL_*`
@@ -696,8 +563,8 @@ scripts/retention.php --dry-run`.
   OAuth), `CLOUDFLARE_TURNSTILE_*` (login and contact form, optional),
   `PROTECTED_ADMIN_EMAILS` (comma-separated accounts no one can demote or
   delete; set it on production).
-- When `APP_ENV=production`: detailed errors are hidden, session cookies get the
-  Secure flag, and the DI container is compiled.
+- When `APP_ENV=production`: detailed errors are hidden, the session cookie is Secure and named `__Host-tarotgen`, and the DI container is compiled.
+- `MAIL_FROM` defaults to `SMTP_USER`, then to `noreply@` the host of `APP_URL` (`Mailer::fromAddress()`).
 - When SMTP is unconfigured outside production, the activation link is returned
   in the API response so sign-up still works in dev.
 
@@ -707,7 +574,7 @@ scripts/retention.php --dry-run`.
 
 - **Tests:** coverage is held high on purpose (AUDIT §8: ~96% of backend lines, ~97% of frontend lines), with the floors in `vite.config.ts` and `backend/composer.json` (`test:coverage`). A route's HTTP test (`tests/Http`) checks its success path with `assertDocumented()`; a frontend spec mounts through the helpers in `src/__tests__/helpers/`. A change on the core path (draw → reading → lightbox → report → admin) updates `e2e/smoke.spec.ts`.
 - **Versioning starts again from 5.0.0** (2026-10-28). The version lives in `frontend/package.json`, and the bump follows the guide's [docs-and-agents.md](shared/standards/docs-and-agents.md) ("Choosing the bump"): here the Dalamud plugin is the client outside the site that relies on the API, so a change installed plugins must follow is a major. The admin dashboard's version tag shows `CHANGELOG.md`, read in at build time (`virtual:changelog`, `utils/changelog.ts`); the changelog table, page and API were retired in 5.4.0.
-- **Refusals** use the guide's statuses. The cases here: a 404 for another user's reading or personal spread and for a pending deck, a 403 for a protected admin, and a 409 for a taken name or a change that would leave no way to sign in. Today a failed validation answers 400 and every error is `{ error }` (§13); the frontend shows that message (`ApiResult.error` from action composables).
+- **Refusals** use the guide's statuses. The cases here: a 404 for another user's reading or personal spread and for a pending deck, a 403 for a protected admin, and a 409 for a taken name or a change that would leave no way to sign in. A failed validation is a 422 listing each field in `errors`, and a value over a limit is refused, never cut or moved into range (the one exception is in §13); 400 is only for a body that isn't a JSON object, and for the plugin's token exchanges, whose `invalid_grant` RFC 6749 makes a 400. A signed-in user without the role gets 403 (a non-admin on `/admin/*`), as does a wrong password on a locked reading or a wrong current password. The frontend shows the problem's `detail` (`ApiResult.error` from action composables), with field errors inline.
 - **Decided security rules** (2026-10-28; AUDIT "Open from §8"), to keep when adding features: personal data (readings, personal spreads, tokens, passkeys) is reachable only by its owner, and unapproved submissions only by admins (`AdminAuth::sessionIsAdmin()`). A new public form or auth endpoint gets a `RateLimiter` and, when configured, Turnstile, as login and contact do; the privacy page names every page using Turnstile (`PrivacyPolicyView.spec.ts` checks). Making a reading without a signed-in user needs Turnstile or a plugin draw key (§4, "Who may make a reading"; no bypass for anything else). A reading's journal fields (`question`, `querent`, tags) reach only its owner — never a shared or locked payload, an export of anyone else, or og.php's share meta (`ReadingShareMeta`). A **private** reading (`readings.is_private`; "password" is still just `password_hash`, and `visibility` is worked out in the SELECT) and an **expired** guest reading (`expires_at`) are a 404 to everyone but the owner, with generic share meta.
 - **Schema changes** are Phinx migrations, made as §7 says and run by the backend deploy (§6 "Deployment"). Seed rows a fresh database needs, such as the starting `spread_categories`, go in a migration too.
 - **Product boundaries (the owner's, after talking with practitioners):** the
@@ -723,7 +590,7 @@ scripts/retention.php --dry-run`.
   for its status codes and auth. New frontend feature?
   Add a `use*` composable + view/component and a route with appropriate `meta`.
 - **Layer discipline:** controllers don't touch SQL; SQL lives only in `Data`.
-- **Time** comes from `Tarot\Utility\Clock` (`now()`, `in($seconds)` for expiries, `today()`), which writes UTC, never from `date()`; the frontend reads timestamps as UTC (`utils/datetime.ts`). The form they are stored in is a departure (§13). Check the zone with `vendor\bin\phpunit -d date.timezone=Pacific/Kiritimati` (UTC+14).
+- **Time** comes from `Tarot\Utility\Clock` (`now()`, `in($seconds)` for expiries, `today()`), which writes UTC, never from `date()`. A timestamp is stored, compared and sent in one form, RFC 3339 in UTC to the second (`2026-11-07T09:18:09Z`, `Clock::FORMAT`), in a `DATETIME` column with `CHECK (col IS strftime('%Y-%m-%dT%H:%M:%SZ', col))` and, for a default of now, `DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))`; a date alone is a `DATE` column (`daily_cards.day`) with `CHECK (day IS date(day))`. SQL never uses `CURRENT_TIMESTAMP` or `datetime()`: a bound comes from `Clock` or from `strftime` in the column's form. The spec marks every timestamp `format: date-time` (or `date`), and `assertDocumented()` fails one in any other form. The frontend reads them with `parseTimestamp()` / `formatDate()` (`utils/datetime.ts`), never `new Date(x)` on its own. `sessions.expires` and the rate limiters keep Unix seconds, compared only with `time()`. The PHP suite runs fourteen hours ahead of UTC (`phpunit.xml`'s `date.timezone=Pacific/Kiritimati`), so code that leans on the machine's zone fails on every machine.
 - Deck card images live at `assets/decks/{deck_id}/Card_XXXX.png` with a
   `Card_Back.png` — the master scans, never modified (the plugin loads them).
   `CardImageService` derives a full-size display `Card_XXXX.webp` (lightbox,
@@ -754,7 +621,7 @@ scripts/retention.php --dry-run`.
 | Change/add a heading font           | `public/fonts/` + `src/assets/fonts.css` + `--myst-heading-font` in `src/assets/tokens.css` |
 | Change a DB schema                  | new migration in `db/migrations/` (`vendor\bin\phinx create`), then `php scripts/dump_schema.php` (§7) |
 | Grant admin                         | `php scripts/make_admin.php <email>` |
-| Adjust auth/session/CSRF            | `api/app.php` (middleware) + `api/index.php` (cookie params) + `api/Routes/Middleware/*` |
+| Adjust auth/session/CSRF            | `api/app.php` (middleware) + `Session::cookieSettings()` (cookie name and flags, applied in `public/api/index.php`) + `api/Routes/Middleware/*` |
 
 ---
 
@@ -791,10 +658,8 @@ and it has its own version, package, and release channel.
   `latest.zip` / `icon.png` / a generated `repo.json` (the pluginmaster) to
   `$WebRoot/plugin`. Testers add `https://tarotgen.io/plugin/repo.json` as a
   custom repo under Dalamud's `/xlsettings`.
-- **Layout:** `Plugin.cs` (composition root + lifecycle), `Services/`
-  (`TarotApiClient`, `CardTextureCache`, `LinkService` account link, `TokenStore`
-  DPAPI, `ReadingFormat`, `SpreadDraw`, `SpreadLayout`), `Windows/` (`MainWindow`,
-  `ReadingPanel`, `Ui`), `Models/ApiModels.cs` (DTOs), `Configuration.cs`.
+- **Layout:** `Plugin.cs` (composition root + lifecycle); `Core/` (namespace `TarotGen.Plugin.Core`), everything that doesn't touch the game: the API models, `TarotApiClient`, `LinkService`, `DrawKeyService`, `LoopbackCodeFlow`, `ErrorMessage` (reads RFC 9457 problem details: `detail`, then `errors[].message`, then an older server's `error`), `ReadingFormat`, `SpreadLayout`, `SpreadGeometry`, `Catalog` and `ICredentialStore`; `Services/` (`TokenStore`, DPAPI, and `CardTextureCache`, which need Dalamud or Windows); `Windows/` (`MainWindow`, `ReadingPanel`, `Ui`, `SpreadDraw`, `ICardTextures`); `Configuration.cs`.
+- **Tests and preview:** `plugin/TarotGen.Plugin.Tests` (xUnit v3 on net10.0) compiles `Core/`'s sources in, with no Dalamud, against a fake server and hand-written fixtures (made-up names); `task test:plugin` runs it from `plugin/`, where `global.json` selects Microsoft.Testing.Platform (from the repo root `dotnet test` falls back to the old runner). `plugin/TarotGen.Plugin.Preview` draws every window and popup to PNGs in the git-ignored `plugin/previews/`, with the plugin's own window code against a stand-in site serving the tests' fixtures (`task preview:plugin`, `-- <folder> <font scale>`); look at the pictures before handing over a window change. CI's `plugin` job builds the plugin and the preview, runs the tests and `dotnet format` on all three projects.
 - **Talks to the API over HTTPS** (not the session cookie). Viewing readings
   needs no auth. Drawing needs, where the site has Turnstile on, a linked
   account or a **draw key** (0.8.0+): the plugin gets one once on the site's
@@ -815,23 +680,16 @@ and it has its own version, package, and release channel.
 
 ---
 
-## 13. Where this project departs from the standards
+## 13. Departures from the standards
 
-Each item is a place where the code still does what [`shared/standards/`](shared/standards/README.md) now rules out. Each says what the code does today, and each moves to the standard in a follow-up of its own. The first eight come from [`plans/shared-tooling-rollout.md`](plans/shared-tooling-rollout.md) (step 3's follow-ups for TarotGen.io, and its accessibility and timestamp decisions); the rest were found in this repo's docs and code on 2026-11-07.
+Each is a place where this project differs from [`shared/standards/`](shared/standards/README.md) on purpose, with the reason that holds today.
 
-- **Error bodies (RFC 9457):** every error is a JSON `{ "error": "…" }` body (registration's validation sends `{ "errors": [...] }`), never an `application/problem+json` problem details body.
-- **Validation status (422):** most failed validations answer 400 (`withJson(['error' => …], 400)` in the controllers); a few already answer 422 (registration, the display name, a weak password). A wrong current password on a password change answers 422, where the guide says 403.
-- **camelCase JSON:** JSON fields and query parameters are snake_case, like the columns (`password_protected`, `turnstile_token`, `?older_than_days=`). The plugin reads them with `JsonNamingPolicy.SnakeCaseLower`, so it must handle the new names before the API stops sending the old ones.
-- **`style-src`:** the shell's CSP (`ContentSecurityPolicy::forShell()`) allows `'unsafe-inline'` in `style-src`, for the styles Vue, Reka UI, Font Awesome and Turnstile set; the policy `/api/docs` sends allows it too, for Scalar.
-- **A password change and plugin tokens:** a password change or reset ends the account's sessions but leaves its plugin tokens (`plugin_tokens`), which are revoked one by one under Connected Apps (`AuthService::changePassword()`, `resetPassword()`).
-- **Font Awesome:** the icons come from the per-style Pro packages (`@fortawesome/pro-solid-svg-icons`, `pro-regular-svg-icons`, `pro-duotone-svg-icons`) and `@fortawesome/free-brands-svg-icons`, not from the owner's `@awesome.me/kit-…` package.
-- **Contrast (AAA):** the target is WCAG 2.2 AAA, with AA as the floor only where AAA can't be met and each such place recorded: body text at 7:1 and large text at 4.5:1. axe enforces the AA floor, and a contrast test holds AAA. (The copy of `accessibility.md` in `shared/` v2.1.0 still names AA.) Today the docs and tests set AA: `tokens.css` holds text to 4.5:1 (§5), `e2e/pages.spec.ts` runs axe at AA, and no test computes the contrast of the token pairs (Home Library's `contrast.test.ts` is the model).
-- **Timestamps:** every timestamp column is `TEXT` in SQLite's space form (`2026-11-07 09:18:09`, in UTC), written by `Clock::now()` (`Y-m-d H:i:s`) or `DEFAULT CURRENT_TIMESTAMP`, with no CHECK, and the API sends that form. The guide's form is a `DATETIME` column holding `2026-11-07T09:18:09Z`, with a `strftime` default and a CHECK; each table moves in one migration (`database.md`, "Timestamps").
-- **The session cookie** keeps PHP's default name, `PHPSESSID`, not a `__Host-` name.
-- **The document root** is the flat web root, which holds the code, `vendor/` and `scripts/` beside `dist/`, with `backend/.htaccess` refusing them (§6). The guide puts a PHP site's document root at its `public/` folder. `.env` and the database already sit outside it, in `TAROT_DATA_DIR`.
-- **Layout** comes from Bulma's helpers (columns, spacing), which the guide counts as neither of its two ways (Tailwind or object classes). They go when the app adopts the component kit.
-- **State class:** the navigation marks the current page with a bare `active` class (`exact-active-class="active"` in `App.vue`), not `is-active`.
-- **`Referrer-Policy`:** `backend/.htaccess` sends `strict-origin-when-cross-origin`, not `same-origin`.
-- **Plugin tests:** the plugin has no test project, no game-free `Core/`, and no picture preview of its windows.
-- **The PHP suite's time zone:** the suite runs in the machine's zone; the far-off-zone run (`-d date.timezone=Pacific/Kiritimati`) is done by hand (§10).
-- **Markdown:** this file, API.md, CONTRIBUTING.md, README.md, plugin/README.md and AUDIT.md are hard-wrapped near 80 columns. MD013 is off, so markdownlint passes. A paragraph rewritten from now on is one line.
+- No restore drill is run on the host, by the owner's decision of 2026-11-15; the drill's steps stay in docs/ops.md for when one is wanted (deploy-and-ops.md, Restores).
+- **The card count is clamped, not refused:** `number_of_cards` on `POST /readings/generate` and `count` on `POST /readings/{id}/draw` are cut to what the deck holds. Installed FFXIV plugins let a free draw ask for up to 78 cards whatever the deck, and a change may never break a client that has shipped, so a larger count becomes a 422 only once a plugin release that bounds it by the deck has reached its users (api-and-realtime.md, Requests and responses).
+- **camelCase JSON:** JSON fields and query parameters are snake_case, like the columns (`password_protected`, `turnstile_token`, `?older_than_days=`). Installed FFXIV plugins read them with `JsonNamingPolicy.SnakeCaseLower`, and a change may never break a client that has shipped, so the names move only once a plugin release that reads camelCase has reached its users (api-and-realtime.md, Paths and methods).
+- **Layout** comes from Bulma's helpers (columns, spacing), which the guide counts as neither of its two ways (Tailwind or object classes): they go when the app adopts the component kit, which comes after the rollout and never in the same pass as a backend change (css.md, Layout; docs-and-agents.md, Working in a repo).
+- **Markdown:** parts of this file, API.md, CONTRIBUTING.md, README.md, plugin/README.md and AUDIT.md are hard-wrapped near 80 columns. Re-flowing them all at once would bury every real change in one diff, so a paragraph becomes one line when it is next rewritten; MD013 is off, so markdownlint passes (docs-and-agents.md, Markdown and copy).
+
+## 14. Not yet meeting the standards
+
+- Since 2026-11-16: CHANGELOG.md's 1.0.0, 2.0.0 and 3.0.0–3.4.0 headings, reconstructed from the history, name versions that were never tagged, so their links lead to tag pages that don't exist; waiting on the owner to tag their release commits and push the tags (docs-and-agents.md, What each doc holds).

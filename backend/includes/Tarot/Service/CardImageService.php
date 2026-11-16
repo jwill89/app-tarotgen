@@ -31,12 +31,12 @@ class CardImageService
 
     /**
      * @param string|null $decksRoot Override the deck-images root (for tests).
-     *                               Defaults to the web root's assets/decks.
+     *                               Defaults to public/assets/decks.
      */
     public function __construct(?string $decksRoot = null)
     {
-        // includes/Tarot/Service -> project root -> assets/decks
-        $this->decksRoot = $decksRoot ?? (dirname(__DIR__, 3) . '/assets/decks');
+        // includes/Tarot/Service -> project root -> public/assets/decks
+        $this->decksRoot = $decksRoot ?? (dirname(__DIR__, 3) . '/public/assets/decks');
     }
 
     /** Create the deck's image folder (and thumbs/) if they don't exist yet. */

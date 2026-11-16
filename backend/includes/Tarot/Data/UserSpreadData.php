@@ -4,6 +4,7 @@ namespace Tarot\Data;
 
 use JsonException;
 use Tarot\Structure\UserSpread;
+use Tarot\Utility\Clock;
 
 class UserSpreadData extends AbstractData
 {
@@ -92,7 +93,8 @@ class UserSpreadData extends AbstractData
             return null;
         }
 
-        $fields[] = "updated_at = CURRENT_TIMESTAMP";
+        $fields[] = 'updated_at = :updated_at';
+        $params[':updated_at'] = Clock::now();
 
         $sql = "UPDATE user_spreads SET " . implode(', ', $fields)
              . " WHERE user_spread_id = :user_spread_id AND user_id = :user_id";

@@ -3,7 +3,7 @@ import { flushPromises } from '@vue/test-utils'
 import SpreadLibraryView from '@/views/SpreadLibraryView.vue'
 import { useSpreads } from '@/composables/useSpreads'
 import { useUserSpreads } from '@/composables/useUserSpreads'
-import { cleanup, signIn, stubApi, testUser } from './helpers/app'
+import { cleanup, signIn, stubApi, testUser, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -199,7 +199,7 @@ describe('SpreadLibraryView', () => {
 
   it("says the spreads couldn't load, rather than that there are none", async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
-    stubApi({ ...loads(), 'GET /spreads': { status: 503, body: { error: 'Down.' } } })
+    stubApi({ ...loads(), 'GET /spreads': { status: 503, body: problem('Down.') } })
     await open()
 
     expect(document.body.textContent).toContain("The spreads couldn't be loaded just now.")
@@ -265,8 +265,8 @@ describe('SpreadLibraryView', () => {
       description: 'For a bond.',
       card_count: 2,
       positions: twoHearts.positions,
-      created_at: '2026-10-30 12:00:00',
-      updated_at: '2026-10-30 12:00:00',
+      created_at: '2026-10-30T12:00:00Z',
+      updated_at: '2026-10-30T12:00:00Z',
     }
     const api = stubApi({ ...loads(), 'POST /spreads/4/copy': { status: 201, body: copy } })
     await open()
@@ -293,7 +293,7 @@ describe('SpreadLibraryView', () => {
     signIn(testUser())
     stubApi({
       ...loads(),
-      'POST /spreads/4/copy': { status: 401, body: { error: 'Not authenticated' } },
+      'POST /spreads/4/copy': { status: 401, body: problem('Not authenticated') },
     })
     await open()
     await openSpread('Two Hearts')

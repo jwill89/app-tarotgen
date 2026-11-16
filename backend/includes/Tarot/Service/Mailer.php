@@ -25,6 +25,21 @@ class Mailer
     }
 
     /**
+     * The address mail is sent from: MAIL_FROM, else SMTP_USER, else noreply@ the
+     * host of the site's address (APP_URL), else noreply@localhost.
+     */
+    public static function fromAddress(): string
+    {
+        $from = Env::get('MAIL_FROM') ?? Env::get('SMTP_USER');
+        if ($from !== null) {
+            return $from;
+        }
+
+        $host = parse_url(Env::get('APP_URL', ''), PHP_URL_HOST);
+        return 'noreply@' . (is_string($host) && $host !== '' ? $host : 'localhost');
+    }
+
+    /**
      * Send an account-activation email. Returns true only when actually sent
      * via SMTP; false when unconfigured or on failure (both are logged).
      */
@@ -143,7 +158,7 @@ class Mailer
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             }
 
-            $fromEmail = Env::get('MAIL_FROM', Env::get('SMTP_USER', 'noreply@tarotgen.io'));
+            $fromEmail = self::fromAddress();
             $fromName  = Env::get('MAIL_FROM_NAME', 'TarotGen.io');
 
             $mail->setFrom($fromEmail, $fromName);

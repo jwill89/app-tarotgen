@@ -4,14 +4,14 @@ import { flushPromises } from '@vue/test-utils'
 import { TooltipProvider } from 'reka-ui'
 import ReadingEditDialog from '@/components/ReadingEditDialog.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
-import { mountWithApp, cleanup, signIn, stubApi, testUser } from './helpers/app'
+import { mountWithApp, cleanup, signIn, stubApi, testUser, problem } from './helpers/app'
 import { apiCalls, button, click, labelled, typeInto, valueOf } from './helpers/page'
 import type { AccountReading } from '@/types'
 
 const stored: AccountReading = {
   reading_id: 'abc123',
   reading_info: { deck_id: 1, draw: [] },
-  reading_time: '2026-10-01 12:00:00',
+  reading_time: '2026-10-01T12:00:00Z',
   user_id: 7,
   hide_user: true,
   reading_name: 'Morning reflection',
@@ -127,8 +127,8 @@ describe('ReadingEditDialog', () => {
   it("keeps the dialog open with the server's reason when a save is refused", async () => {
     stubApi({
       'PATCH /account/readings/abc123': {
-        status: 400,
-        body: { error: 'A reading can have at most 10 tags.' },
+        status: 422,
+        body: problem('A reading can have at most 10 tags.'),
       },
     })
     const { saved } = await openDialog()

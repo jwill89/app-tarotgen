@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import ErroredCardsView from '@/views/admin/ErroredCardsView.vue'
 import { useUser } from '@/composables/useUser'
 import { formatDateTime } from '@/utils/datetime'
-import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -35,7 +35,7 @@ const submission = (
   round,
   reason,
   details,
-  submitted_at: `2026-10-${String(submission_id).padStart(2, '0')} 12:00:00`,
+  submitted_at: `2026-10-${String(submission_id).padStart(2, '0')}T12:00:00Z`,
 })
 
 /** The Fool: reported twice for an artefact since it was last fixed, once for cropping before. */
@@ -47,8 +47,8 @@ const fool: CardReport = {
   card_name: 'The Fool',
   report_count: 5,
   resolved_at: null,
-  first_reported_at: '2026-09-01 08:00:00',
-  last_reported_at: '2026-10-12 12:00:00',
+  first_reported_at: '2026-09-01T08:00:00Z',
+  last_reported_at: '2026-10-12T12:00:00Z',
   round: 2,
   submissions: [
     submission(12, 1, 2, 'artefact', 'A dust speck near the top-left corner'),
@@ -66,8 +66,8 @@ const orphan: CardReport = {
   card_name: '',
   report_count: 1,
   resolved_at: null,
-  first_reported_at: '2026-10-02 09:00:00',
-  last_reported_at: '2026-10-02 09:00:00',
+  first_reported_at: '2026-10-02T09:00:00Z',
+  last_reported_at: '2026-10-02T09:00:00Z',
   round: 1,
   submissions: [],
 }
@@ -79,7 +79,7 @@ const fixed: CardReport = {
   deck_name: 'Rider-Waite Tarot',
   card_id: 22,
   card_name: 'The World',
-  resolved_at: '2026-10-20 10:00:00',
+  resolved_at: '2026-10-20T10:00:00Z',
   submissions: [submission(5, 3, 1, 'quality', 'Blurry')],
 }
 
@@ -203,7 +203,7 @@ describe('admin ErroredCardsView', () => {
     })
 
     it('drops to the login page when the session has expired', async () => {
-      stubApi({ 'GET /admin/card-reports': { status: 401, body: { error: 'Unauthorized' } } })
+      stubApi({ 'GET /admin/card-reports': { status: 401, body: problem('Unauthorized') } })
       const { router } = await mountPage(ErroredCardsView, { path: '/admin/card-reports' })
 
       // The login route's component loads lazily, so the navigation lands a beat later.
@@ -251,7 +251,7 @@ describe('admin ErroredCardsView', () => {
     it("shows the server's reason and keeps the report when resolving fails", async () => {
       const api = stubApi({
         'GET /admin/card-reports': { body: [fool] },
-        'PATCH /admin/card-reports/1': { status: 400, body: { error: 'Report not found.' } },
+        'PATCH /admin/card-reports/1': { status: 422, body: problem('Report not found.') },
       })
       await mountPage(ErroredCardsView, { path: '/admin/card-reports' })
       api.mockClear()
@@ -265,7 +265,7 @@ describe('admin ErroredCardsView', () => {
   })
 
   describe('regenerating', () => {
-    const regenerated: CardReport = { ...fool, resolved_at: '2026-10-30 09:15:00' }
+    const regenerated: CardReport = { ...fool, resolved_at: '2026-10-30T09:15:00Z' }
     const purgeUrls = [
       `${window.location.origin}/assets/decks/3/Card_0001.webp`,
       `${window.location.origin}/assets/decks/3/thumbs/Card_0001.webp`,
@@ -363,7 +363,7 @@ describe('admin ErroredCardsView', () => {
         'There is no master scan for this card on the server. Upload Card_0001.png to deck 3’s folder, then try again.'
       stubApi({
         'GET /admin/card-reports': { body: [fool] },
-        'POST /admin/card-reports/1/regenerate': { status: 409, body: { error: message } },
+        'POST /admin/card-reports/1/regenerate': { status: 409, body: problem(message) },
       })
       await mountPage(ErroredCardsView, { path: '/admin/card-reports' })
 

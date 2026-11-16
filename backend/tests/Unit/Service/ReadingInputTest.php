@@ -19,15 +19,37 @@ use Tarot\Service\ReadingInput;
 #[CoversClass(ReadingFilter::class)]
 final class ReadingInputTest extends TestCase
 {
-    public function testTheQuestionAndQuerentAreTrimmedCappedOrNull(): void
+    public function testTheQuestionAndQuerentAreTrimmedOrNull(): void
     {
         $this->assertSame('What now?', ReadingInput::question('  What now?  '));
         $this->assertNull(ReadingInput::question('   '));
         $this->assertNull(ReadingInput::question(['not', 'text']));
-        $this->assertSame(500, mb_strlen((string) ReadingInput::question(str_repeat('ä', 501))));
+        $this->assertSame(500, mb_strlen((string) ReadingInput::question(str_repeat('ä', 500))));
         $this->assertSame('Sam', ReadingInput::querent(' Sam '));
         $this->assertSame('42', ReadingInput::querent(42));
-        $this->assertSame(100, mb_strlen((string) ReadingInput::querent(str_repeat('x', 101))));
+        $this->assertSame(100, mb_strlen((string) ReadingInput::querent(str_repeat('x', 100))));
+    }
+
+    public function testTheNameNotesQuestionAndQuerentOverTheirLimitsAreRefusedNotCut(): void
+    {
+        $cases = [
+            'body.reading_name'  => static fn() => ReadingInput::name(str_repeat('x', ReadingInput::NAME_MAX + 1)),
+            'body.reading_notes' => static fn() => ReadingInput::notes(str_repeat('x', ReadingInput::NOTES_MAX + 1)),
+            'body.question'      => static fn() => ReadingInput::question(str_repeat('ä', ReadingInput::QUESTION_MAX + 1)),
+            'body.querent'       => static fn() => ReadingInput::querent(str_repeat('x', ReadingInput::QUERENT_MAX + 1)),
+        ];
+        foreach ($cases as $location => $call) {
+            try {
+                $call();
+                $this->fail("{$location} over its limit was accepted.");
+            } catch (ApiException $e) {
+                $this->assertSame([422, $location], [$e->getStatusCode(), $e->getLocation()]);
+            }
+        }
+
+        // Notes keep their inner spacing; only the empty check is trimmed.
+        $this->assertSame(' a  b ', ReadingInput::notes(' a  b '));
+        $this->assertNull(ReadingInput::notes('   '));
     }
 
     /**
@@ -76,7 +98,7 @@ final class ReadingInputTest extends TestCase
     #[DataProvider('badTags')]
     public function testTagsOverTheLimitsAreRefused(mixed $tags, string $error): void
     {
-        $this->expectExceptionObject(new ApiException($error, 400));
+        $this->expectExceptionObject(new ApiException($error, 422, location: 'body.tags'));
         ReadingInput::tags($tags);
     }
 
@@ -87,8 +109,8 @@ final class ReadingInputTest extends TestCase
         foreach ([1, 7, 30, '30'] as $days) {
             $expires = ReadingInput::expiresAt($days);
             $this->assertIsString($expires);
-            $this->assertEqualsWithDelta(time() + (int) $days * 86400, strtotime($expires . ' UTC'), 5, (string) $days);
-            $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $expires);
+            $this->assertEqualsWithDelta(time() + (int) $days * 86400, strtotime($expires), 5, (string) $days);
+            $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $expires);
         }
 
         foreach ([2, '7 ', 365, true, [7]] as $days) {
@@ -96,7 +118,7 @@ final class ReadingInputTest extends TestCase
                 ReadingInput::expiresAt($days);
                 $this->fail('Accepted ' . json_encode($days));
             } catch (ApiException $e) {
-                $this->assertSame(400, $e->getStatusCode());
+                $this->assertSame([422, 'body.expires_in_days'], [$e->getStatusCode(), $e->getLocation()]);
             }
         }
     }
@@ -107,7 +129,7 @@ final class ReadingInputTest extends TestCase
         $this->assertNull(ReadingInput::visibility(''));
         $this->assertSame('private', ReadingInput::visibility('private'));
 
-        $this->expectExceptionObject(new ApiException('Choose who can open the reading: link, password or private.', 400));
+        $this->expectExceptionObject(new ApiException('Choose who can open the reading: link, password or private.', 422, location: 'body.visibility'));
         ReadingInput::visibility('Private');
     }
 
@@ -129,12 +151,14 @@ final class ReadingInputTest extends TestCase
             ReadingInput::access(['visibility' => 'password']);
             $this->fail('Password with no password was accepted.');
         } catch (ApiException $e) {
-            $this->assertSame([400, 'Choose a password of at least 4 characters for this reading.'], [$e->getStatusCode(), $e->getMessage()]);
+            $this->assertSame(
+                [422, 'body.password', 'Choose a password of at least 4 characters for this reading.'],
+                [$e->getStatusCode(), $e->getLocation(), $e->getMessage()]
+            );
         }
 
-        // The edit endpoint answers a password problem with its own status.
-        $this->expectExceptionObject(new ApiException('Reading password must be at least 4 characters.', 422));
-        ReadingInput::access(['visibility' => 'password', 'password' => 'abc'], false, 422);
+        $this->expectExceptionObject(new ApiException('Reading password must be at least 4 characters.', 422, location: 'body.password'));
+        ReadingInput::access(['visibility' => 'password', 'password' => 'abc']);
     }
 
     public function testWithoutVisibilityTheOlderFieldsWorkAsBefore(): void
@@ -158,7 +182,7 @@ final class ReadingInputTest extends TestCase
     public function testFiltersAreNormalised(): void
     {
         $filter = ReadingInput::filter([
-            'q' => '  ' . str_repeat('x', 120), 'deck_id' => '12', 'spread' => ' Celtic Cross ', 'tag' => ' #Career ', 'daily' => 'exclude',
+            'q' => '  ' . str_repeat('x', 100), 'deck_id' => '12', 'spread' => ' Celtic Cross ', 'tag' => ' #Career ', 'daily' => 'exclude',
         ]);
 
         $this->assertSame(100, mb_strlen((string) $filter->text));
@@ -169,16 +193,28 @@ final class ReadingInputTest extends TestCase
         $this->assertTrue(ReadingInput::filter(['daily' => 'only'])->daily);
     }
 
+    public function testASearchOrSpreadOverItsLimitIsRefusedNotCut(): void
+    {
+        foreach (['q' => 101, 'spread' => 201] as $name => $length) {
+            try {
+                ReadingInput::filter([$name => str_repeat('x', $length)]);
+                $this->fail("A {$name} of {$length} characters was accepted.");
+            } catch (ApiException $e) {
+                $this->assertSame([422, "query.{$name}"], [$e->getStatusCode(), $e->getLocation()]);
+            }
+        }
+    }
+
     public function testTheReadersDatesBecomeUtcBoundsTheLastDayIncluded(): void
     {
         $utc = ReadingInput::filter(['from' => '2026-03-01', 'to' => '2026-03-01']);
-        $this->assertSame(['2026-03-01 00:00:00', '2026-03-02 00:00:00'], [$utc->from, $utc->until]);
+        $this->assertSame(['2026-03-01T00:00:00Z', '2026-03-02T00:00:00Z'], [$utc->from, $utc->until]);
 
         // New York, across the start of daylight saving time (8 March 2026): the
         // first day starts at UTC−5, the day after the last at UTC−4.
         $ny = ReadingInput::filter(['from' => '2026-03-07', 'to' => '2026-03-08', 'tz' => 'America/New_York']);
-        $this->assertSame(['2026-03-07 05:00:00', '2026-03-09 04:00:00'], [$ny->from, $ny->until]);
+        $this->assertSame(['2026-03-07T05:00:00Z', '2026-03-09T04:00:00Z'], [$ny->from, $ny->until]);
 
-        $this->assertSame('2026-02-28 11:00:00', ReadingInput::filter(['from' => '2026-03-01', 'tz' => 'Pacific/Auckland'])->from);
+        $this->assertSame('2026-02-28T11:00:00Z', ReadingInput::filter(['from' => '2026-03-01', 'tz' => 'Pacific/Auckland'])->from);
     }
 }

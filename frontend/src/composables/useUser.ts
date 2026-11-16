@@ -1,7 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import { session } from '@/utils/storage'
 import { STORAGE_KEYS } from '@/constants'
-import { apiRequest, sendJson } from './apiClient'
+import { apiRequest, fieldErrors, sendJson } from './apiClient'
 import { endpoints } from '@/api/endpoints'
 import type { User } from '@/types'
 
@@ -38,7 +38,6 @@ interface MeResponse {
 interface RegisterResponse {
   message?: string
   activation_link?: string
-  errors?: string[]
 }
 interface MessageResponse {
   message?: string
@@ -80,9 +79,10 @@ export function useUser() {
       }
     }
 
-    // The backend returns a list of field-level validation errors here.
-    const errors = (res.data as RegisterResponse | null)?.errors
-    return { ok: false, errors: Array.isArray(errors) ? errors : [res.error] }
+    // A failed validation lists each field the server refused; anything else
+    // (a taken display name, a rate limit) is the one message.
+    const errors = fieldErrors(res.data).map((error) => error.message)
+    return { ok: false, errors: errors.length > 0 ? errors : [res.error] }
   }
 
   async function activate(

@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 import { statSync } from 'node:fs'
 import { changelogPlugin } from './config/changelog-plugin.ts'
+import { swaggerUiPlugin } from './config/swagger-ui-plugin.ts'
 import { vitestDefaults } from '../shared/test/web/vitest.js'
 
 /**
@@ -30,6 +31,8 @@ export default defineConfig({
     vue(),
     // The repo root's CHANGELOG.md as `virtual:changelog`, for the admin dashboard.
     changelogPlugin(resolve(import.meta.dirname, '../CHANGELOG.md')),
+    // Swagger UI's files at /swagger-ui/, for the API reference at /api/docs.
+    swaggerUiPlugin(),
     {
       // Cache-bust the homepage's OG/Twitter share image (served as the
       // static dist/index.html). Reading pages are handled in og.php.
@@ -39,16 +42,20 @@ export default defineConfig({
           'https://tarotgen.io/assets/share_banner.png',
           withAssetVersion(
             'https://tarotgen.io/assets/share_banner.png',
-            // The banner is served from the BACKEND web root at /assets/ (the
-            // deploy flattens backend/ + frontend/dist/ into one root), so it is
-            // NOT under frontend/. Statting the wrong path silently shipped the
-            // URL unversioned.
-            '../backend/assets/share_banner.png',
+            // The banner is served from the backend's document root at /assets/
+            // (backend/public/assets, beside dist/), so it is NOT under frontend/.
+            // Statting the wrong path silently shipped the URL unversioned.
+            '../backend/public/assets/share_banner.png',
           ),
         )
       },
     },
   ],
+  // Every <script>, <style> and stylesheet link in the built index.html carries
+  // nonce="__CSP_NONCE__", and a <meta property="csp-nonce"> holds it for the code that
+  // adds styles at run time. og.php swaps the placeholder for the nonce in the response's
+  // Content-Security-Policy (Tarot\Utility\ContentSecurityPolicy::stampNonce()).
+  html: { cspNonce: '__CSP_NONCE__' },
   resolve: {
     alias: {
       '@': resolve(import.meta.dirname, 'src'),

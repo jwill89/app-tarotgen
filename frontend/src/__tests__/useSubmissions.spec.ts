@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { useSubmissions } from '@/composables/useSubmissions'
+import { problemBody } from './helpers/api'
 
 function fakeResponse(body: unknown, { ok = true, status = 200 } = {}): Response {
   return { ok, status, json: async () => body } as unknown as Response
@@ -26,7 +27,9 @@ describe('useSubmissions', () => {
     const limited = 'You have submitted too many spreads recently. Please try again later.'
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(fakeResponse({ error: limited }, { ok: false, status: 429 })),
+      vi
+        .fn()
+        .mockResolvedValue(fakeResponse(problemBody(429, limited), { ok: false, status: 429 })),
     )
 
     const res = await useSubmissions().submitSpread(spread)

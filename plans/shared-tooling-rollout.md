@@ -1,5 +1,7 @@
 # shared-tooling rollout
 
+Rollout complete, 2026-11-15.
+
 The passages of shared-tooling's cross-project plan (`PLAN.md` at v2.6.0) that name this project, moved here word for word on 2026-11-10 when shared-tooling became project-agnostic. The portfolio-wide rest is in `PLAN.md` beside the project folders.
 
 ## Summary
@@ -102,7 +104,7 @@ The material exists but is scattered: about 8,600 lines across 24 files, includi
 
 | Project | Missing | Note |
 | --- | --- | --- |
-| TarotGen.io | None since its 2026-11-06 rollout | Phinx migrations, run by the deploy, replaced the one-off scripts in `backend/db/` |
+| TarotGen.io | None since its 2026-11-15 compliance pass on v2.15.2 | Phinx migrations, run by the deploy, replaced the one-off scripts in `backend/db/`; AGENTS.md's departures each state their reason, and its not-yet list holds only the old versions' tags, waiting on the owner |
 
 ## Where to start
 
@@ -110,7 +112,7 @@ The material exists but is scattered: about 8,600 lines across 24 files, includi
 
 3. **Gather the standards into `standards/` in this repo** (github.com/jwill89/shared-tooling, public). Claude Code sorts each rule as shared, project-only or conflicting and brings you the conflicts. It comes after the rollouts of Senpan, Marxbot and TarotGen.io (decided 2026-11-06), which take their CLAUDE.md pointer then.
    - Where a decision changes how an existing project works, the change is that project's own follow-up:
-     - **TarotGen.io**: RFC 9457 errors, 422, camelCase JSON, no `'unsafe-inline'` in `style-src`, a password change revoking plugin tokens, and Font Awesome from its own kit package or the free packages.
+     - **TarotGen.io**: RFC 9457 errors, 422, camelCase JSON, no `'unsafe-inline'` in `style-src`, a password change revoking plugin tokens, and Font Awesome from its own kit package or the free packages. All but camelCase done on 2026-11-15 (6.0.0); camelCase stays a departure until the plugin reads the new names.
 4. **Seed shared-tooling from what you already have; no new rules yet.**
    - TarotGen.io's coverage floors become the model for `test/web` and `test/php`, and the deploy scripts' existing health checks become the shared smoke step.
 

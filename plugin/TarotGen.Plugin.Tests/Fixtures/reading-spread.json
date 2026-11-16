@@ -1,0 +1,32 @@
+{
+  "reading_id": "4f9c2a7b1e",
+  "reading_info": {
+    "deck_id": 1,
+    "origin": "generated",
+    "spread": {
+      "spread_id": 3,
+      "name": "Past, Present, Future",
+      "description": "Where things have come from, where they stand, and where they lead.",
+      "positions": [
+        { "order": 1, "title": "Past", "x": 25, "y": 50, "rotation": 0, "description": "What has led here" },
+        { "order": 2, "title": "Present", "x": 50, "y": 50, "rotation": 0, "description": "Where things stand now" },
+        { "order": 3, "title": "Future", "x": 75, "y": 50, "rotation": 0 }
+      ]
+    },
+    "draw": [
+      { "card_id": 18, "reversed": false, "card_name": "The Star" },
+      { "card_id": 39, "reversed": true, "card_name": "Three of Cups" },
+      { "card_id": 2, "reversed": false, "card_name": "The Magician" }
+    ]
+  },
+  "reading_time": "2026-11-14 21:07:33",
+  "reading_name": null,
+  "reading_notes": null,
+  "reader": "Guest",
+  "is_owner": false,
+  "is_final": false,
+  "can_draw_more": false,
+  "locked": false,
+  "visibility": "link",
+  "expires_at": null
+}

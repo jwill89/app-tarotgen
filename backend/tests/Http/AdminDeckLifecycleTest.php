@@ -25,7 +25,7 @@ final class AdminDeckLifecycleTest extends HttpTestCase
 {
     private int $systemId;
 
-    /** Where the image service writes, instead of backend/assets/decks. */
+    /** Where the image service writes, instead of backend/public/assets/decks. */
     private string $imageRoot;
 
     protected function setUp(): void
@@ -80,7 +80,7 @@ final class AdminDeckLifecycleTest extends HttpTestCase
     {
         $this->assertJsonResponse(201, $this->post('/admin/decks', ['name' => 'Thoth']));
 
-        $this->assertSame(['error' => 'A deck with that name already exists'], $this->assertJsonResponse(409, $this->post('/admin/decks', ['name' => 'Thoth'])));
+        $this->assertSame('A deck with that name already exists', $this->assertProblem(409, $this->post('/admin/decks', ['name' => 'Thoth'])));
         $this->assertSame(1, $this->rowCount('decks'));
     }
 
@@ -91,7 +91,7 @@ final class AdminDeckLifecycleTest extends HttpTestCase
 
         $response = $this->request('PATCH', "/admin/decks/{$deck->deck_id}", ['name' => 'Thoth', 'artist' => 'Renamed']);
 
-        $this->assertSame(['error' => 'A deck with that name already exists'], $this->assertJsonResponse(409, $response));
+        $this->assertSame('A deck with that name already exists', $this->assertProblem(409, $response));
         $this->assertSame(
             [['name' => 'Thoth', 'artist' => 'Someone'], ['name' => 'Marseille', 'artist' => 'Someone']],
             $this->rows('SELECT name, artist FROM decks ORDER BY deck_id')
@@ -102,21 +102,38 @@ final class AdminDeckLifecycleTest extends HttpTestCase
 
     public function testADeckNeedsAName(): void
     {
-        $required = ['error' => 'Name is required'];
+        $required = 'Name is required';
 
-        $this->assertSame($required, $this->assertJsonResponse(400, $this->post('/admin/decks', ['artist' => 'Harris'])));
-        $this->assertSame($required, $this->assertJsonResponse(400, $this->post('/admin/decks', ['name' => '   '])));
+        $this->assertSame($required, $this->assertProblem(422, $this->post('/admin/decks', ['artist' => 'Harris'])));
+        $this->assertSame($required, $this->assertProblem(422, $this->post('/admin/decks', ['name' => '   '])));
         $this->assertSame(0, $this->rowCount('decks'));
+    }
+
+    public function testACardAspectOutsideItsRangeIsRefusedNotMovedIntoIt(): void
+    {
+        foreach ([0, -2, 100001, 'wide', ''] as $bad) {
+            $response = $this->post('/admin/decks', ['name' => 'Thoth', 'card_aspect_w' => $bad]);
+            $this->assertArrayHasKey('body.card_aspect_w', $this->problemErrors($response), var_export($bad, true));
+        }
+        $this->assertSame(0, $this->rowCount('decks'));
+
+        $deck = $this->storeDeck('Thoth');
+        $response = $this->request('PATCH', "/admin/decks/{$deck->deck_id}", ['card_aspect_h' => 0]);
+        $this->assertArrayHasKey('body.card_aspect_h', $this->problemErrors($response));
+
+        // Inside the range, as a number or numeric text, it is kept as given.
+        $updated = $this->assertJsonResponse(200, $this->request('PATCH', "/admin/decks/{$deck->deck_id}", ['card_aspect_w' => '2.75', 'card_aspect_h' => 4.75]));
+        $this->assertEquals([2.75, 4.75], [$updated['card_aspect_w'], $updated['card_aspect_h']]);
     }
 
     public function testARenameCannotBlankTheName(): void
     {
         $deck = $this->storeDeck('Thoth');
-        $required = ['error' => 'Name is required'];
+        $required = 'Name is required';
 
         foreach (['', '   ', null] as $blank) {
             $response = $this->request('PATCH', "/admin/decks/{$deck->deck_id}", ['name' => $blank, 'artist' => 'Renamed']);
-            $this->assertSame($required, $this->assertJsonResponse(400, $response), var_export($blank, true));
+            $this->assertSame($required, $this->assertProblem(422, $response), var_export($blank, true));
         }
 
         $this->assertSame([['name' => 'Thoth', 'artist' => 'Someone']], $this->rows('SELECT name, artist FROM decks'));
@@ -151,7 +168,7 @@ final class AdminDeckLifecycleTest extends HttpTestCase
 
     public function testApprovingAnUnknownDeckIsNotFound(): void
     {
-        $this->assertSame(['error' => 'Deck not found'], $this->assertJsonResponse(404, $this->post('/admin/decks/999/approve')));
+        $this->assertSame('Deck not found', $this->assertProblem(404, $this->post('/admin/decks/999/approve')));
     }
 
     public function testMakingADeckUsablePublishesItAndPreparesItsImageFolders(): void
@@ -182,12 +199,12 @@ final class AdminDeckLifecycleTest extends HttpTestCase
         $deck = $this->storeDeck('Thoth');
 
         $updated = $this->assertJsonResponse(200, $this->request('PATCH', "/admin/decks/{$deck->deck_id}", [
-            'name' => 'Book of Thoth', 'artist' => 'Harris', 'card_aspect_w' => -3, 'additional_cards' => '2',
+            'name' => 'Book of Thoth', 'artist' => 'Harris', 'card_aspect_w' => 3.5, 'additional_cards' => '2',
             'deck_id' => 500, 'submitted_by' => 42,
         ]));
 
         $this->assertSame(
-            ['deck_id' => $deck->deck_id, 'name' => 'Book of Thoth', 'artist' => 'Harris', 'additional_cards' => 2, 'card_aspect_w' => 0.1, 'submitted_by' => null],
+            ['deck_id' => $deck->deck_id, 'name' => 'Book of Thoth', 'artist' => 'Harris', 'additional_cards' => 2, 'card_aspect_w' => 3.5, 'submitted_by' => null],
             array_intersect_key($updated, array_flip(['deck_id', 'name', 'artist', 'card_aspect_w', 'additional_cards', 'submitted_by']))
         );
     }
@@ -204,13 +221,15 @@ final class AdminDeckLifecycleTest extends HttpTestCase
         $this->assertSame(['Thoth'], array_column($this->assertJsonResponse(200, $this->get('/decks')), 'name'));
     }
 
-    public function testAnUpdateWithNothingToChangeOrForNoDeckIsNotFound(): void
+    public function testAnUpdateWithNothingToChangeIsRefusedAndOneForNoDeckIsNotFound(): void
     {
         $deck = $this->storeDeck('Thoth');
-        $notFound = ['error' => 'Deck not found or no valid fields'];
 
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('PATCH', "/admin/decks/{$deck->deck_id}", ['deck_id' => 7])));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('PATCH', '/admin/decks/999', ['name' => 'Ghost'])));
+        $nothing = $this->request('PATCH', "/admin/decks/{$deck->deck_id}", ['deck_id' => 7]);
+        $this->assertSame('No changes provided.', $this->assertDocumentedProblem('patch', '/admin/decks/{deck_id}', 422, $nothing));
+        $this->assertSame(['body' => 'No changes provided.'], $this->problemErrors($nothing));
+        $ghost = $this->request('PATCH', '/admin/decks/999', ['name' => 'Ghost']);
+        $this->assertSame('Deck not found', $this->assertDocumentedProblem('patch', '/admin/decks/{deck_id}', 404, $ghost));
         $this->assertSame([], $this->rows("SELECT 1 FROM decks WHERE name = 'Ghost'"));
     }
 
@@ -228,10 +247,10 @@ final class AdminDeckLifecycleTest extends HttpTestCase
         $deck = $this->storeDeck('Thoth', approved: false);
         $this->signInAs($this->createUser('reader@example.test')->user_id);
 
-        $this->assertJsonResponse(401, $this->get('/admin/decks/pending'));
-        $this->assertJsonResponse(401, $this->post('/admin/decks', ['name' => 'Mine']));
-        $this->assertJsonResponse(401, $this->post("/admin/decks/{$deck->deck_id}/approve"));
-        $this->assertJsonResponse(401, $this->request('DELETE', "/admin/decks/{$deck->deck_id}"));
+        $this->assertProblem(403, $this->get('/admin/decks/pending'));
+        $this->assertProblem(403, $this->post('/admin/decks', ['name' => 'Mine']));
+        $this->assertProblem(403, $this->post("/admin/decks/{$deck->deck_id}/approve"));
+        $this->assertProblem(403, $this->request('DELETE', "/admin/decks/{$deck->deck_id}"));
 
         $this->assertSame([['name' => 'Thoth', 'approved' => 0]], $this->rows('SELECT name, approved FROM decks'));
     }

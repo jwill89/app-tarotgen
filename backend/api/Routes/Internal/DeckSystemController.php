@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Routes\Middleware\AdminAuth;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -76,7 +77,7 @@ class DeckSystemController extends AbstractController
 
         $system = $this->visibleSystem($id);
         if ($system === null) {
-            return $response->withJson(['error' => 'Deck system not found'], 404);
+            return Problem::respond($response, 404, 'Deck system not found');
         }
 
         $cards = $this->systems->getCards($id);
@@ -115,9 +116,9 @@ class DeckSystemController extends AbstractController
                 description: 'The created deck system',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/DeckSystem')
             ),
-            new OAS\Response(response: 400, description: 'Validation failure'),
             new OAS\Response(response: 401, description: 'Not authenticated'),
             new OAS\Response(response: 409, description: 'A deck system with that name already exists'),
+            new OAS\Response(response: 422, description: 'Validation failure'),
         ]
     )]
     /**
@@ -133,7 +134,7 @@ class DeckSystemController extends AbstractController
         $userId = Session::userId();
         $user   = $userId === null ? null : $this->users->findById($userId);
         if ($user === null || !$user->is_active) {
-            return $response->withJson(['error' => 'Not authenticated'], 401);
+            return Problem::respond($response, 401, 'Not authenticated');
         }
 
         $isAdmin = $user->is_admin;
@@ -144,11 +145,19 @@ class DeckSystemController extends AbstractController
         $totalCards = (int) ($params['total_cards'] ?? 78);
 
         if ($name === '' || $shortName === '') {
-            return $response->withJson(['error' => 'Name and Short Name are required.'], 400);
+            return Problem::respond(
+                $response,
+                422,
+                'Name and Short Name are required.',
+                array_filter([
+                    'body.name'       => $name === '' ? 'Name is required.' : '',
+                    'body.short_name' => $shortName === '' ? 'Short Name is required.' : '',
+                ], static fn(string $message): bool => $message !== '')
+            );
         }
 
         if ($totalCards < 1) {
-            return $response->withJson(['error' => 'Total cards must be at least 1.'], 400);
+            return Problem::invalid($response, 'body.total_cards', 'Total cards must be at least 1.');
         }
 
         $cards = $params['cards'] ?? [];
@@ -158,13 +167,13 @@ class DeckSystemController extends AbstractController
         }
 
         if (!is_array($cards) || count($cards) < $totalCards) {
-            return $response->withJson(['error' => "At least $totalCards card entries are required (name is mandatory for each)."], 400);
+            return Problem::invalid($response, 'body.cards', "At least $totalCards card entries are required (name is mandatory for each).");
         }
 
         // Validate that each card has at least a name
         foreach ($cards as $i => $card) {
             if (!is_array($card) || trim((string) ($card['name'] ?? '')) === '') {
-                return $response->withJson(['error' => "Card #" . ($i + 1) . " requires a name."], 400);
+                return Problem::invalid($response, "body.cards[{$i}].name", "Card #" . ($i + 1) . " requires a name.");
             }
         }
 
@@ -178,7 +187,7 @@ class DeckSystemController extends AbstractController
 
         // Null only when the name is taken (deck_systems.name is UNIQUE; short_name isn't).
         if ($system === null) {
-            return $response->withJson(['error' => 'A deck system with that name already exists.'], 409);
+            return Problem::respond($response, 409, 'A deck system with that name already exists.');
         }
 
         // Store the cards

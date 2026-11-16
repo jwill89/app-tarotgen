@@ -1,4 +1,51 @@
 import { vi, type Mock } from 'vitest'
+import type { ProblemDetails } from '@/types'
+
+/** The reason phrases the API's problems carry as `title`, by status. */
+const TITLES: Record<number, string> = {
+  400: 'Bad Request',
+  401: 'Unauthorized',
+  403: 'Forbidden',
+  404: 'Not Found',
+  405: 'Method Not Allowed',
+  409: 'Conflict',
+  422: 'Unprocessable Entity',
+  429: 'Too Many Requests',
+  500: 'Internal Server Error',
+  503: 'Service Unavailable',
+}
+
+/**
+ * The RFC 9457 problem details body the API answers an error with: `detail`
+ * says why, and `members` adds the problem's others (a validation's `errors`,
+ * a taken daily card's `reading_id`).
+ */
+export function problemBody(
+  status: number,
+  detail: string,
+  members: Partial<ProblemDetails> & Record<string, unknown> = {},
+): ProblemDetails & Record<string, unknown> {
+  return { type: 'about:blank', title: TITLES[status] ?? 'Error', status, detail, ...members }
+}
+
+/** A stub reply's body that stands for the problem details of the reply's status. */
+class ProblemStub {
+  constructor(
+    readonly detail: string,
+    readonly members: Partial<ProblemDetails> & Record<string, unknown>,
+  ) {}
+}
+
+/**
+ * The problem details body of a stubbed error, filled in with the reply's
+ * status: `{ status: 422, body: problem('Name is required.') }`.
+ */
+export function problem(
+  detail: string,
+  members: Partial<ProblemDetails> & Record<string, unknown> = {},
+): ProblemStub {
+  return new ProblemStub(detail, members)
+}
 
 interface ApiReply {
   status?: number
@@ -23,7 +70,8 @@ export function takeUnexpectedApiCalls(): string[] {
 /**
  * Stub `fetch` for the API: keys are `'GET /decks'` style (method + path after
  * `/api`, query ignored), values a reply (status, JSON body, headers) or a
- * function of the parsed JSON body and URL. A request nothing matches fails the
+ * function of the parsed JSON body and URL. An error's body is best written
+ * with {@link problem}. A request nothing matches fails the
  * test, so a spec states every call its component makes. Returns the mock, to
  * inspect the calls.
  */
@@ -46,11 +94,15 @@ export function stubApi(handlers: Record<string, ApiHandler>): Mock {
       body = null,
       headers = {},
     } = typeof handler === 'function' ? handler(sent, url) : handler
-    return status === 204 || body === null
+    const payload =
+      body instanceof ProblemStub ? problemBody(status, body.detail, body.members) : body
+    // Errors come as problem details, as the API sends them.
+    const contentType = status >= 400 ? 'application/problem+json' : 'application/json'
+    return status === 204 || payload === null
       ? new Response(null, { status, headers })
-      : new Response(JSON.stringify(body), {
+      : new Response(JSON.stringify(payload), {
           status,
-          headers: { 'Content-Type': 'application/json', ...headers },
+          headers: { 'Content-Type': contentType, ...headers },
         })
   })
   vi.stubGlobal('fetch', mock)

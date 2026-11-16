@@ -12,10 +12,25 @@ namespace Tarot\Utility;
  * Cloudflare stamps the nonce it finds in this header onto what it injects. Our
  * own code needs none: the app is one external module script.
  *
+ * Styles are 'self' and the same nonce — never 'unsafe-inline'. The app's own CSS
+ * is external files; the shell's boot-loader <style> carries the nonce (stampNonce()),
+ * and so do the <style> elements code adds at run time (TipTap's editor styles, the
+ * scrollbar rules of Reka UI's select and combobox lists), which read it from the
+ * shell's <meta property="csp-nonce">. Style bindings (Vue's :style, Reka UI's
+ * positioning) go through the CSSOM, which the policy doesn't govern; a style=""
+ * attribute in parsed HTML is refused.
+ *
  * /api/docs sends its own, narrower policy (Routes\Internal\ApiDocsController).
  */
 final class ContentSecurityPolicy
 {
+    /**
+     * What the built index.html carries in each nonce="" attribute (Vite's
+     * html.cspNonce, frontend/vite.config.ts) until stampNonce() puts the response's
+     * nonce there.
+     */
+    public const string NONCE_PLACEHOLDER = '__CSP_NONCE__';
+
     /** A fresh nonce for one response: 128 random bits, base64. */
     public static function nonce(): string
     {
@@ -27,8 +42,7 @@ final class ContentSecurityPolicy
         return implode('; ', [
             "default-src 'self'",
             "script-src 'self' 'nonce-{$nonce}' https://challenges.cloudflare.com https://static.cloudflareinsights.com",
-            // Inline styles are allowed: Vue, Reka UI, FontAwesome and Turnstile set them.
-            "style-src 'self' 'unsafe-inline'",
+            "style-src 'self' 'nonce-{$nonce}'",
             "font-src 'self'",
             "img-src 'self' data:",
             // Turnstile; the analytics beacon reports to our own /cdn-cgi/rum.
@@ -41,6 +55,14 @@ final class ContentSecurityPolicy
             "frame-ancestors 'none'",
             "object-src 'none'",
         ]);
+    }
+
+    /** The shell with the response's nonce in every nonce="" attribute the build left for it. */
+    public static function stampNonce(string $html, string $nonce): string
+    {
+        $attribute = static fn(string $value): string => 'nonce="' . htmlspecialchars($value, ENT_QUOTES) . '"';
+
+        return str_replace($attribute(self::NONCE_PLACEHOLDER), $attribute($nonce), $html);
     }
 
     /**

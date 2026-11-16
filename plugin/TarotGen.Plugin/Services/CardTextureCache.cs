@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
+using TarotGen.Plugin.Windows;
 
 namespace TarotGen.Plugin.Services;
 
@@ -12,7 +13,7 @@ namespace TarotGen.Plugin.Services;
 /// thread; <see cref="GetCard"/>/<see cref="GetCardBack"/> return null until a
 /// load finishes, so <c>Draw()</c> shows a placeholder meanwhile.
 /// </summary>
-public sealed class CardTextureCache : IDisposable
+public sealed class CardTextureCache : ICardTextures, IDisposable
 {
     private readonly HttpClient http;
     private readonly ITextureProvider textures;

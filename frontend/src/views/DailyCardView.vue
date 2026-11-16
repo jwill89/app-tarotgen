@@ -538,7 +538,7 @@ onMounted(() => {
 
 .daily-calendar__nav:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 35%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 .daily-calendar__nav:disabled {
@@ -607,7 +607,7 @@ onMounted(() => {
 
 .daily-calendar__day.is-drawn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 35%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 /* Drawn, but its reading is gone: the gold edge of a drawn day, broken, and

@@ -53,20 +53,27 @@ tasks:
     desc: Build the FFXIV plugin in Release against this machine's Dalamud (XIVLauncher)
     cmds:
       - dotnet build plugin/TarotGen.Plugin/TarotGen.Plugin.csproj --configuration Release
+      - dotnet build plugin/TarotGen.Plugin.Preview/TarotGen.Plugin.Preview.csproj --configuration Release
+
+  preview:plugin:
+    desc: Draw each of the plugin's windows to a picture in plugin/previews, with stand-in data and no game (-- <folder> <font scale> to change either)
+    cmds:
+      - dotnet run --project plugin/TarotGen.Plugin.Preview/TarotGen.Plugin.Preview.csproj -- {{.CLI_ARGS}}
 
   test:
-    desc: Run every test - Vitest, PHPUnit, then the Playwright smoke run
+    desc: Run every test - Vitest, PHPUnit, the plugin's, then the Playwright suite
     aliases: [tests]
     cmds:
       - task: test:unit
       - task: test:e2e
 
   test:unit:
-    desc: Run the frontend (Vitest) and backend (PHPUnit) tests
+    desc: Run the frontend (Vitest), backend (PHPUnit) and plugin (xUnit) tests
     aliases: [tests:unit]
     cmds:
       - task: test:frontend
       - task: test:backend
+      - task: test:plugin
 
   test:frontend:
     desc: Run the frontend's Vitest tests
@@ -82,6 +89,14 @@ tasks:
     cmds:
       - composer test
 
+  # From plugin/, where global.json selects Microsoft.Testing.Platform, which xUnit v3 runs on.
+  test:plugin:
+    desc: Run the plugin's tests (everything in Core/, with no Dalamud)
+    aliases: [tests:plugin]
+    dir: plugin
+    cmds:
+      - dotnet test --project TarotGen.Plugin.Tests
+
   test:e2e:
     desc: Run the Playwright suite (it builds the SPA) on the real API, on a throwaway database
     aliases: [tests:e2e, test:smoke, tests:smoke]
@@ -89,16 +104,36 @@ tasks:
     cmds:
       - npm run test:e2e
 
+  # The floors CI holds: Vitest's thresholds in frontend/vite.config.ts, and PHPUnit's line
+  # and method floors in backend/composer.json's test:coverage (Xdebug or pcov locally).
+  test:coverage:
+    desc: Run the Vitest and PHPUnit tests with coverage, failing below CI's floors
+    cmds:
+      - cd frontend && npm run test:coverage
+      - cd backend && composer test:coverage
+
+  # The committed OpenAPI spec is what the PHP attributes make, and the frontend's API types
+  # are what that spec makes.
+  generate:check:
+    desc: Fail if backend/openapi.json or frontend/src/types/api.generated.ts differs from what the code generates
+    cmds:
+      - cd backend && composer docs:check
+      - cd frontend && npm run gen:check
+
+  web:specs:
+    desc: Type-check the frontend's Vitest specs under its tsconfig.vitest.json, as CI does
+    cmds:
+      - task: shared:web:specs
+        vars: { DIR: frontend }
+
   lint:
-    desc: Lint, format-check, type-check, and statically analyse everything
+    desc: Lint, format-check, type-check, and statically analyse everything, the shared docs checks included
     cmds:
       - task: lint:frontend
       - task: lint:backend
       - task: lint:plugin
       - task: lint:scripts
-      - task: shared:lint:md
-      - task: shared:repo:check
-      - task: shared:version:check
+      - task: shared:docs:check
 
   lint:frontend:
     dir: frontend
@@ -117,12 +152,12 @@ tasks:
       - composer lint
       - composer rector:check
       - composer stan
-      # The committed openapi.json must be what the PHP attributes generate.
-      - composer docs:check
 
   lint:plugin:
     cmds:
       - dotnet format plugin/TarotGen.Plugin/TarotGen.Plugin.csproj --verify-no-changes
+      - dotnet format plugin/TarotGen.Plugin.Tests/TarotGen.Plugin.Tests.csproj --verify-no-changes
+      - dotnet format plugin/TarotGen.Plugin.Preview/TarotGen.Plugin.Preview.csproj --verify-no-changes
 
   # PSScriptAnalyzer, with the shared settings, on every tracked script (the local
   # deploy.config.ps1 is untracked). Install it once with
@@ -132,21 +167,25 @@ tasks:
       - task: shared:lint:scripts
 
   vuln:
-    desc: Check dependencies for known vulnerabilities
+    desc: Check dependencies for known vulnerabilities (Composer, npm's shipped packages, and OSV-Scanner over every lockfile and requirements file)
     cmds:
       - cd backend && composer audit
       - cd frontend && npm audit --audit-level=high --omit=dev
       - task: shared:vuln
 
+  # Everything CI runs. The generated files are checked first, since gen:check rewrites the
+  # frontend's API types that the type-check reads; then the steps that don't depend on each
+  # other run at once, each line prefixed with its task; then the end-to-end suite, which
+  # builds the SPA.
   check:
-    desc: Lint, audit, and run every test (CI also checks the generated files and coverage floors)
+    desc: Everything CI runs - the generated files, lint and the docs checks, the specs' type-check, every test with its coverage floor, the audits, then the end-to-end suite
     cmds:
-      # The steps that don't depend on each other run at once, each line prefixed with
-      # its task.
-      - task --parallel --output prefixed lint vuln test
+      - task: generate:check
+      - task --parallel --output prefixed lint web:specs test:coverage test:plugin vuln
+      - task: test:e2e
 
   push:
-    desc: Take the in-range updates Dependabot would open, scan for advisories, run task check, then push (-- -Yes, -SkipUpdates, -SkipCheck)
+    desc: Take the in-range updates Dependabot would open, then push and follow CI to its verdict (CI does the checking; run task check first)
     interactive: true
     cmds:
       - task: shared:push

@@ -48,6 +48,30 @@ final class ContentSecurityPolicyTest extends TestCase
         $this->assertStringNotContainsString('unsafe-eval', $d['script-src']);
     }
 
+    public function testStylesAllowTheNonceButNeverInline(): void
+    {
+        $d = self::directives(ContentSecurityPolicy::forShell('abc123=='));
+
+        $this->assertSame("'self' 'nonce-abc123=='", $d['style-src']);
+        $this->assertArrayNotHasKey('style-src-attr', $d);
+        $this->assertArrayNotHasKey('style-src-elem', $d);
+    }
+
+    public function testTheResponsesNonceReplacesEveryPlaceholderTheBuildLeft(): void
+    {
+        $placeholder = 'nonce="' . ContentSecurityPolicy::NONCE_PLACEHOLDER . '"';
+        $shell = "<style {$placeholder}>a{}</style><meta property=\"csp-nonce\" {$placeholder}>"
+            . "<script type=\"module\" src=\"/_app/index.js\" {$placeholder}></script>"
+            . '<p>' . ContentSecurityPolicy::NONCE_PLACEHOLDER . '</p>';
+
+        $this->assertSame(
+            '<style nonce="abc+/123==">a{}</style><meta property="csp-nonce" nonce="abc+/123==">'
+                . '<script type="module" src="/_app/index.js" nonce="abc+/123=="></script>'
+                . '<p>' . ContentSecurityPolicy::NONCE_PLACEHOLDER . '</p>',
+            ContentSecurityPolicy::stampNonce($shell, 'abc+/123==')
+        );
+    }
+
     public function testAllowsExactlyTheThirdPartiesThePagesUse(): void
     {
         $d = self::directives(ContentSecurityPolicy::forShell('n'));

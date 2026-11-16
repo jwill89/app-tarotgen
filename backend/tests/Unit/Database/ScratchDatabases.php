@@ -44,6 +44,12 @@ trait ScratchDatabases
         return (string) file_get_contents(dirname(__DIR__, 3) . '/db/schema.sql');
     }
 
+    /** The schema the baseline froze: what production held before any migration ran. */
+    private function baselineSql(): string
+    {
+        return (string) file_get_contents(dirname(__DIR__, 3) . '/db/migrations/20261106000000_baseline.sql');
+    }
+
     private function execute(string $path, string $sql): void
     {
         new PDO('sqlite:' . $path)->exec($sql);

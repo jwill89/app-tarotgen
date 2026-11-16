@@ -89,19 +89,19 @@ final class AdminCardReportsTest extends HttpTestCase
 
     public function testAReportIdThatIsNotAPositiveNumberIsRefused(): void
     {
-        $invalid = ['error' => 'Invalid report ID'];
+        $invalid = 'Invalid report ID';
 
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->request('PATCH', '/admin/card-reports/0', ['resolved' => true])));
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->request('PATCH', '/admin/card-reports/all', ['resolved' => true])));
+        $this->assertSame($invalid, $this->assertProblem(422, $this->request('PATCH', '/admin/card-reports/0', ['resolved' => true])));
+        $this->assertSame($invalid, $this->assertProblem(422, $this->request('PATCH', '/admin/card-reports/all', ['resolved' => true])));
     }
 
     public function testAReportThatDoesNotExistIsNotFound(): void
     {
         $this->reportId(1, 'The Magician');
-        $notFound = ['error' => 'Report not found'];
+        $notFound = 'Report not found';
 
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('PATCH', '/admin/card-reports/999', ['resolved' => true])));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('PATCH', '/admin/card-reports/999', [])));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->request('PATCH', '/admin/card-reports/999', ['resolved' => true])));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->request('PATCH', '/admin/card-reports/999', [])));
         $this->assertSame([['resolved_at' => null]], $this->rows('SELECT resolved_at FROM card_reports'));
     }
 
@@ -110,8 +110,8 @@ final class AdminCardReportsTest extends HttpTestCase
         $id = $this->reportId(1, 'The Magician');
         $this->signInAs($this->createUser('reader@example.test')->user_id);
 
-        $this->assertJsonResponse(401, $this->get('/admin/card-reports'));
-        $this->assertJsonResponse(401, $this->request('PATCH', "/admin/card-reports/{$id}", ['resolved' => true]));
+        $this->assertProblem(403, $this->get('/admin/card-reports'));
+        $this->assertProblem(403, $this->request('PATCH', "/admin/card-reports/{$id}", ['resolved' => true]));
         $this->assertSame([['resolved_at' => null]], $this->rows('SELECT resolved_at FROM card_reports'));
     }
 

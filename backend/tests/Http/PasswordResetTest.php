@@ -27,7 +27,7 @@ use Tarot\Utility\AfterResponse;
 final class PasswordResetTest extends HttpTestCase
 {
     private const string EMAIL = 'reader@example.test';
-    private const array REFUSED = ['error' => 'This reset link is invalid or has expired.'];
+    private const string REFUSED = 'This reset link is invalid or has expired.';
 
     private string $password;
 
@@ -130,10 +130,10 @@ final class PasswordResetTest extends HttpTestCase
         $this->assertDocumented('post', '/auth/reset-password', 200, $reset);
         $this->assertSame(['success' => true, 'message' => 'Your password has been updated. You can now log in.'], $reset);
 
-        $this->assertJsonResponse(401, $this->signIn($this->password));
+        $this->assertProblem(401, $this->signIn($this->password));
         $this->assertJsonResponse(200, $this->signIn($newPassword));
 
-        $this->assertSame(self::REFUSED, $this->assertJsonResponse(400, $this->reset($token, 'another-' . $this->password)));
+        $this->assertSame(self::REFUSED, $this->assertProblem(422, $this->reset($token, 'another-' . $this->password)));
         $this->assertJsonResponse(200, $this->signIn($newPassword));
     }
 
@@ -154,14 +154,14 @@ final class PasswordResetTest extends HttpTestCase
 
         $this->assertJsonResponse(200, $this->reset($this->resetToken(), 'new-' . $this->password));
 
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
         $this->useSessionCookie($laptop);
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
         $this->useSessionCookie($someoneElse);
         $this->assertJsonResponse(200, $this->get('/auth/me'));
-        // A linked plugin is revoked under Connected Apps, not by this.
+        // Every linked plugin's token is revoked with the old password.
         $this->useSessionCookie(null);
-        $this->assertJsonResponse(200, $this->get('/account/readings', ['Authorization' => "Bearer {$plugin}"]));
+        $this->assertProblem(401, $this->get('/account/readings', ['Authorization' => "Bearer {$plugin}"]));
     }
 
     public function testATooWeakPasswordIsRefusedAndTheLinkStillWorks(): void
@@ -170,16 +170,16 @@ final class PasswordResetTest extends HttpTestCase
         $token = $this->resetToken();
 
         $this->assertSame(
-            ['error' => 'Password must be at least 12 characters long. A memorable passphrase works well.'],
-            $this->assertJsonResponse(422, $this->reset($token, 'short'))
+            'Password must be at least 12 characters long. A memorable passphrase works well.',
+            $this->assertProblem(422, $this->reset($token, 'short'))
         );
         $this->assertSame(
-            ['error' => 'That password is too common. Please choose a less predictable password.'],
-            $this->assertJsonResponse(422, $this->reset($token, 'Password1234'))
+            'That password is too common. Please choose a less predictable password.',
+            $this->assertProblem(422, $this->reset($token, 'Password1234'))
         );
         $this->assertSame(
-            ['error' => 'Password cannot be only whitespace.'],
-            $this->assertJsonResponse(422, $this->reset($token, str_repeat(' ', 16)))
+            'Password cannot be only whitespace.',
+            $this->assertProblem(422, $this->reset($token, str_repeat(' ', 16)))
         );
 
         $this->assertJsonResponse(200, $this->reset($token, 'new-' . $this->password));
@@ -189,8 +189,8 @@ final class PasswordResetTest extends HttpTestCase
     {
         $this->createUserWithPassword();
 
-        $this->assertSame(self::REFUSED, $this->assertJsonResponse(400, $this->post('/auth/reset-password')));
-        $this->assertSame(self::REFUSED, $this->assertJsonResponse(400, $this->reset(str_repeat('ab', 32), 'short')));
+        $this->assertSame(self::REFUSED, $this->assertProblem(422, $this->post('/auth/reset-password')));
+        $this->assertSame(self::REFUSED, $this->assertProblem(422, $this->reset(str_repeat('ab', 32), 'short')));
         $this->assertJsonResponse(200, $this->signIn($this->password));
     }
 
@@ -198,9 +198,9 @@ final class PasswordResetTest extends HttpTestCase
     {
         $this->createUserWithPassword();
         $token = $this->resetToken();
-        $this->db->exec("UPDATE user_tokens SET expires_at = '2000-01-01 00:00:00'");
+        $this->db->exec("UPDATE user_tokens SET expires_at = '2000-01-01T00:00:00Z'");
 
-        $this->assertSame(self::REFUSED, $this->assertJsonResponse(400, $this->reset($token, 'new-' . $this->password)));
+        $this->assertSame(self::REFUSED, $this->assertProblem(422, $this->reset($token, 'new-' . $this->password)));
         $this->assertJsonResponse(200, $this->signIn($this->password));
     }
 
@@ -210,7 +210,7 @@ final class PasswordResetTest extends HttpTestCase
         $first = $this->resetToken();
         $second = $this->resetToken();
 
-        $this->assertSame(self::REFUSED, $this->assertJsonResponse(400, $this->reset($first, 'new-' . $this->password)));
+        $this->assertSame(self::REFUSED, $this->assertProblem(422, $this->reset($first, 'new-' . $this->password)));
         $this->assertJsonResponse(200, $this->reset($second, 'new-' . $this->password));
     }
 
@@ -233,8 +233,8 @@ final class PasswordResetTest extends HttpTestCase
         }
 
         $this->assertSame(
-            ['error' => 'Too many requests. Please try again later.'],
-            $this->assertJsonResponse(429, $this->forgot(self::EMAIL))
+            'Too many requests. Please try again later.',
+            $this->assertProblem(429, $this->forgot(self::EMAIL))
         );
         $this->assertSame(0, $this->rowCount('user_tokens'));
     }

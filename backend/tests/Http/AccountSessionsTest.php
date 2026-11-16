@@ -56,7 +56,7 @@ final class AccountSessionsTest extends HttpTestCase
         // A copy of its old cookie, the phone and the laptop are signed out.
         foreach ([$here, $phone, $laptop] as $cookie) {
             $this->useSessionCookie($cookie);
-            $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->get('/auth/me')));
+            $this->assertSame('Not authenticated', $this->assertProblem(401, $this->get('/auth/me')));
         }
         $this->assertCount(1, $this->rows("SELECT 1 FROM sessions WHERE user_id = {$this->userId}"));
         // Someone else's session is theirs.
@@ -113,7 +113,7 @@ final class AccountSessionsTest extends HttpTestCase
 
         $refused = $this->post('/account/sessions/end-others', [], ['Authorization' => "Bearer {$token}"]);
 
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $refused));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $refused));
         $this->useSessionCookie($here);
         $this->assertJsonResponse(200, $this->get('/auth/me'));
     }

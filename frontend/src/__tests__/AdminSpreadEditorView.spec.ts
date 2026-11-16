@@ -3,7 +3,7 @@ import { flushPromises } from '@vue/test-utils'
 import { RouterView, type Router } from 'vue-router'
 import SpreadEditorView from '@/views/admin/SpreadEditorView.vue'
 import { useUser } from '@/composables/useUser'
-import { cleanup, stubApi, signIn, testUser, testWebRouter, lazyLoad } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, testWebRouter, lazyLoad, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -186,7 +186,7 @@ describe('admin SpreadEditorView', () => {
     it('stays in the editor and says the save failed when the server refuses it', async () => {
       stubApi({
         ...editing,
-        'PUT /admin/spreads/1': { status: 404, body: { error: 'Spread not found' } },
+        'PUT /admin/spreads/1': { status: 404, body: problem('Spread not found') },
       })
       const { router } = await mountPage(SpreadEditorView, { path: '/admin/spreads/1/edit' })
 
@@ -202,7 +202,7 @@ describe('admin SpreadEditorView', () => {
     it('says there is no such spread, with the way back, for an unknown id', async () => {
       stubApi({
         'GET /admin/spread-categories': { body: categories },
-        'GET /admin/spreads/99': { status: 404, body: { error: 'Spread not found' } },
+        'GET /admin/spreads/99': { status: 404, body: problem('Spread not found') },
       })
       await mountPage(SpreadEditorView, { path: '/admin/spreads/99/edit' })
 
@@ -228,7 +228,7 @@ describe('admin SpreadEditorView', () => {
     it("says why when the spread couldn't be loaded", async () => {
       stubApi({
         'GET /admin/spread-categories': { body: categories },
-        'GET /admin/spreads/1': { status: 500, body: { error: 'The database is busy.' } },
+        'GET /admin/spreads/1': { status: 500, body: problem('The database is busy.') },
       })
       await mountPage(SpreadEditorView, { path: '/admin/spreads/1/edit' })
 
@@ -241,7 +241,7 @@ describe('admin SpreadEditorView', () => {
     })
 
     it('drops to the login page when the session has expired', async () => {
-      const expired = { status: 401, body: { error: 'Unauthorized' } }
+      const expired = { status: 401, body: problem('Unauthorized') }
       stubApi({ 'GET /admin/spread-categories': expired, 'GET /admin/spreads/1': expired })
       const { router } = await mountPage(SpreadEditorView, { path: '/admin/spreads/1/edit' })
 

@@ -41,7 +41,7 @@ final class AdminReadingsTest extends HttpTestCase
 
     public function testDeletingAReadingThatIsGoneIsNotFound(): void
     {
-        $this->assertSame(['error' => 'Reading not found'], $this->assertJsonResponse(404, $this->request('DELETE', '/admin/readings/nosuch0001')));
+        $this->assertSame('Reading not found', $this->assertProblem(404, $this->request('DELETE', '/admin/readings/nosuch0001')));
     }
 
     public function testThePurgeRemovesOnlyGuestReadingsPastTheWindow(): void
@@ -63,10 +63,10 @@ final class AdminReadingsTest extends HttpTestCase
     public function testThePurgeOnlyTakesAnAllowedWindow(): void
     {
         $this->reading('guestold01', daysAgo: 45);
-        $invalid = ['error' => 'Invalid day range.'];
+        $invalid = 'Invalid day range.';
 
         foreach (['', '?older_than_days=1', '?older_than_days=31', '?older_than_days=-7', '?older_than_days=week'] as $query) {
-            $this->assertSame($invalid, $this->assertJsonResponse(400, $this->request('DELETE', "/admin/readings/all{$query}")), $query);
+            $this->assertSame($invalid, $this->assertProblem(422, $this->request('DELETE', "/admin/readings/all{$query}")), $query);
         }
         $this->assertSame(1, $this->rowCount('readings'));
     }
@@ -87,9 +87,9 @@ final class AdminReadingsTest extends HttpTestCase
         $this->reading('guestold01', daysAgo: 400);
         $this->signInAs($this->ownerId);
 
-        $this->assertJsonResponse(401, $this->get('/admin/readings'));
-        $this->assertJsonResponse(401, $this->request('DELETE', '/admin/readings/all?older_than_days=7'));
-        $this->assertJsonResponse(401, $this->request('DELETE', '/admin/readings/guestold01'));
+        $this->assertProblem(403, $this->get('/admin/readings'));
+        $this->assertProblem(403, $this->request('DELETE', '/admin/readings/all?older_than_days=7'));
+        $this->assertProblem(403, $this->request('DELETE', '/admin/readings/guestold01'));
         $this->assertSame(1, $this->rowCount('readings'));
     }
 

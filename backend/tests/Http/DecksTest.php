@@ -73,9 +73,9 @@ final class DecksTest extends HttpTestCase
     {
         $response = $this->get('/decks/999');
 
-        $this->assertSame(['error' => 'InvalidDeckID'], $this->assertJsonResponse(404, $response));
+        $this->assertSame('InvalidDeckID', $this->assertProblem(404, $response));
         $this->assertSame('', $response->getHeaderLine('Cache-Control'));
-        $this->assertSame(['error' => 'InvalidDeckID'], $this->assertJsonResponse(404, $this->get('/decks/999/cards')));
+        $this->assertSame('InvalidDeckID', $this->assertProblem(404, $this->get('/decks/999/cards')));
     }
 
     public function testAPendingDeckLooksToAVisitorExactlyLikeOneThatDoesNotExist(): void
@@ -84,7 +84,7 @@ final class DecksTest extends HttpTestCase
 
         foreach (['', '/cards'] as $suffix) {
             $unknown = $this->asSeenByANewBrowser("/decks/999{$suffix}");
-            $this->assertSame([404, '{"error":"InvalidDeckID"}', ''], array_slice($unknown, 0, 3));
+            $this->assertSame([404, '{"type":"about:blank","title":"Not Found","status":404,"detail":"InvalidDeckID"}', ''], array_slice($unknown, 0, 3));
             // Down to the session: the admin check starts one for both, or a
             // cookie would tell a pending id from a free one.
             $this->assertSame($unknown, $this->asSeenByANewBrowser("/decks/{$pending->deck_id}{$suffix}"), $suffix);
@@ -92,7 +92,7 @@ final class DecksTest extends HttpTestCase
 
         $this->signInAs($this->createUser('reader@example.test')->user_id);
         foreach (['', '/cards'] as $suffix) {
-            $this->assertSame(['error' => 'InvalidDeckID'], $this->assertJsonResponse(404, $this->get("/decks/{$pending->deck_id}{$suffix}")));
+            $this->assertSame('InvalidDeckID', $this->assertProblem(404, $this->get("/decks/{$pending->deck_id}{$suffix}")));
         }
     }
 
@@ -136,7 +136,7 @@ final class DecksTest extends HttpTestCase
         // Revoked mid-session: the same session no longer sees it.
         $this->service(UserRepository::class)->setAdmin($admin->user_id, false);
 
-        $this->assertJsonResponse(404, $this->get("/decks/{$pending->deck_id}"));
+        $this->assertProblem(404, $this->get("/decks/{$pending->deck_id}"));
     }
 
     public function testADecksCardListHasItsSystemsCardsThenItsExtras(): void
@@ -160,7 +160,7 @@ final class DecksTest extends HttpTestCase
 
     public function testSubmittingADeckNeedsASignedInAccount(): void
     {
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->post('/decks', ['name' => 'Mine', 'artist' => 'Me'])));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->post('/decks', ['name' => 'Mine', 'artist' => 'Me'])));
         $this->assertSame(0, $this->rowCount('decks'));
     }
 
@@ -170,7 +170,7 @@ final class DecksTest extends HttpTestCase
         $this->signInAs($gone->user_id);
         $this->service(UserRepository::class)->delete($gone->user_id);
 
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->post('/decks', ['name' => 'Spam', 'artist' => 'Spammer'])));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->post('/decks', ['name' => 'Spam', 'artist' => 'Spammer'])));
         $this->assertSame(0, $this->rowCount('decks'));
     }
 
@@ -208,10 +208,10 @@ final class DecksTest extends HttpTestCase
     public function testADeckNeedsANameAndAnArtist(): void
     {
         $this->signInAs($this->createUser('maker@example.test')->user_id);
-        $required = ['error' => 'Name and Artist are required.'];
+        $required = 'Name and Artist are required.';
 
-        $this->assertSame($required, $this->assertJsonResponse(400, $this->post('/decks', ['name' => 'Thoth'])));
-        $this->assertSame($required, $this->assertJsonResponse(400, $this->post('/decks', ['name' => '  ', 'artist' => 'Harris'])));
+        $this->assertSame($required, $this->assertProblem(422, $this->post('/decks', ['name' => 'Thoth'])));
+        $this->assertSame($required, $this->assertProblem(422, $this->post('/decks', ['name' => '  ', 'artist' => 'Harris'])));
         $this->assertSame(0, $this->rowCount('decks'));
     }
 
@@ -221,8 +221,8 @@ final class DecksTest extends HttpTestCase
         $this->signInAs($this->createUser('maker@example.test')->user_id);
 
         $this->assertSame(
-            ['error' => 'A deck with that name already exists.'],
-            $this->assertJsonResponse(409, $this->post('/decks', ['name' => 'Thoth', 'artist' => 'Someone else']))
+            'A deck with that name already exists.',
+            $this->assertProblem(409, $this->post('/decks', ['name' => 'Thoth', 'artist' => 'Someone else']))
         );
         $this->assertSame(1, $this->rowCount('decks'));
     }

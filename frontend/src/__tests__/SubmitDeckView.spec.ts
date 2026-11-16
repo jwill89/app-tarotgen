@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import SubmitDeckView from '@/views/SubmitDeckView.vue'
 import { NETWORK_ERROR_MESSAGE } from '@/composables/apiClient'
-import { cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -70,7 +70,7 @@ describe('SubmitDeckView', () => {
   })
 
   it("says so when the deck systems can't be loaded", async () => {
-    stubApi({ 'GET /deck-systems': { status: 500, body: { error: 'Database error' } } })
+    stubApi({ 'GET /deck-systems': { status: 500, body: problem('Database error') } })
     await mountPage(SubmitDeckView, { path: '/submit-deck' })
 
     expect(errorBox()?.textContent.trim()).toBe(
@@ -140,7 +140,7 @@ describe('SubmitDeckView', () => {
   it("keeps the form and shows the server's reason when the submission is refused", async () => {
     stubApi({
       'GET /deck-systems': { body: systems },
-      'POST /decks': { status: 429, body: { error: 'Too many submissions. Try again later.' } },
+      'POST /decks': { status: 429, body: problem('Too many submissions. Try again later.') },
     })
     await mountPage(SubmitDeckView, { path: '/submit-deck' })
 

@@ -122,7 +122,7 @@ async function doLogout() {
 
 .daily-strip:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 35%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
 }
 
 .daily-strip__icon {

@@ -5,9 +5,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: pushMock }) }))
 
-import { apiFetch, apiRequest, useAdminApi, readApiError } from '@/composables/useApi'
+import { apiFetch, apiRequest, fieldErrors, useAdminApi, readApiError } from '@/composables/useApi'
 import { useUser } from '@/composables/useUser'
 import { useToasts } from '@/composables/useToasts'
+import { problemBody } from './helpers/api'
 
 /** Build a minimal Response-like object for the fetch mock. */
 function fakeResponse(body: unknown, { ok = true, status = 200 } = {}): Response {
@@ -55,17 +56,19 @@ describe('apiRequest', () => {
   it('on an error status returns the server message, status, body, and networkError=false', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(fakeResponse({ error: 'Bad deck' }, { ok: false, status: 400 })),
+      vi
+        .fn()
+        .mockResolvedValue(fakeResponse(problemBody(422, 'Bad deck'), { ok: false, status: 422 })),
     )
 
     const res = await apiRequest('/decks')
 
     expect(res.ok).toBe(false)
     if (!res.ok) {
-      expect(res.status).toBe(400)
+      expect(res.status).toBe(422)
       expect(res.error).toBe('Bad deck')
       expect(res.networkError).toBe(false)
-      expect(res.data).toEqual({ error: 'Bad deck' })
+      expect(res.data).toEqual(problemBody(422, 'Bad deck'))
     }
   })
 
@@ -152,13 +155,18 @@ describe('apiRequest', () => {
 })
 
 describe('readApiError', () => {
-  it('extracts the server error message', async () => {
-    const res = new Response(JSON.stringify({ error: 'Bad deck' }), { status: 400 })
+  it("extracts the problem's detail", async () => {
+    const res = new Response(JSON.stringify(problemBody(422, 'Bad deck')), { status: 422 })
     expect(await readApiError(res, 'fallback')).toBe('Bad deck')
   })
 
-  it('falls back when there is no error field', async () => {
+  it('falls back when there is no detail', async () => {
     const res = new Response(JSON.stringify({ ok: true }), { status: 500 })
+    expect(await readApiError(res, 'fallback')).toBe('fallback')
+  })
+
+  it('falls back for a body that is not problem details', async () => {
+    const res = new Response(JSON.stringify({ error: 'Bad deck' }), { status: 422 })
     expect(await readApiError(res, 'fallback')).toBe('fallback')
   })
 
@@ -167,9 +175,38 @@ describe('readApiError', () => {
     expect(await readApiError(res, 'fallback')).toBe('fallback')
   })
 
-  it('falls back for a blank error string', async () => {
-    const res = new Response(JSON.stringify({ error: '   ' }), { status: 400 })
+  it('falls back for a blank detail', async () => {
+    const res = new Response(JSON.stringify(problemBody(422, '   ')), { status: 422 })
     expect(await readApiError(res, 'fallback')).toBe('fallback')
+  })
+})
+
+describe('fieldErrors', () => {
+  it("lists a failed validation's fields", () => {
+    const errors = [
+      { message: 'Please enter a valid email address.', location: 'body.email' },
+      { message: 'Name is required.', location: 'body.name' },
+    ]
+
+    expect(fieldErrors(problemBody(422, 'Two fields need fixing.', { errors }))).toEqual(errors)
+  })
+
+  it('is empty for a problem without fields, or a body that is no problem', () => {
+    expect(fieldErrors(problemBody(409, 'That display name is already taken.'))).toEqual([])
+    expect(fieldErrors({ errors: [{ message: 'x', location: 'body' }] })).toEqual([])
+    expect(fieldErrors(null)).toEqual([])
+  })
+
+  it('skips an entry that is not a field error', () => {
+    const body = problemBody(422, 'No.', {
+      errors: [
+        { message: 'Kept.', location: 'body.name' },
+        { message: 'No location.' },
+        'text',
+      ] as never,
+    })
+
+    expect(fieldErrors(body)).toEqual([{ message: 'Kept.', location: 'body.name' }])
   })
 })
 
@@ -277,7 +314,7 @@ describe('useAdminApi', () => {
   it('del returns null when the DELETE fails', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(fakeResponse({ error: 'nope' }, { ok: false, status: 500 })),
+      vi.fn().mockResolvedValue(fakeResponse(problemBody(500, 'nope'), { ok: false, status: 500 })),
     )
     expect(await useAdminApi().del('/decks/5')).toBeNull()
   })
@@ -295,7 +332,9 @@ describe('useAdminApi', () => {
       'fetch',
       vi
         .fn()
-        .mockResolvedValue(fakeResponse({ error: 'Spread not found' }, { ok: false, status: 404 })),
+        .mockResolvedValue(
+          fakeResponse(problemBody(404, 'Spread not found'), { ok: false, status: 404 }),
+        ),
     )
 
     await useAdminApi().get('/spreads/99')
@@ -309,7 +348,9 @@ describe('useAdminApi', () => {
       'fetch',
       vi
         .fn()
-        .mockResolvedValue(fakeResponse({ error: 'Spread not found' }, { ok: false, status: 404 })),
+        .mockResolvedValue(
+          fakeResponse(problemBody(404, 'Spread not found'), { ok: false, status: 404 }),
+        ),
     )
 
     const result = await useAdminApi().getResult('/spreads/99')

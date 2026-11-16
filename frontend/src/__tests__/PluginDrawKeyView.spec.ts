@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import PluginDrawKeyView from '@/views/PluginDrawKeyView.vue'
-import { mountWithApp, cleanup, stubApi, signIn } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, signIn, problem } from './helpers/app'
 
 const text = (el: Element) => el.textContent.replace(/\s+/g, ' ').trim()
 const pageText = () => text(document.body)
@@ -109,8 +109,8 @@ describe('PluginDrawKeyView', () => {
       stubApi({
         ...withTurnstile,
         'POST /plugin/draw-keys/authorize': {
-          status: 400,
-          body: { error: 'Captcha verification failed. Please try again.' },
+          status: 422,
+          body: problem('Captcha verification failed. Please try again.'),
         },
       })
       await mountWithApp(PluginDrawKeyView, { path: keyPath() })
@@ -133,7 +133,7 @@ describe('PluginDrawKeyView', () => {
       ...noTurnstile,
       'POST /plugin/draw-keys/authorize': {
         status: 429,
-        body: { error: 'Too many attempts. Please try again later.' },
+        body: problem('Too many attempts. Please try again later.'),
       },
     })
     await mountWithApp(PluginDrawKeyView, { path: keyPath() })

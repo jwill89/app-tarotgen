@@ -87,7 +87,7 @@ final class DrawKeyServiceTest extends TestCase
     public function testAnExpiredCodeCannotBeRedeemed(): void
     {
         $code = $this->service->createCode(Pkce::challengeFor('verifier'));
-        $this->db->exec("UPDATE plugin_draw_keys SET code_expires_at = datetime('now', '-1 second')");
+        $this->db->exec("UPDATE plugin_draw_keys SET code_expires_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-1 second')");
 
         $this->assertNull($this->service->exchangeCode($code, 'verifier'));
     }
@@ -130,7 +130,7 @@ final class DrawKeyServiceTest extends TestCase
         // The account token table is never consulted, nor this one for an account token.
         $this->assertNull($this->service->resolve('Bearer tg_pat_' . substr($key, strlen(DrawKeyService::KEY_PREFIX))));
 
-        $this->db->exec("UPDATE plugin_draw_keys SET revoked_at = datetime('now')");
+        $this->db->exec("UPDATE plugin_draw_keys SET revoked_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')");
         $this->assertNull($this->service->resolve("Bearer {$key}"));
         $this->assertNull($this->value('SELECT last_used_at FROM plugin_draw_keys'));
     }
@@ -142,8 +142,8 @@ final class DrawKeyServiceTest extends TestCase
         // Issued keys stay whatever their code's expiry, a revoked one included.
         $this->issue();
         $this->issue();
-        $this->db->exec("UPDATE plugin_draw_keys SET code_expires_at = datetime('now', '-1 day') WHERE key_hash IS NOT NULL");
-        $this->db->exec("UPDATE plugin_draw_keys SET revoked_at = datetime('now') WHERE id = (SELECT max(id) FROM plugin_draw_keys)");
+        $this->db->exec("UPDATE plugin_draw_keys SET code_expires_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-1 day') WHERE key_hash IS NOT NULL");
+        $this->db->exec("UPDATE plugin_draw_keys SET revoked_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = (SELECT max(id) FROM plugin_draw_keys)");
         $repository = new DrawKeyRepository($this->data);
 
         $this->assertSame(1, $repository->purgeUnredeemedCodes(dryRun: true));

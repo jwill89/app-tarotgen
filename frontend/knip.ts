@@ -4,8 +4,10 @@ import type { KnipConfig } from 'knip'
 // Its Vite, Vitest and ESLint plugins find the entry points; these are the cases
 // it can't see by itself.
 const config: KnipConfig = {
-  // Registered by URL in main.ts (navigator.serviceWorker.register), never imported.
-  entry: ['public/sw.js'],
+  // Loaded by URL, never imported: the service worker by main.ts
+  // (navigator.serviceWorker.register), the API reference's start-up script by the
+  // page /api/docs sends.
+  entry: ['public/sw.js', 'public/swagger-ui/api-docs.js'],
   ignore: [
     // Generated from backend/openapi.json; its unused exports are the generator's.
     'src/types/api.generated.ts',

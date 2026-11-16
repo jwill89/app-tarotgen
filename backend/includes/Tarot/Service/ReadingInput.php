@@ -16,10 +16,13 @@ use Tarot\Utility\Input;
  * expiry, and My Readings' filters. Drawing a reading (ReadingService) and
  * editing one (PATCH /account/readings/{id}) take the same rules from here.
  *
- * Stateless; a refusal is an ApiException with a message the reader can act on.
+ * Stateless; a refusal is an ApiException (422) with a message the reader can
+ * act on, naming the field it refused.
  */
 final class ReadingInput
 {
+    public const int NAME_MAX = 100;
+    public const int NOTES_MAX = 20000;
     public const int QUESTION_MAX = 500;
     public const int QUERENT_MAX = 100;
     public const int TAG_MAX = 30;
@@ -34,21 +37,38 @@ final class ReadingInput
     private const int SEARCH_MAX = 100;
 
     /**
-     * The longest spread name the filter keeps: a personal spread's name may be
+     * The longest spread name the filter takes: a personal spread's name may be
      * 200 characters (UserSpreadData), and a reading records it whole, so a
-     * shorter cap would cut the name GET /account/reading-spreads offers and
-     * find nothing.
+     * shorter limit would refuse a name GET /account/reading-spreads offers.
      */
     private const int SPREAD_NAME_MAX = 200;
 
-    public static function question(mixed $value): ?string
+    /** @throws ApiException Over NAME_MAX characters. */
+    public static function name(mixed $value): ?string
     {
-        return Input::nullableString(is_scalar($value) ? $value : null, self::QUESTION_MAX);
+        return Input::nullableText($value, self::NAME_MAX, 'body.reading_name');
     }
 
+    /**
+     * Notes keep internal whitespace; only the empty check is trimmed.
+     *
+     * @throws ApiException Over NOTES_MAX characters.
+     */
+    public static function notes(mixed $value): ?string
+    {
+        return Input::nullableText($value, self::NOTES_MAX, 'body.reading_notes', trim: false);
+    }
+
+    /** @throws ApiException Over QUESTION_MAX characters. */
+    public static function question(mixed $value): ?string
+    {
+        return Input::nullableText($value, self::QUESTION_MAX, 'body.question');
+    }
+
+    /** @throws ApiException Over QUERENT_MAX characters. */
     public static function querent(mixed $value): ?string
     {
-        return Input::nullableString(is_scalar($value) ? $value : null, self::QUERENT_MAX);
+        return Input::nullableText($value, self::QUERENT_MAX, 'body.querent');
     }
 
     /**
@@ -69,7 +89,7 @@ final class ReadingInput
         $tags = [];
         foreach ($parts as $part) {
             if (!is_string($part)) {
-                throw new ApiException('Tags must be text.', 400);
+                throw new ApiException('Tags must be text.', 422, location: 'body.tags');
             }
             foreach (explode(',', $part) as $raw) {
                 $tag = self::tag($raw);
@@ -77,14 +97,14 @@ final class ReadingInput
                     continue;
                 }
                 if (mb_strlen($tag) > self::TAG_MAX) {
-                    throw new ApiException('A tag can be at most ' . self::TAG_MAX . " characters: \"{$tag}\".", 400);
+                    throw new ApiException('A tag can be at most ' . self::TAG_MAX . " characters: \"{$tag}\".", 422, location: 'body.tags');
                 }
                 $tags[$tag] = true;
             }
         }
 
         if (count($tags) > self::TAGS_MAX) {
-            throw new ApiException('A reading can have at most ' . self::TAGS_MAX . ' tags.', 400);
+            throw new ApiException('A reading can have at most ' . self::TAGS_MAX . ' tags.', 422, location: 'body.tags');
         }
 
         return array_map(strval(...), array_keys($tags));
@@ -120,7 +140,7 @@ final class ReadingInput
             $days = (int) $days;
         }
         if (!in_array($days, self::EXPIRY_DAYS, true)) {
-            throw new ApiException('A reading made without an account can be kept for 1, 7 or 30 days, or the usual year.', 400);
+            throw new ApiException('A reading made without an account can be kept for 1, 7 or 30 days, or the usual year.', 422, location: 'body.expires_in_days');
         }
 
         return Clock::in($days * 86400);
@@ -137,7 +157,7 @@ final class ReadingInput
             return null;
         }
         if (!in_array($value, self::VISIBILITIES, true)) {
-            throw new ApiException('Choose who can open the reading: link, password or private.', 400);
+            throw new ApiException('Choose who can open the reading: link, password or private.', 422, location: 'body.visibility');
         }
 
         return $value;
@@ -151,11 +171,10 @@ final class ReadingInput
      * means Password and `remove_password` drops one.
      *
      * @param array<string,mixed> $params
-     * @param int $status The status a password problem is refused with (the edit endpoint answers 422).
      * @return array{is_private?: bool, password_hash?: string|null}
      * @throws ApiException
      */
-    public static function access(array $params, bool $hasPassword = false, int $status = 400): array
+    public static function access(array $params, bool $hasPassword = false): array
     {
         $visibility = self::visibility($params['visibility'] ?? null);
         $password = is_scalar($params['password'] ?? null) ? (string) $params['password'] : '';
@@ -179,10 +198,10 @@ final class ReadingInput
             if ($hasPassword) {
                 return ['is_private' => false];
             }
-            throw new ApiException('Choose a password of at least ' . self::PASSWORD_MIN . ' characters for this reading.', $status);
+            throw new ApiException('Choose a password of at least ' . self::PASSWORD_MIN . ' characters for this reading.', 422, location: 'body.password');
         }
         if (mb_strlen($password) < self::PASSWORD_MIN) {
-            throw new ApiException('Reading password must be at least ' . self::PASSWORD_MIN . ' characters.', $status);
+            throw new ApiException('Reading password must be at least ' . self::PASSWORD_MIN . ' characters.', 422, location: 'body.password');
         }
 
         return ['is_private' => false, 'password_hash' => password_hash($password, AuthService::passwordAlgo())];
@@ -202,34 +221,35 @@ final class ReadingInput
         $text = self::queryString($query, 'q');
         $deckId = self::queryString($query, 'deck_id');
         if ($deckId !== '' && (!ctype_digit($deckId) || (int) $deckId < 1)) {
-            throw new ApiException("deck_id must be a deck's id.", 400);
+            throw new ApiException("deck_id must be a deck's id.", 422, location: 'query.deck_id');
         }
 
         $daily = match (self::queryString($query, 'daily')) {
             ''        => null,
             'only'    => true,
             'exclude' => false,
-            default   => throw new ApiException('daily must be only or exclude.', 400),
+            default   => throw new ApiException('daily must be only or exclude.', 422, location: 'query.daily'),
         };
 
         $tzName = self::queryString($query, 'tz');
         try {
             $zone = new DateTimeZone($tzName === '' ? 'UTC' : $tzName);
         } catch (Exception) {
-            throw new ApiException('tz must be a time zone, such as Europe/London.', 400);
+            throw new ApiException('tz must be a time zone, such as Europe/London.', 422, location: 'query.tz');
         }
         $from = self::localDay($query, 'from', $zone);
         $to = self::localDay($query, 'to', $zone);
         if ($from !== null && $to !== null && $from > $to) {
-            throw new ApiException('from must be on or before to.', 400);
+            throw new ApiException('from must be on or before to.', 422, location: 'query.from');
         }
 
         $utc = new DateTimeZone('UTC');
         $tag = self::tag(self::queryString($query, 'tag'));
-        $spread = Input::string(self::queryString($query, 'spread'), self::SPREAD_NAME_MAX);
+        $spread = Input::text(self::queryString($query, 'spread'), self::SPREAD_NAME_MAX, 'query.spread');
+        $text = Input::text($text, self::SEARCH_MAX, 'query.q');
 
         return new ReadingFilter(
-            text: $text === '' ? null : mb_substr($text, 0, self::SEARCH_MAX),
+            text: $text === '' ? null : $text,
             deckId: $deckId === '' ? null : (int) $deckId,
             spread: $spread === '' ? null : $spread,
             tag: $tag === '' ? null : $tag,
@@ -249,7 +269,7 @@ final class ReadingInput
     {
         $value = $query[$name] ?? '';
         if (!is_string($value)) {
-            throw new ApiException("{$name} must be sent once, as text.", 400);
+            throw new ApiException("{$name} must be sent once, as text.", 422, location: "query.{$name}");
         }
 
         return trim($value);
@@ -270,7 +290,7 @@ final class ReadingInput
 
         $date = DateTimeImmutable::createFromFormat('!Y-m-d', $day, $zone);
         if ($date === false || $date->format('Y-m-d') !== $day) {
-            throw new ApiException("{$name} must be a date, as YYYY-MM-DD.", 400);
+            throw new ApiException("{$name} must be a date, as YYYY-MM-DD.", 422, location: "query.{$name}");
         }
 
         return $date;

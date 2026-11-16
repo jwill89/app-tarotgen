@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Config\Env;
@@ -67,8 +68,9 @@ class UserController extends AbstractController
                     ]
                 )
             ),
-            new OAS\Response(response: 422, description: 'Validation failure, or a display name that is taken'),
-            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
+            new OAS\Response(response: 409, description: 'The display name is taken'),
+            new OAS\Response(response: 422, description: 'Validation failure: each field the rules refuse is listed in `errors`'),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded: 5 sign-ups/IP/hour'),
         ]
     )]
     public function register(Request $request, Response $response): Response|ResponseInterface
@@ -77,7 +79,7 @@ class UserController extends AbstractController
         $ip      = $this->clientIp($request);
 
         if ($limiter->isLimited($ip)) {
-            return $response->withJson(['error' => 'Too many sign-up attempts. Please try again later.'], 429);
+            return Problem::tooManyRequests($response, 'Too many sign-up attempts. Please try again later.', $limiter->retryAfter($ip));
         }
 
         $params      = $this->parsedBody($request);
@@ -89,7 +91,15 @@ class UserController extends AbstractController
 
         if (!$result['ok']) {
             $limiter->hit($ip);
-            return $response->withJson(['errors' => $result['errors'] ?? ['Registration failed.']], 422);
+            $errors = $result['errors'] ?? [];
+            // Each message is a sentence, so together they say everything that's wrong.
+            $detail = $errors === [] ? 'Registration failed.' : implode(' ', $errors);
+
+            return match ($result['reason'] ?? null) {
+                'taken'  => Problem::respond($response, 409, $detail),
+                'failed' => Problem::respond($response, 500, $detail),
+                default  => Problem::respond($response, 422, $detail, self::bodyLocations($errors)),
+            };
         }
 
         $limiter->hit($ip);
@@ -130,7 +140,7 @@ class UserController extends AbstractController
                     ]
                 )
             ),
-            new OAS\Response(response: 400, description: 'Invalid/expired token'),
+            new OAS\Response(response: 422, description: 'Invalid/expired token'),
         ]
     )]
     public function activate(Request $request, Response $response): Response|ResponseInterface
@@ -145,9 +155,7 @@ class UserController extends AbstractController
             ]);
         }
 
-        return $response->withJson([
-            'error' => 'This activation link is invalid or has expired.',
-        ], 400);
+        return Problem::invalid($response, 'body.token', 'This activation link is invalid or has expired.');
     }
 
     #[OAS\Operation\Post(
@@ -171,7 +179,7 @@ class UserController extends AbstractController
                     ]
                 )
             ),
-            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded: 5 requests/IP/hour'),
         ]
     )]
     public function forgotPassword(Request $request, Response $response): Response|ResponseInterface
@@ -180,7 +188,7 @@ class UserController extends AbstractController
         $ip      = $this->clientIp($request);
 
         if ($limiter->isLimited($ip)) {
-            return $response->withJson(['error' => 'Too many requests. Please try again later.'], 429);
+            return Problem::tooManyRequests($response, 'Too many requests. Please try again later.', $limiter->retryAfter($ip));
         }
 
         $params = $this->parsedBody($request);
@@ -235,8 +243,7 @@ class UserController extends AbstractController
                     ]
                 )
             ),
-            new OAS\Response(response: 400, description: 'Invalid/expired token'),
-            new OAS\Response(response: 422, description: 'New password too weak (token not consumed)'),
+            new OAS\Response(response: 422, description: 'Invalid/expired token, or a new password too weak (the token is then not consumed)'),
         ]
     )]
     public function resetPassword(Request $request, Response $response): Response|ResponseInterface
@@ -248,11 +255,11 @@ class UserController extends AbstractController
         $result = $this->auth->resetPassword($token, $password);
 
         if ($result['status'] === 'weak') {
-            return $response->withJson(['error' => $result['error'] ?? 'Password is too weak.'], 422);
+            return Problem::invalid($response, 'body.password', $result['error'] ?? 'Password is too weak.');
         }
 
         if ($result['status'] !== 'ok') {
-            return $response->withJson(['error' => 'This reset link is invalid or has expired.'], 400);
+            return Problem::invalid($response, 'body.token', 'This reset link is invalid or has expired.');
         }
 
         return $response->withJson([
@@ -286,10 +293,10 @@ class UserController extends AbstractController
                     new OAS\Property(property: 'user', schema: new OAS\Schema(ref: '#/components/schemas/User')),
                 ])
             ),
-            new OAS\Response(response: 400, description: 'Captcha failed'),
             new OAS\Response(response: 401, description: 'Invalid credentials (an unknown email, or an account without a password, takes as long to answer as a wrong password)'),
             new OAS\Response(response: 403, description: 'Inactive or password-login disabled'),
-            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
+            new OAS\Response(response: 422, description: 'Captcha failed'),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded: 10 failed attempts/IP/15 minutes'),
         ]
     )]
     public function login(Request $request, Response $response): Response|ResponseInterface
@@ -298,7 +305,7 @@ class UserController extends AbstractController
         $ip      = $this->clientIp($request);
 
         if ($limiter->isLimited($ip)) {
-            return $response->withJson(['error' => 'Too many attempts. Please try again later.'], 429);
+            return Problem::tooManyRequests($response, 'Too many attempts. Please try again later.', $limiter->retryAfter($ip));
         }
 
         $params     = $this->parsedBody($request);
@@ -312,7 +319,7 @@ class UserController extends AbstractController
             $token = (string) ($params['turnstile_token'] ?? '');
             if (!$this->turnstile->verify($token, $ip)) {
                 $limiter->hit($ip);
-                return $response->withJson(['error' => 'Captcha verification failed. Please try again.'], 400);
+                return Problem::invalid($response, 'body.turnstile_token', 'Captcha verification failed. Please try again.');
             }
         }
 
@@ -320,21 +327,17 @@ class UserController extends AbstractController
 
         if ($result['status'] === 'inactive') {
             $limiter->hit($ip);
-            return $response->withJson([
-                'error' => 'Your account is not activated yet. Please use the activation link sent to your email.',
-            ], 403);
+            return Problem::respond($response, 403, 'Your account is not activated yet. Please use the activation link sent to your email.');
         }
 
         if ($result['status'] === 'password_disabled') {
             $limiter->hit($ip);
-            return $response->withJson([
-                'error' => 'Password login is disabled for this account. Please sign in with your passkey or Google.',
-            ], 403);
+            return Problem::respond($response, 403, 'Password login is disabled for this account. Please sign in with your passkey or Google.');
         }
 
         if ($result['status'] !== 'ok' || !isset($result['user'])) {
             $limiter->hit($ip);
-            return $response->withJson(['error' => 'Invalid email or password.'], 401);
+            return Problem::respond($response, 401, 'Invalid email or password.');
         }
 
         $limiter->clear($ip);
@@ -394,16 +397,32 @@ class UserController extends AbstractController
 
         $userId = Session::userId();
         if ($userId === null) {
-            return $response->withJson(['error' => 'Not authenticated'], 401);
+            return Problem::respond($response, 401, 'Not authenticated');
         }
 
         $user = $this->users->findById($userId);
         if ($user === null) {
             // Stale session (account removed) — clear it.
             Session::clearUser();
-            return $response->withJson(['error' => 'Not authenticated'], 401);
+            return Problem::respond($response, 401, 'Not authenticated');
         }
 
         return $response->withJson(['user' => $user]);
+    }
+
+    /**
+     * Each field's message, keyed by where the field was sent.
+     *
+     * @param array<string,string> $errors Keyed by field name.
+     * @return array<string,string>
+     */
+    private static function bodyLocations(array $errors): array
+    {
+        $located = [];
+        foreach ($errors as $field => $message) {
+            $located["body.{$field}"] = $message;
+        }
+
+        return $located;
     }
 }

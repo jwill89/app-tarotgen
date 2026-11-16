@@ -41,6 +41,21 @@ readonly class RateLimiter
         return $entry['count'] >= $this->maxHits;
     }
 
+    /**
+     * Seconds until $key's window ends and its hits stop counting, for a 429's
+     * Retry-After; 0 when it has no window running.
+     */
+    public function retryAfter(string $key): int
+    {
+        $entry = $this->read()[$key] ?? null;
+
+        if ($entry === null) {
+            return 0;
+        }
+
+        return max(0, $entry['first'] + $this->windowSeconds + 1 - time());
+    }
+
     /** Record one hit against $key, starting a fresh window if needed. */
     public function hit(string $key): void
     {

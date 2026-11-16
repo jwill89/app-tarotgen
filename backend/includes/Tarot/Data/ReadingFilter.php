@@ -17,7 +17,7 @@ final readonly class ReadingFilter
      *                            "Free Draw" also matches a free draw that was never placed, as the
      *                            reading page names one.
      * @param string|null $tag    One tag, normalised as stored.
-     * @param string|null $from   Made at or after this UTC time ("Y-m-d H:i:s").
+     * @param string|null $from   Made at or after this UTC time (RFC 3339, as Clock writes it).
      * @param string|null $until  Made before this UTC time.
      * @param bool|null   $daily  true: only daily cards; false: none; null: either.
      */

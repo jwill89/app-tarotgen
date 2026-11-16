@@ -30,6 +30,37 @@ final class Session
     public const int DEFAULT_LIFETIME = 60 * 60 * 24; // 24 hours
 
     /**
+     * The session cookie's name in production. The `__Host-` prefix makes a
+     * browser refuse the cookie unless it is Secure, set for `/` and tied to this
+     * exact host, so no subdomain or plain-HTTP page can plant or read it.
+     */
+    public const string COOKIE_NAME = '__Host-tarotgen';
+
+    /** Its name outside production, where the site runs over plain HTTP and the prefix can't be met. */
+    public const string DEV_COOKIE_NAME = 'tarotgen';
+
+    /**
+     * The session cookie's name and flags, which the bootstrap (public/api/index.php)
+     * applies before any session starts: a session cookie, HttpOnly, SameSite=Lax,
+     * for the whole site, and Secure with the `__Host-` name in production.
+     *
+     * @return array{name: string, params: array{lifetime: int, path: string, httponly: bool, samesite: 'Lax', secure: bool}}
+     */
+    public static function cookieSettings(bool $isProduction): array
+    {
+        return [
+            'name'   => $isProduction ? self::COOKIE_NAME : self::DEV_COOKIE_NAME,
+            'params' => [
+                'lifetime' => 0,
+                'path'     => '/',
+                'httponly' => true,
+                'samesite' => 'Lax',
+                'secure'   => $isProduction,
+            ],
+        ];
+    }
+
+    /**
      * Where sessions are stored, resolved only when one starts. The app hands over
      * its container's PDO (api/app.php), so the HTTP tests, which build the app on
      * an in-memory database, keep their sessions there too.
@@ -88,7 +119,7 @@ final class Session
      * when $persistent is true.
      *
      * session_regenerate_id() sends the new cookie with the params set at
-     * bootstrap (api/index.php: a session cookie, HttpOnly, SameSite=Lax), and
+     * bootstrap (public/api/index.php, from cookieSettings()), and
      * replaces any session cookie already queued this request — e.g. start()'s
      * sliding refresh carrying the old ID. Those params can't be changed here:
      * session_set_cookie_params() is refused once the session is active.

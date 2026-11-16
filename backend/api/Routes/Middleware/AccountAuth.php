@@ -5,6 +5,7 @@ namespace Routes\Middleware;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\RequestHandlerInterface as Handler;
+use Routes\Problem;
 use Slim\Psr7\Response;
 use Tarot\Repository\UserRepository;
 use Tarot\Service\PluginTokenService;
@@ -45,10 +46,6 @@ readonly class AccountAuth
             }
         }
 
-        $response = new Response();
-        $response->getBody()->write(json_encode(['error' => 'Not authenticated'], JSON_THROW_ON_ERROR));
-        return $response
-            ->withStatus(401)
-            ->withHeader('Content-Type', 'application/json');
+        return Problem::respond(new Response(), 401, 'Not authenticated');
     }
 }

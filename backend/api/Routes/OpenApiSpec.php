@@ -13,12 +13,12 @@ use Psr\Log\LoggerInterface;
  * security scheme, and the tag list that groups operations in the reference UI.
  *
  * This carries no runtime behaviour — it exists purely so `composer docs`
- * (swagger-php) can assemble `backend/openapi.json`, which the Scalar page at
+ * (swagger-php) can assemble `backend/openapi.json`, which the Swagger UI page at
  * `GET /api/docs` renders. Per-operation attributes live on the controllers; the
  * response/request schemas are the `#[OA\Schema]`-annotated Structure classes.
  */
 #[OAS\Info(
-    version: '1.0.0',
+    version: '2.0.0',
     title: 'TarotGen.io API',
     description: <<<'MD'
         The backend for **TarotGen.io** — a PHP 8.5 / Slim 4 hybrid-REST API.
@@ -28,8 +28,16 @@ use Psr\Log\LoggerInterface;
           `PATCH` applies a partial update / flag toggle, `DELETE` removes (→`204`).
         - State transitions that aren't a plain field-set are `POST …/{id}/{verb}`
           (e.g. `…/finalize`, `…/approve`, `…/draw`).
-        - Errors are `{ "error": "…" }`; multi-message validation is `{ "errors": […] }`.
-        - Auth is a session cookie (`PHPSESSID`) set by the `/auth/*` endpoints —
+        - Every error is RFC 9457 problem details (`application/problem+json`, the
+          `ProblemDetails` schema), whatever the request's `Accept`: `detail` says
+          why, in words to show the user. A failed validation answers `422` and lists
+          each field it refused in `errors` (`message`, and `location` such as
+          `body.email` or `query.limit`); `400` is only for a body that isn't a JSON
+          object, and for a plugin code exchange's `invalid_grant` (RFC 6749). `401`
+          is not signed in, `403` signed in but not allowed, `404` an
+          unknown id or one the requester may not see, `409` a conflict, and `429` a
+          rate limit, with `Retry-After`.
+        - Auth is a session cookie (`__Host-tarotgen`) set by the `/auth/*` endpoints —
           there are no API keys or bearer tokens for first-party calls.
         MD
 )]
@@ -38,8 +46,8 @@ use Psr\Log\LoggerInterface;
     component: 'sessionCookie',
     type: 'apiKey',
     in: 'cookie',
-    name: 'PHPSESSID',
-    description: 'Session cookie issued on sign-in. Sent automatically by the browser.'
+    name: '__Host-tarotgen',
+    description: 'Session cookie issued on sign-in: HttpOnly, SameSite=Lax, Secure, and bound to this exact host by its `__Host-` prefix. Sent automatically by the browser.'
 )]
 #[OAS\Security\Scheme(
     component: 'pluginToken',
@@ -124,7 +132,7 @@ use Psr\Log\LoggerInterface;
     properties: [
         new OAS\Property(property: 'reading_id', schema: new OAS\Schema(description: 'The code in the reading link.', type: 'string')),
         new OAS\Property(property: 'reading_info', schema: new OAS\Schema(ref: '#/components/schemas/ReadingInfo', description: 'What was drawn.')),
-        new OAS\Property(property: 'reading_time', schema: new OAS\Schema(description: 'When it was made, UTC ("Y-m-d H:i:s").', type: 'string')),
+        new OAS\Property(property: 'reading_time', schema: new OAS\Schema(description: 'When it was made, in UTC.', type: 'string', format: 'date-time', examples: ['2026-11-07T09:18:09Z'])),
         new OAS\Property(property: 'reading_name', schema: new OAS\Schema(description: "The owner's title for it, if any.", type: 'string', nullable: true)),
         new OAS\Property(property: 'reading_notes', schema: new OAS\Schema(description: "The owner's notes (Markdown), if any.", type: 'string', nullable: true)),
         new OAS\Property(property: 'reader', schema: new OAS\Schema(description: '"Guest", or the owner\'s display name unless they chose to hide it.', type: 'string')),
@@ -133,7 +141,7 @@ use Psr\Log\LoggerInterface;
         new OAS\Property(property: 'can_draw_more', schema: new OAS\Schema(description: 'The requester may draw more cards into it: their own, not final, not custom.', type: 'boolean')),
         new OAS\Property(property: 'locked', schema: new OAS\Schema(description: 'Always false here; see LockedReading.', type: 'boolean', enum: [false])),
         new OAS\Property(property: 'visibility', schema: new OAS\Schema(description: 'Who can open it: anyone with the link, anyone with its password, or (private) only its owner.', type: 'string', enum: ['link', 'password', 'private'])),
-        new OAS\Property(property: 'expires_at', schema: new OAS\Schema(description: 'When this guest reading will be deleted, UTC ("Y-m-d H:i:s"), as its maker chose; null for the usual retention.', type: 'string', nullable: true)),
+        new OAS\Property(property: 'expires_at', schema: new OAS\Schema(description: 'When this guest reading will be deleted, in UTC, as its maker chose; null for the usual retention.', type: 'string', format: 'date-time', nullable: true, examples: ['2026-11-07T09:18:09Z'])),
         new OAS\Property(property: 'question', schema: new OAS\Schema(description: "What was asked. Only in the owner's payload.", type: 'string', nullable: true)),
         new OAS\Property(property: 'querent', schema: new OAS\Schema(description: "Who the reading was for. Only in the owner's payload.", type: 'string', nullable: true)),
         new OAS\Property(property: 'tags', schema: new OAS\Schema(description: "The owner's tags, sorted. Only in the owner's payload.", type: 'array', items: new OAS\Schema\Items(type: 'string'))),
@@ -156,7 +164,7 @@ use Psr\Log\LoggerInterface;
     description: "Every reading the user owns: the JSON journal download.",
     required: ['exported_at', 'readings'],
     properties: [
-        new OAS\Property(property: 'exported_at', schema: new OAS\Schema(description: 'When the file was made, UTC ("Y-m-d H:i:s").', type: 'string')),
+        new OAS\Property(property: 'exported_at', schema: new OAS\Schema(description: 'When the file was made, in UTC.', type: 'string', format: 'date-time', examples: ['2026-11-07T09:18:09Z'])),
         new OAS\Property(property: 'readings', schema: new OAS\Schema(description: 'Newest first.', type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/JournalReading'))),
     ]
 )]
@@ -167,7 +175,7 @@ use Psr\Log\LoggerInterface;
     properties: [
         new OAS\Property(property: 'reading_id', schema: new OAS\Schema(description: 'The code in the reading link.', type: 'string')),
         new OAS\Property(property: 'link', schema: new OAS\Schema(description: "The reading's share link.", type: 'string')),
-        new OAS\Property(property: 'reading_time', schema: new OAS\Schema(description: 'When it was made, UTC ("Y-m-d H:i:s").', type: 'string')),
+        new OAS\Property(property: 'reading_time', schema: new OAS\Schema(description: 'When it was made, in UTC.', type: 'string', format: 'date-time', examples: ['2026-11-07T09:18:09Z'])),
         new OAS\Property(property: 'reading_name', schema: new OAS\Schema(description: "The owner's title for it, if any.", type: 'string', nullable: true)),
         new OAS\Property(property: 'reading_notes', schema: new OAS\Schema(description: "The owner's notes (Markdown), if any.", type: 'string', nullable: true)),
         new OAS\Property(property: 'question', schema: new OAS\Schema(description: 'What was asked, if recorded.', type: 'string', nullable: true)),
@@ -220,8 +228,8 @@ use Psr\Log\LoggerInterface;
     properties: [
         new OAS\Property(property: 'passkey_id', schema: new OAS\Schema(type: 'integer')),
         new OAS\Property(property: 'name', schema: new OAS\Schema(description: 'The name given, or "My Passkey".', type: 'string')),
-        new OAS\Property(property: 'created_at', schema: new OAS\Schema(description: 'When it was registered, UTC ("Y-m-d H:i:s").', type: 'string')),
-        new OAS\Property(property: 'last_used_at', schema: new OAS\Schema(description: 'Always null: it has not signed in yet.', type: 'string', nullable: true)),
+        new OAS\Property(property: 'created_at', schema: new OAS\Schema(description: 'When it was registered, in UTC.', type: 'string', format: 'date-time', examples: ['2026-11-07T09:18:09Z'])),
+        new OAS\Property(property: 'last_used_at', schema: new OAS\Schema(description: 'Always null: it has not signed in yet.', type: 'string', format: 'date-time', nullable: true)),
     ]
 )]
 // The admin dashboard's usage overview (GET /admin/stats, and `stats` in
@@ -283,11 +291,77 @@ use Psr\Log\LoggerInterface;
                 type: 'object',
                 required: ['date', 'count'],
                 properties: [
-                    new OAS\Property(property: 'date', schema: new OAS\Schema(description: '"Y-m-d", UTC.', type: 'string')),
+                    new OAS\Property(property: 'date', schema: new OAS\Schema(description: 'The UTC day.', type: 'string', format: 'date', examples: ['2026-11-07'])),
                     new OAS\Property(property: 'count', schema: new OAS\Schema(type: 'integer')),
                 ]
             )
         )),
+    ]
+)]
+// Every error the API sends (Routes\Problem). ProblemResponses gives each
+// operation's 4xx and 5xx responses this schema.
+#[OAS\Schema(
+    component: 'ProblemDetails',
+    description: 'An error, as RFC 9457 problem details: what every 4xx and 5xx answers with, as application/problem+json.',
+    required: ['type', 'title', 'status', 'detail'],
+    properties: [
+        new OAS\Property(property: 'type', schema: new OAS\Schema(description: 'Always about:blank: the status says what kind of problem it is.', type: 'string', enum: ['about:blank'])),
+        new OAS\Property(property: 'title', schema: new OAS\Schema(description: 'The status\'s reason phrase, e.g. "Unprocessable Entity".', type: 'string')),
+        new OAS\Property(property: 'status', schema: new OAS\Schema(description: 'The HTTP status code, repeated.', type: 'integer')),
+        new OAS\Property(property: 'detail', schema: new OAS\Schema(description: 'Why the request failed, in words to show the user.', type: 'string')),
+        new OAS\Property(property: 'errors', schema: new OAS\Schema(description: 'On a failed validation (422) only: each field that was refused.', type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/ProblemFieldError'))),
+        new OAS\Property(property: 'exception', schema: new OAS\Schema(
+            description: 'Outside production, on an unexpected error (500) only: the exception chain, outermost first.',
+            type: 'array',
+            items: new OAS\Schema\Items(
+                type: 'object',
+                required: ['type', 'code', 'message', 'file', 'line'],
+                properties: [
+                    new OAS\Property(property: 'type', schema: new OAS\Schema(description: "The exception's class.", type: 'string')),
+                    new OAS\Property(property: 'code', schema: new OAS\Schema(description: "The exception's code.", type: ['integer', 'string'])),
+                    new OAS\Property(property: 'message', schema: new OAS\Schema(description: "The exception's message.", type: 'string')),
+                    new OAS\Property(property: 'file', schema: new OAS\Schema(description: 'The file it was thrown in.', type: 'string')),
+                    new OAS\Property(property: 'line', schema: new OAS\Schema(description: 'The line it was thrown at.', type: 'integer')),
+                ]
+            )
+        )),
+    ]
+)]
+#[OAS\Schema(
+    component: 'ProblemFieldError',
+    description: 'One field a failed validation refused.',
+    required: ['message', 'location'],
+    properties: [
+        new OAS\Property(property: 'message', schema: new OAS\Schema(description: 'Why the field was refused, in words to show beside it.', type: 'string')),
+        new OAS\Property(property: 'location', schema: new OAS\Schema(description: 'Where the field was sent: `body.email`, `body.positions[2].x`, `query.limit`, `path.deck_id`, or `body` for the body as a whole.', type: 'string')),
+    ]
+)]
+#[OAS\Schema(
+    component: 'DailyCardTaken',
+    description: 'The problem a second daily card for one day answers with (409).',
+    allOf: [
+        new OAS\Schema(ref: '#/components/schemas/ProblemDetails'),
+        new OAS\Schema(
+            type: 'object',
+            required: ['reading_id'],
+            properties: [
+                new OAS\Property(property: 'reading_id', schema: new OAS\Schema(description: 'The reading already drawn for the day; null when it was deleted.', type: 'string', nullable: true)),
+            ]
+        ),
+    ]
+)]
+#[OAS\Schema(
+    component: 'InvalidGrant',
+    description: "The problem a plugin's code exchange answers with when the code or verifier is wrong (400): RFC 6749's invalid_grant, which `error` names for an OAuth client.",
+    allOf: [
+        new OAS\Schema(ref: '#/components/schemas/ProblemDetails'),
+        new OAS\Schema(
+            type: 'object',
+            required: ['error'],
+            properties: [
+                new OAS\Property(property: 'error', schema: new OAS\Schema(description: 'The OAuth error code.', type: 'string', enum: ['invalid_grant'])),
+            ]
+        ),
     ]
 )]
 final class OpenApiSpec
@@ -295,7 +369,8 @@ final class OpenApiSpec
     /**
      * The API document as `composer docs` writes it to openapi.json and
      * OpenApiSpecTest compares it: the attributes in api/ and includes/, as
-     * OpenAPI 3.1, with every Structure property required. The caller passes the
+     * OpenAPI 3.1, with every Structure property required and every error
+     * response a problem details body. The caller passes the
      * logger it wants the build's messages in (swagger-php 7.3 takes it in the
      * constructor; setLogger() is deprecated) and runs build().
      */
@@ -311,6 +386,7 @@ final class OpenApiSpec
                 // goes with it; RequireStructureProperties covers the Structures.
                 $augmenters->remove(Properties::class);
                 $augmenters->add(new RequireStructureProperties());
+                $augmenters->add(new ProblemResponses());
             });
     }
 }

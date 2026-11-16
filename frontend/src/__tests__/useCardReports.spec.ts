@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { useCardReports, type CardReportInput } from '@/composables/useCardReports'
 import { NETWORK_ERROR_MESSAGE } from '@/composables/apiClient'
+import { problemBody } from './helpers/api'
 
 /** Build a minimal Response-like object for the fetch mock. */
 function fakeResponse(body: unknown, { ok = true, status = 200 } = {}): Response {
@@ -76,7 +77,7 @@ describe('useCardReports', () => {
         .fn()
         .mockResolvedValue(
           fakeResponse(
-            { error: 'You have reported too many cards recently. Please try again later.' },
+            problemBody(429, 'You have reported too many cards recently. Please try again later.'),
             { ok: false, status: 429 },
           ),
         ),

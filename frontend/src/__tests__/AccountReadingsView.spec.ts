@@ -7,7 +7,15 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useDecks } from '@/composables/useDecks'
 import { useToasts } from '@/composables/useToasts'
 import { useConfirm } from '@/composables/useConfirm'
-import { mountWithApp, cleanup, stubApi, signIn, testRouter, testUser } from './helpers/app'
+import {
+  mountWithApp,
+  cleanup,
+  stubApi,
+  signIn,
+  testRouter,
+  testUser,
+  problem,
+} from './helpers/app'
 import { choose, labelled, optionsOf, typeInto, valueOf } from './helpers/page'
 import type { AccountReading, Deck, ReadingSpread, ReadingTag } from '@/types'
 
@@ -87,7 +95,7 @@ const reading = (reading_id: string, extra: Partial<AccountReading> = {}): Accou
       { card_id: 3, reversed: false },
     ],
   },
-  reading_time: '2026-10-01 12:00:00',
+  reading_time: '2026-10-01T12:00:00Z',
   user_id: 7,
   hide_user: false,
   reading_name: null,
@@ -378,7 +386,7 @@ describe('AccountReadingsView', () => {
 
     it('still filters when the spreads could not be listed, offering none', async () => {
       const { lastFilters } = serve(() => [named('a', 'Reading')], {
-        'GET /account/reading-spreads': { status: 500, body: { error: 'Server error' } },
+        'GET /account/reading-spreads': { status: 500, body: problem('Server error') },
       })
       await open()
 
@@ -614,7 +622,7 @@ describe('AccountReadingsView', () => {
       serve(() => [named('a', 'Morning reflection')], {
         'PATCH /account/readings/a': {
           status: 422,
-          body: { error: 'Choose a password of at least 4 characters for this reading.' },
+          body: problem('Choose a password of at least 4 characters for this reading.'),
         },
       })
       await open()
@@ -679,7 +687,7 @@ describe('AccountReadingsView', () => {
     it("says why a reading couldn't be deleted", async () => {
       vi.spyOn(console, 'error').mockImplementation(() => {})
       serve(() => [named('a', 'Morning reflection')], {
-        'DELETE /account/readings/a': { status: 404, body: { error: 'Reading not found.' } },
+        'DELETE /account/readings/a': { status: 404, body: problem('Reading not found.') },
       })
       await open()
 

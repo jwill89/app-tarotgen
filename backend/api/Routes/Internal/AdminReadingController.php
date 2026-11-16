@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\ReadingRepository;
@@ -71,13 +72,13 @@ class AdminReadingController extends AbstractController
         $reading_id = $args['reading_id'] ?? '';
 
         if ($reading_id === '') {
-            return $response->withJson(['error' => 'Invalid reading ID'], 400);
+            return Problem::invalid($response, 'path.reading_id', 'Invalid reading ID');
         }
 
         $deleted = $this->readings->delete($reading_id);
 
         if (!$deleted) {
-            return $response->withJson(['error' => 'Reading not found'], 404);
+            return Problem::respond($response, 404, 'Reading not found');
         }
 
         return $response->withStatus(204);
@@ -110,7 +111,7 @@ class AdminReadingController extends AbstractController
                     properties: [new OAS\Property(property: 'deleted', schema: new OAS\Schema(type: 'integer'))]
                 )
             ),
-            new OAS\Response(response: 400, description: 'Invalid day range'),
+            new OAS\Response(response: 422, description: 'Invalid day range'),
         ]
     )]
     public function cleanReadings(Request $request, Response $response): Response|ResponseInterface
@@ -119,7 +120,7 @@ class AdminReadingController extends AbstractController
 
         $allowed = [7, 14, 30, 60, 90, 180, 365];
         if (!in_array($days, $allowed, true)) {
-            return $response->withJson(['error' => 'Invalid day range.'], 400);
+            return Problem::invalid($response, 'query.older_than_days', 'Invalid day range.');
         }
 
         $deleted = $this->readings->cleanGuest($days);

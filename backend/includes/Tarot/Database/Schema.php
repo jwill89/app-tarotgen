@@ -30,10 +30,11 @@ final class Schema
 
     /**
      * Run the migrations that haven't run yet on the SQLite file at $path, with
-     * phinx.php's settings. The file must exist (an empty one gets the whole
+     * phinx.php's settings: all of them, or those up to and including the one
+     * whose version is $target. The file must exist (an empty one gets the whole
      * schema); Phinx never creates one.
      */
-    public static function migrate(string $path): void
+    public static function migrate(string $path, ?int $target = null): void
     {
         /** @var array{environments: array{app: array<string,string>}} $values */
         $values = require self::CONFIG;
@@ -41,7 +42,7 @@ final class Schema
 
         $manager = new Manager(new Config($values), new ArrayInput([]), new NullOutput());
         try {
-            $manager->migrate('app');
+            $manager->migrate('app', $target);
         } finally {
             // Closes the file, rolling back a migration that threw, so the
             // caller can open or delete it.

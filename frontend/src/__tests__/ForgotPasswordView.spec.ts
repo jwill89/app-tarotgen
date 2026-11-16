@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
 import { NETWORK_ERROR_MESSAGE } from '@/composables/apiClient'
-import { mountWithApp, cleanup, stubApi } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, problem } from './helpers/app'
 
 const text = (el: Element) => el.textContent.replace(/\s+/g, ' ').trim()
 const pageText = () => text(document.body)
@@ -67,7 +67,7 @@ describe('ForgotPasswordView', () => {
     stubApi({
       'POST /auth/forgot-password': {
         status: 429,
-        body: { error: 'Too many requests. Please try again later.' },
+        body: problem('Too many requests. Please try again later.'),
       },
     })
     await mountWithApp(ForgotPasswordView, { path: '/forgot-password' })

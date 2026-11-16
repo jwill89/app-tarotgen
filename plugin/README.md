@@ -46,12 +46,31 @@ dotnet build plugin\TarotGen.Plugin\TarotGen.Plugin.csproj -c Debug     # compil
 dotnet build plugin\TarotGen.Plugin\TarotGen.Plugin.csproj -c Release   # + DalamudPackager -> bin\Release\TarotGen.Plugin\latest.zip
 ```
 
-`dotnet format plugin\TarotGen.Plugin\TarotGen.Plugin.csproj --verify-no-changes` checks the
-formatting, as CI's plugin job does after its Release build.
+`dotnet format <project> --verify-no-changes` checks the formatting of each of the three projects (`TarotGen.Plugin`, `TarotGen.Plugin.Tests`, `TarotGen.Plugin.Preview`), as CI's plugin job does after its Release builds.
 
 Or open `TarotGen.Plugin.sln` in Visual Studio 2026 / Rider 2025.3. To try it in-game: `/xldev` →
 Dev Plugin Locations → point at the built DLL, then `/tarot`. The plugin **version** comes from
 `<Version>` in the `.csproj` — bump it to make Dalamud offer an update to installed testers.
+
+## Tests and the window preview
+
+Everything that doesn't touch the game lives in `TarotGen.Plugin/Core/`: the API client and its models, how an error body becomes the message the player sees, the account-link and draw-key browser flows (PKCE over a loopback listener), the deck and spread pickers' grouping, and the spread geometry. What needs Dalamud stays outside it: `Plugin.cs`, the windows (`Windows/`), the DPAPI token store and the card texture cache (`Services/`).
+
+`TarotGen.Plugin.Tests/` (xUnit v3) compiles `Core/` in, with no Dalamud, and talks to a fake site (`FakeServer.cs`) that answers with the fixtures in `Fixtures/`, written by hand from `backend/openapi.json`'s schemas with made-up names. It runs on Microsoft.Testing.Platform, which `plugin/global.json` selects, so run it from `plugin/`:
+
+```powershell
+cd plugin
+dotnet test --project TarotGen.Plugin.Tests
+```
+
+`TarotGen.Plugin.Preview/` draws every state of the window (each tab, the lightbox and its report form, the first-run pop-ups, the error messages) to a PNG without the game: it compiles the plugin's `Core/` and `Windows/` against this machine's Dalamud (`DALAMUD_HOME`, else XIVLauncher's dev folder), paints stand-in card faces, and has the windows talk to a stand-in site that answers with the tests' fixtures. Its scenes are in `Scenes.cs`; a new tab, pop-up or state gets one there.
+
+```powershell
+dotnet run --project plugin\TarotGen.Plugin.Preview\TarotGen.Plugin.Preview.csproj                 # -> plugin\previews\*.png
+dotnet run --project plugin\TarotGen.Plugin.Preview\TarotGen.Plugin.Preview.csproj -- <folder> 1.5  # elsewhere, at a 1.5 font scale
+```
+
+Look at every picture before handing over a change to a window. `plugin/previews/` is git-ignored. CI builds the preview but doesn't run it, and runs the tests.
 
 ## Installing (testers)
 
@@ -110,3 +129,5 @@ PHP **8.5 / Slim 4** on one DigitalOcean droplet — **Apache (event MPM) + PHP-
 behind **Cloudflare**. The endpoints it uses are the `Plugin`- and `Cards`-tagged routes in the API
 (`/plugin/*`, `/account/tokens`, `/card-reports`); browse the live reference at
 [`/api/docs`](https://tarotgen.io/api/docs).
+
+An API error is an RFC 9457 problem details body (`application/problem+json`). The plugin shows its `detail`; without one, the `message` of each entry in its `errors`, joined with "; "; from an older server, its `{ "error": "…" }` or `{ "errors": ["…"] }`; failing all of those, `HTTP <status>` (`Core/ErrorMessage.cs`).

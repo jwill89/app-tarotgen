@@ -15,7 +15,7 @@ use Tarot\Repository\DeckRepository;
 
 /**
  * The admin buttons that derive each deck's web images from its PNG scans, run
- * against a temporary deck-images root rather than backend/assets/decks.
+ * against a temporary deck-images root rather than backend/public/assets/decks.
  */
 #[CoversClass(AdminDeckController::class)]
 #[CoversClass(DeckRepository::class)]
@@ -105,8 +105,8 @@ final class AdminDeckImagesTest extends HttpTestCase
     {
         $this->signInAs($this->createUser('admin@example.test', admin: true)->user_id);
 
-        $this->assertSame(['error' => 'Invalid deck ID'], $this->assertJsonResponse(400, $this->post('/admin/decks/0/images')));
-        $this->assertSame(['error' => 'Invalid deck ID'], $this->assertJsonResponse(400, $this->post('/admin/decks/thoth/images')));
+        $this->assertSame('Invalid deck ID', $this->assertProblem(422, $this->post('/admin/decks/0/images')));
+        $this->assertSame('Invalid deck ID', $this->assertProblem(422, $this->post('/admin/decks/thoth/images')));
     }
 
     public function testOnlyAnAdminCanGenerateImages(): void
@@ -115,8 +115,8 @@ final class AdminDeckImagesTest extends HttpTestCase
         $this->scan($deckId, 'Card_0001.png');
         $this->signInAs($this->createUser('reader@example.test')->user_id);
 
-        $this->assertJsonResponse(401, $this->post("/admin/decks/{$deckId}/images"));
-        $this->assertJsonResponse(401, $this->post('/admin/decks/images'));
+        $this->assertProblem(403, $this->post("/admin/decks/{$deckId}/images"));
+        $this->assertProblem(403, $this->post('/admin/decks/images'));
 
         $this->assertFileDoesNotExist("{$this->imageRoot}/{$deckId}/Card_0001.webp");
     }

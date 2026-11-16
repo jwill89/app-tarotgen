@@ -3,12 +3,12 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Exception\NameTakenException;
 use Tarot\Repository\SpreadCategoryRepository;
 use Tarot\Structure\SpreadCategory;
-use Tarot\Utility\Input;
 use OpenApi\Spec as OAS;
 
 /**
@@ -59,7 +59,7 @@ class AdminSpreadCategoryController extends AbstractController
             content: new OAS\MediaType\Json(
                 required: ['name'],
                 properties: [
-                    new OAS\Property(property: 'name', schema: new OAS\Schema(description: 'Trimmed; cut to 60 characters.', type: 'string')),
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(description: 'Trimmed.', type: 'string', maxLength: self::NAME_MAX_LENGTH)),
                 ]
             )
         ),
@@ -69,25 +69,26 @@ class AdminSpreadCategoryController extends AbstractController
                 description: 'The new category',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/SpreadCategory')
             ),
-            new OAS\Response(response: 400, description: 'A category needs a name'),
             new OAS\Response(response: 409, description: 'Another category has that name (case-insensitively)'),
+            new OAS\Response(response: 422, description: 'A category needs a name, of at most 60 characters'),
         ]
     )]
     public function create(Request $request, Response $response): Response|ResponseInterface
     {
         $name = self::name($this->parsedBody($request));
-        if ($name === '') {
-            return $response->withJson(['error' => self::NAME_REQUIRED], 400);
+        $refusal = self::refuseName($name);
+        if ($refusal !== null) {
+            return Problem::invalid($response, 'body.name', $refusal);
         }
 
         try {
             $category = $this->categories->create($name);
         } catch (NameTakenException) {
-            return $response->withJson(['error' => self::NAME_TAKEN], 409);
+            return Problem::respond($response, 409, self::NAME_TAKEN);
         }
 
         if ($category === null) {
-            return $response->withJson(['error' => 'Failed to add the category.'], 500);
+            return Problem::respond($response, 500, 'Failed to add the category.');
         }
 
         return $response->withJson($category, 201);
@@ -109,7 +110,7 @@ class AdminSpreadCategoryController extends AbstractController
             content: new OAS\MediaType\Json(
                 required: ['name'],
                 properties: [
-                    new OAS\Property(property: 'name', schema: new OAS\Schema(description: 'Trimmed; cut to 60 characters.', type: 'string')),
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(description: 'Trimmed.', type: 'string', maxLength: self::NAME_MAX_LENGTH)),
                 ]
             )
         ),
@@ -119,26 +120,27 @@ class AdminSpreadCategoryController extends AbstractController
                 description: 'The renamed category',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/SpreadCategory')
             ),
-            new OAS\Response(response: 400, description: 'A category needs a name'),
             new OAS\Response(response: 404, description: 'No such category'),
             new OAS\Response(response: 409, description: 'Another category has that name (case-insensitively)'),
+            new OAS\Response(response: 422, description: 'A category needs a name, of at most 60 characters'),
         ]
     )]
     public function rename(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $name = self::name($this->parsedBody($request));
-        if ($name === '') {
-            return $response->withJson(['error' => self::NAME_REQUIRED], 400);
+        $refusal = self::refuseName($name);
+        if ($refusal !== null) {
+            return Problem::invalid($response, 'body.name', $refusal);
         }
 
         try {
             $category = $this->categories->rename((int) ($args['category_id'] ?? 0), $name);
         } catch (NameTakenException) {
-            return $response->withJson(['error' => self::NAME_TAKEN], 409);
+            return Problem::respond($response, 409, self::NAME_TAKEN);
         }
 
         if ($category === null) {
-            return $response->withJson(['error' => 'Category not found.'], 404);
+            return Problem::respond($response, 404, 'Category not found.');
         }
 
         return $response->withJson($category);
@@ -164,7 +166,7 @@ class AdminSpreadCategoryController extends AbstractController
                 description: 'Every category, in the new order',
                 content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/SpreadCategory'))
             ),
-            new OAS\Response(response: 400, description: 'Not every category id exactly once'),
+            new OAS\Response(response: 422, description: 'Not every category id exactly once'),
         ]
     )]
     public function reorder(Request $request, Response $response): Response|ResponseInterface
@@ -178,7 +180,7 @@ class AdminSpreadCategoryController extends AbstractController
         sort($current);
 
         if ($order === null || $sorted !== $current) {
-            return $response->withJson(['error' => 'Send every category id once, in the new order.'], 400);
+            return Problem::invalid($response, 'body.category_ids', 'Send every category id once, in the new order.');
         }
 
         $this->categories->reorder($order);
@@ -208,23 +210,25 @@ class AdminSpreadCategoryController extends AbstractController
         $category = $this->categories->find((int) ($args['category_id'] ?? 0));
 
         if ($category === null) {
-            return $response->withJson(['error' => 'Category not found.'], 404);
+            return Problem::respond($response, 404, 'Category not found.');
         }
 
         if ($category->spread_count > 0) {
             [$spreads, $them] = $category->spread_count === 1
                 ? ['1 spread', 'it']
                 : ["{$category->spread_count} spreads", 'them'];
-            return $response->withJson(
-                ['error' => "\u{201C}{$category->name}\u{201D} still holds {$spreads}. Move {$them} to another category first."],
-                409
+            return Problem::respond(
+                $response,
+                409,
+                "\u{201C}{$category->name}\u{201D} still holds {$spreads}. Move {$them} to another category first."
             );
         }
 
         if (count($this->categories->all()) === 1) {
-            return $response->withJson(
-                ['error' => 'Keep at least one category: a spread with none chosen goes into the first.'],
-                409
+            return Problem::respond(
+                $response,
+                409,
+                'Keep at least one category: a spread with none chosen goes into the first.'
             );
         }
 
@@ -240,7 +244,17 @@ class AdminSpreadCategoryController extends AbstractController
     {
         $name = $params['name'] ?? null;
 
-        return is_scalar($name) ? Input::string($name, self::NAME_MAX_LENGTH) : '';
+        return is_scalar($name) ? trim((string) $name) : '';
+    }
+
+    /** Why $name can't be a category's name; null when it can. */
+    private static function refuseName(string $name): ?string
+    {
+        return match (true) {
+            $name === ''                               => self::NAME_REQUIRED,
+            mb_strlen($name) > self::NAME_MAX_LENGTH   => 'A category name can be at most ' . self::NAME_MAX_LENGTH . ' characters.',
+            default                                    => null,
+        };
     }
 
     /**

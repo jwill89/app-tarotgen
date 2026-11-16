@@ -1,12 +1,12 @@
 import { expect, test, type Page } from '@playwright/test'
-import { axeViolations } from '@jwill89/test-a11y'
+import { WCAG_22_AA, axeViolations } from '@jwill89/test-a11y'
 import { watchForBreakage } from './breakage.ts'
 import { seededReading } from './env.ts'
 
 /**
  * The main public pages, each opened by its own address: it shows its heading and
  * what the server sent for it (the seeded deck, spread and reading) or its own
- * words, then passes axe at WCAG 2.2 AA with its best practices. Everything is found
+ * words, then passes axe at WCAG 2.2 AAA with its best practices. Everything is found
  * by role and name, never by a Bulma class, so the suite doesn't depend on the
  * CSS framework.
  */
@@ -134,7 +134,7 @@ for (const { title, path, heading, shows } of pages) {
     // A first visit's cookie notice slides in: axe would read its colours mid-fade.
     await expect(page.getByRole('region', { name: 'Cookie notice' })).toHaveCSS('opacity', '1')
 
-    expect(await axeViolations(page)).toEqual([])
+    expect(await axeViolations(page, { tags: [...WCAG_22_AA, 'wcag2aaa'] })).toEqual([])
     expect(problems).toEqual([])
   })
 }

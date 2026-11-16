@@ -61,8 +61,21 @@ updates:
       composer-minor:
         patterns: ['*']
         update-types: [minor, patch]
+  # The card-scan cleanup script's packages (backend/scripts/requirements.txt), compiled with
+  # hashes from requirements.in by uv pip compile. Dependabot's uv ecosystem compiles it again
+  # with the command in the file's header, keeping --universal and --python-version.
+  - package-ecosystem: uv
+    directory: /backend/scripts
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      python-minor:
+        patterns: ['*']
+        update-types: [minor, patch]
+  # The plugin and its tests project (the preview has no packages of its own).
   - package-ecosystem: nuget
-    directory: /plugin/TarotGen.Plugin
+    directory: /plugin
     schedule:
       interval: weekly
       day: monday

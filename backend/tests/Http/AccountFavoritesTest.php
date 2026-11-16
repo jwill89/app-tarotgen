@@ -64,10 +64,10 @@ final class AccountFavoritesTest extends HttpTestCase
     public function testAnInvalidFavouriteSpreadIsRefused(string $type, mixed $id): void
     {
         $this->signInAs($this->userId);
-        $invalid = ['error' => 'Invalid spread type or ID.'];
+        $invalid = 'Invalid spread type or ID.';
 
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->post('/account/favorites', ['spread_type' => $type, 'spread_id' => $id])));
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->request('DELETE', "/account/favorites/{$type}/{$this->pathId($id)}")));
+        $this->assertSame($invalid, $this->assertProblem(422, $this->post('/account/favorites', ['spread_type' => $type, 'spread_id' => $id])));
+        $this->assertSame($invalid, $this->assertProblem(422, $this->request('DELETE', "/account/favorites/{$type}/{$this->pathId($id)}")));
         $this->assertSame(0, $this->rowCount('user_favorite_spreads'));
     }
 
@@ -122,11 +122,11 @@ final class AccountFavoritesTest extends HttpTestCase
     public function testAnInvalidFavouriteDeckIsRefused(): void
     {
         $this->signInAs($this->userId);
-        $invalid = ['error' => 'Invalid deck ID.'];
+        $invalid = 'Invalid deck ID.';
 
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->post('/account/favorite-decks', [])));
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->post('/account/favorite-decks', ['deck_id' => 0])));
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->request('DELETE', '/account/favorite-decks/0')));
+        $this->assertSame($invalid, $this->assertProblem(422, $this->post('/account/favorite-decks', [])));
+        $this->assertSame($invalid, $this->assertProblem(422, $this->post('/account/favorite-decks', ['deck_id' => 0])));
+        $this->assertSame($invalid, $this->assertProblem(422, $this->request('DELETE', '/account/favorite-decks/0')));
     }
 
     public function testADeckThatDoesNotExistCannotBeFavourited(): void
@@ -135,7 +135,7 @@ final class AccountFavoritesTest extends HttpTestCase
 
         $response = $this->post('/account/favorite-decks', ['deck_id' => 999]);
 
-        $this->assertSame(['error' => 'Invalid deck ID.'], $this->assertJsonResponse(400, $response));
+        $this->assertSame('Invalid deck ID.', $this->assertProblem(422, $response));
         $this->assertSame(0, $this->rowCount('user_favorite_decks'));
     }
 
@@ -144,11 +144,11 @@ final class AccountFavoritesTest extends HttpTestCase
         $pending = $this->deck('Submitted Deck', approved: false);
         $this->signInAs($this->userId);
 
-        $refused = $this->assertJsonResponse(400, $this->post('/account/favorite-decks', ['deck_id' => $pending]));
-        $unknown = $this->assertJsonResponse(400, $this->post('/account/favorite-decks', ['deck_id' => $pending + 1]));
+        $refused = $this->post('/account/favorite-decks', ['deck_id' => $pending]);
+        $unknown = $this->post('/account/favorite-decks', ['deck_id' => $pending + 1]);
 
-        $this->assertSame(['error' => 'Invalid deck ID.'], $refused);
-        $this->assertSame($unknown, $refused);
+        $this->assertSame('Invalid deck ID.', $this->assertProblem(422, $refused));
+        $this->assertSame((string) $unknown->getBody(), (string) $refused->getBody());
         $this->assertSame(0, $this->rowCount('user_favorite_decks'));
     }
 

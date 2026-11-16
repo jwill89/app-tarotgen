@@ -13,6 +13,7 @@ parameters:
     paths:
         - includes/Tarot
         - api
+        - public/api/index.php
         - bin
         - tests
         - db/migrations

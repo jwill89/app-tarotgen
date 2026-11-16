@@ -73,16 +73,16 @@ final class CardReportsTest extends HttpTestCase
     public function testIncompleteReportsAreRefused(): void
     {
         $missingCard = $this->post('/card-reports', ['deck_id' => $this->deckId]);
-        $this->assertSame(['error' => 'A valid deck and card are required.'], $this->assertJsonResponse(400, $missingCard));
+        $this->assertSame('A valid deck and card are required.', $this->assertProblem(422, $missingCard));
 
         $missingDeck = $this->post('/card-reports', ['card_id' => 1]);
-        $this->assertJsonResponse(400, $missingDeck);
+        $this->assertProblem(422, $missingDeck);
 
         $unknownReason = $this->post('/card-reports', ['deck_id' => $this->deckId, 'card_id' => 1, 'reason' => 'ugly']);
-        $this->assertSame(['error' => "Please choose what's wrong with this card."], $this->assertJsonResponse(400, $unknownReason));
+        $this->assertSame("Please choose what's wrong with this card.", $this->assertProblem(422, $unknownReason));
 
         $otherWithoutDetails = $this->post('/card-reports', ['deck_id' => $this->deckId, 'card_id' => 1, 'reason' => 'other']);
-        $this->assertSame(['error' => "Please describe what's wrong with this card."], $this->assertJsonResponse(400, $otherWithoutDetails));
+        $this->assertSame("Please describe what's wrong with this card.", $this->assertProblem(422, $otherWithoutDetails));
 
         $this->assertSame([], $this->reports());
     }
@@ -91,7 +91,7 @@ final class CardReportsTest extends HttpTestCase
     {
         $response = $this->post('/card-reports', ['deck_id' => $this->deckId + 1, 'card_id' => 1, 'reason' => 'quality']);
 
-        $this->assertSame(['error' => 'A valid deck and card are required.'], $this->assertJsonResponse(400, $response));
+        $this->assertSame('A valid deck and card are required.', $this->assertProblem(422, $response));
     }
 
     public function testOneVisitorCanReportTwentyCardsAnHour(): void
@@ -103,8 +103,8 @@ final class CardReportsTest extends HttpTestCase
         $response = $this->post('/card-reports', ['deck_id' => $this->deckId, 'card_id' => 21]);
 
         $this->assertSame(
-            ['error' => 'You have reported too many cards recently. Please try again later.'],
-            $this->assertJsonResponse(429, $response)
+            'You have reported too many cards recently. Please try again later.',
+            $this->assertProblem(429, $response)
         );
         $this->assertCount(20, $this->reports());
     }

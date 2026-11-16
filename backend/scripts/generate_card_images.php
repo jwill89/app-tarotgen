@@ -19,7 +19,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use Tarot\Service\CardImageService;
 
-$decksRoot = dirname(__DIR__) . '/assets/decks';
+$decksRoot = dirname(__DIR__) . '/public/assets/decks';
 
 $deckIds = array_map(intval(...), array_slice($argv, 1));
 if ($deckIds === []) {

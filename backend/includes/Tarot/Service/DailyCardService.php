@@ -46,7 +46,7 @@ class DailyCardService
     public function month(int $userId, mixed $month): array
     {
         if (!is_string($month) || preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month) !== 1) {
-            throw new ApiException('month must be a month, as YYYY-MM.', 400);
+            throw new ApiException('month must be a month, as YYYY-MM.', 422, location: 'query.month');
         }
 
         return $this->dailyCards->forMonth($userId, $month);
@@ -72,7 +72,7 @@ class DailyCardService
             $deckId = (int) $deckId;
         }
         if (!is_int($deckId) || $deckId < 1) {
-            throw new ApiException('Choose a deck to draw from.', 400);
+            throw new ApiException('Choose a deck to draw from.', 422, location: 'body.deck_id');
         }
 
         $existing = $this->dailyCards->forDay($userId, $day);
@@ -114,12 +114,12 @@ class DailyCardService
         $day = is_string($value) ? $value : '';
         $date = DateTimeImmutable::createFromFormat('!Y-m-d', $day, $utc);
         if ($date === false || $date->format('Y-m-d') !== $day) {
-            throw new ApiException('day must be a date, as YYYY-MM-DD.', 400);
+            throw new ApiException('day must be a date, as YYYY-MM-DD.', 422, location: 'body.day');
         }
 
         $today = new DateTimeImmutable(Clock::today(), $utc);
         if (abs($date->getTimestamp() - $today->getTimestamp()) > self::MAX_DAYS_FROM_UTC * 86400) {
-            throw new ApiException("A daily card can only be drawn for today. Check your device's date.", 400);
+            throw new ApiException("A daily card can only be drawn for today. Check your device's date.", 422, location: 'body.day');
         }
 
         return $date;

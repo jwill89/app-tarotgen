@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using TarotGen.Plugin.Core;
 
 namespace TarotGen.Plugin.Services;
 
@@ -13,7 +14,7 @@ namespace TarotGen.Plugin.Services;
 /// worse than Dalamud's plaintext config, and both are revocable server-side
 /// regardless. Neither is ever shown in the UI.
 /// </summary>
-public sealed class TokenStore
+public sealed class TokenStore : ICredentialStore
 {
     // A non-secret, plugin-scoped entropy so the blob is bound to this plugin.
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TarotGen.Plugin.v1");
@@ -34,15 +35,9 @@ public sealed class TokenStore
         this.cachedDrawKey = this.Decrypt(config.EncryptedDrawKey, config.DrawKeyIsEncrypted, "draw key");
     }
 
-    /// <summary>An account token is present (unlocks finalize / favorites / My Readings).</summary>
-    public bool IsLinked => !string.IsNullOrEmpty(this.cachedToken);
-
     public string? Token => this.cachedToken;
 
     public string LinkedName => this.config.LinkedName ?? string.Empty;
-
-    /// <summary>A draw key is present: an unlinked install can draw.</summary>
-    public bool HasDrawKey => !string.IsNullOrEmpty(this.cachedDrawKey);
 
     public string? DrawKey => this.cachedDrawKey;
 
@@ -82,18 +77,6 @@ public sealed class TokenStore
         this.config.DrawKeyIsEncrypted = false;
 
         this.config.Save(this.pluginInterface);
-    }
-
-    /// <summary>
-    /// The site refused <paramref name="credential"/> as no longer valid: forget it,
-    /// if it is still the one held (a new one may have arrived meanwhile).
-    /// </summary>
-    public void Forget(string credential)
-    {
-        if (credential == this.cachedToken)
-            this.Clear();
-        else if (credential == this.cachedDrawKey)
-            this.ClearDrawKey();
     }
 
     private (string Blob, bool Encrypted) Encrypt(string secret)

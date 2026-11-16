@@ -80,4 +80,16 @@ class PluginTokenData extends AbstractData
 
         return $stmt->rowCount() > 0;
     }
+
+    /** Revoke every live token of a user. Returns how many were revoked. */
+    public function revokeAllForUser(int $userId): int
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE plugin_tokens SET revoked_at = :now
+             WHERE user_id = :uid AND revoked_at IS NULL'
+        );
+        $stmt->execute([':now' => Clock::now(), ':uid' => $userId]);
+
+        return $stmt->rowCount();
+    }
 }

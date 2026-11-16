@@ -88,14 +88,14 @@ final class PasskeyCeremonyTest extends HttpTestCase
         $this->signInAs($this->reader->user_id);
 
         $this->assertSame(
-            ['error' => 'No pending registration challenge.'],
-            $this->assertJsonResponse(400, $this->post('/auth/passkeys/register', $this->attestation(self::base64Url(random_bytes(32)))))
+            'No pending registration challenge.',
+            $this->assertProblem(409, $this->post('/auth/passkeys/register', $this->attestation(self::base64Url(random_bytes(32)))))
         );
 
         $this->registrationChallenge();
         $this->assertSame(
-            ['error' => 'Registration failed: invalid challenge'],
-            $this->assertJsonResponse(400, $this->post('/auth/passkeys/register', $this->attestation(self::base64Url(random_bytes(32)))))
+            'Registration failed: invalid challenge',
+            $this->assertProblem(422, $this->post('/auth/passkeys/register', $this->attestation(self::base64Url(random_bytes(32)))))
         );
         $this->assertSame(0, $this->rowCount('user_passkeys'));
     }
@@ -106,13 +106,13 @@ final class PasskeyCeremonyTest extends HttpTestCase
         $challenge = $this->registrationChallenge();
 
         $this->assertSame(
-            ['error' => 'Missing attestation data.'],
-            $this->assertJsonResponse(400, $this->post('/auth/passkeys/register', ['name' => 'Laptop']))
+            'Missing attestation data.',
+            $this->assertProblem(422, $this->post('/auth/passkeys/register', ['name' => 'Laptop']))
         );
 
         $this->assertSame(
-            ['error' => 'No pending registration challenge.'],
-            $this->assertJsonResponse(400, $this->post('/auth/passkeys/register', $this->attestation($challenge)))
+            'No pending registration challenge.',
+            $this->assertProblem(409, $this->post('/auth/passkeys/register', $this->attestation($challenge)))
         );
     }
 
@@ -121,13 +121,13 @@ final class PasskeyCeremonyTest extends HttpTestCase
         $this->signInAs($this->reader->user_id);
 
         $this->assertSame(
-            ['error' => 'Registration failed: invalid origin'],
-            $this->assertJsonResponse(400, $this->post('/auth/passkeys/register', $this->attestation($this->registrationChallenge(), ['origin' => 'https://evil.example'])))
+            'Registration failed: invalid origin',
+            $this->assertProblem(422, $this->post('/auth/passkeys/register', $this->attestation($this->registrationChallenge(), ['origin' => 'https://evil.example'])))
         );
 
         $this->assertSame(
-            ['error' => 'Registration failed: invalid rpId hash'],
-            $this->assertJsonResponse(400, $this->post('/auth/passkeys/register', $this->attestation($this->registrationChallenge(), ['rpId' => 'evil.example'])))
+            'Registration failed: invalid rpId hash',
+            $this->assertProblem(422, $this->post('/auth/passkeys/register', $this->attestation($this->registrationChallenge(), ['rpId' => 'evil.example'])))
         );
         $this->assertSame(0, $this->rowCount('user_passkeys'));
     }
@@ -138,10 +138,10 @@ final class PasskeyCeremonyTest extends HttpTestCase
         $response = $this->attestation($this->registrationChallenge());
         $response['attestationObject'] = self::base64Url('not CBOR at all');
 
-        $refused = $this->assertJsonResponse(400, $this->post('/auth/passkeys/register', $response));
+        $refused = $this->post('/auth/passkeys/register', $response);
 
-        $this->assertIsString($refused['error']);
-        $this->assertStringStartsWith('Registration failed: ', $refused['error']);
+        $this->assertStringStartsWith('Registration failed: ', $this->assertDocumentedProblem('post', '/auth/passkeys/register', 422, $refused));
+        $this->assertSame(['body.attestationObject'], array_keys($this->problemErrors($refused)));
         $this->assertSame(0, $this->rowCount('user_passkeys'));
     }
 
@@ -152,8 +152,8 @@ final class PasskeyCeremonyTest extends HttpTestCase
 
         // Browsers skip an excluded credential, but nothing makes a client honour the list.
         $this->assertSame(
-            ['error' => 'This passkey is already registered.'],
-            $this->assertJsonResponse(400, $this->post('/auth/passkeys/register', $this->attestation($this->registrationChallenge())))
+            'This passkey is already registered.',
+            $this->assertProblem(409, $this->post('/auth/passkeys/register', $this->attestation($this->registrationChallenge())))
         );
         $this->assertSame(1, $this->rowCount('user_passkeys'));
     }
@@ -179,7 +179,7 @@ final class PasskeyCeremonyTest extends HttpTestCase
         $this->assertGreaterThan(time() + Session::REMEMBER_ME_LIFETIME - 60, $this->sessionExpiry());
         $this->assertJsonResponse(200, $this->get('/auth/me'));
         $this->useSessionCookie($visitor);
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 
     public function testSigningInRecordsTheCounterAndWhenThePasskeyAndAccountWereUsed(): void
@@ -208,10 +208,10 @@ final class PasskeyCeremonyTest extends HttpTestCase
 
         // A counter that doesn't move past the stored one suggests a cloned authenticator.
         $this->assertSame(
-            ['error' => 'Passkey authentication failed: signature counter not valid'],
-            $this->assertJsonResponse(401, $this->post('/auth/passkeys/login', $this->assertion($this->signInChallenge(), 5)))
+            'Passkey authentication failed: signature counter not valid',
+            $this->assertProblem(401, $this->post('/auth/passkeys/login', $this->assertion($this->signInChallenge(), 5)))
         );
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 
     public function testSigningInNeedsTheChallengeFromTheOptionsRequest(): void
@@ -220,16 +220,16 @@ final class PasskeyCeremonyTest extends HttpTestCase
         $this->useSessionCookie(null);
 
         $this->assertSame(
-            ['error' => 'No pending authentication challenge.'],
-            $this->assertJsonResponse(400, $this->post('/auth/passkeys/login', $this->assertion(self::base64Url(random_bytes(32)), 1)))
+            'No pending authentication challenge.',
+            $this->assertProblem(409, $this->post('/auth/passkeys/login', $this->assertion(self::base64Url(random_bytes(32)), 1)))
         );
 
         $this->signInChallenge();
         $this->assertSame(
-            ['error' => 'Passkey authentication failed: invalid challenge'],
-            $this->assertJsonResponse(401, $this->post('/auth/passkeys/login', $this->assertion(self::base64Url(random_bytes(32)), 1)))
+            'Passkey authentication failed: invalid challenge',
+            $this->assertProblem(401, $this->post('/auth/passkeys/login', $this->assertion(self::base64Url(random_bytes(32)), 1)))
         );
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 
     public function testAnAssertionWithMissingPartsIsRefused(): void
@@ -240,8 +240,8 @@ final class PasskeyCeremonyTest extends HttpTestCase
         unset($assertion['signature']);
 
         $this->assertSame(
-            ['error' => 'Missing assertion data.'],
-            $this->assertJsonResponse(400, $this->post('/auth/passkeys/login', $assertion))
+            'Missing assertion data.',
+            $this->assertProblem(422, $this->post('/auth/passkeys/login', $assertion))
         );
     }
 
@@ -250,8 +250,8 @@ final class PasskeyCeremonyTest extends HttpTestCase
         $this->useSessionCookie(null);
 
         $this->assertSame(
-            ['error' => 'Unknown passkey credential.'],
-            $this->assertJsonResponse(401, $this->post('/auth/passkeys/login', $this->assertion($this->signInChallenge(), 1)))
+            'Unknown passkey credential.',
+            $this->assertProblem(401, $this->post('/auth/passkeys/login', $this->assertion($this->signInChallenge(), 1)))
         );
     }
 
@@ -263,15 +263,15 @@ final class PasskeyCeremonyTest extends HttpTestCase
 
         $forged = $this->assertion($challenge, 1, self::newKey());
         $this->assertSame(
-            ['error' => 'Passkey authentication failed: invalid signature'],
-            $this->assertJsonResponse(401, $this->post('/auth/passkeys/login', $forged))
+            'Passkey authentication failed: invalid signature',
+            $this->assertProblem(401, $this->post('/auth/passkeys/login', $forged))
         );
 
         $this->assertSame(
-            ['error' => 'No pending authentication challenge.'],
-            $this->assertJsonResponse(400, $this->post('/auth/passkeys/login', $this->assertion($challenge, 1)))
+            'No pending authentication challenge.',
+            $this->assertProblem(409, $this->post('/auth/passkeys/login', $this->assertion($challenge, 1)))
         );
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 
     public function testAnUnactivatedAccountCannotSignInWithAPasskey(): void
@@ -281,10 +281,10 @@ final class PasskeyCeremonyTest extends HttpTestCase
         $this->useSessionCookie(null);
 
         $this->assertSame(
-            ['error' => 'Your account is not activated.'],
-            $this->assertJsonResponse(403, $this->post('/auth/passkeys/login', $this->assertion($this->signInChallenge(), 1)))
+            'Your account is not activated.',
+            $this->assertProblem(403, $this->post('/auth/passkeys/login', $this->assertion($this->signInChallenge(), 1)))
         );
-        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertProblem(401, $this->get('/auth/me'));
     }
 
     /** Register this test's authenticator on the reader's account, signed in as them. */

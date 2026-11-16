@@ -46,7 +46,7 @@ final class SpreadCategoriesTest extends HttpTestCase
     public function testThereIsNoPublicListOfCategories(): void
     {
         // A spread carries its category's name and place instead (GET /spreads).
-        $this->assertJsonResponse(404, $this->get('/spread-categories'));
+        $this->assertProblem(404, $this->get('/spread-categories'));
     }
 
     public function testAnAdminAddsACategoryAtTheEnd(): void
@@ -63,27 +63,32 @@ final class SpreadCategoriesTest extends HttpTestCase
         $this->assertSame([...self::STARTING, 'Shadow work'], array_column($list, 'name'));
     }
 
-    public function testANameIsRequiredAndCutTo60Characters(): void
+    public function testANameIsRequiredAndAtMost60Characters(): void
     {
         $this->signInAsAdmin();
-        $required = ['error' => 'A category needs a name.'];
+        $required = 'A category needs a name.';
 
         foreach ([[], ['name' => ''], ['name' => '   '], ['name' => ['Career']], ['name' => null]] as $body) {
-            $this->assertSame($required, $this->assertJsonResponse(400, $this->post('/admin/spread-categories', $body)), json_encode($body, JSON_THROW_ON_ERROR));
+            $this->assertSame($required, $this->assertProblem(422, $this->post('/admin/spread-categories', $body)), json_encode($body, JSON_THROW_ON_ERROR));
         }
         $this->assertSame(6, $this->rowCount('spread_categories'));
 
-        $long = $this->assertJsonResponse(201, $this->post('/admin/spread-categories', ['name' => str_repeat('é', 70)]));
-        $this->assertSame(str_repeat('é', 60), $long['name']);
+        $long = $this->post('/admin/spread-categories', ['name' => str_repeat('é', 61)]);
+        $this->assertSame('A category name can be at most 60 characters.', $this->assertDocumentedProblem('post', '/admin/spread-categories', 422, $long));
+        $this->assertSame(['body.name'], array_keys($this->problemErrors($long)));
+        $this->assertSame(6, $this->rowCount('spread_categories'));
+
+        $longest = $this->assertJsonResponse(201, $this->post('/admin/spread-categories', ['name' => str_repeat('é', 60)]));
+        $this->assertSame(str_repeat('é', 60), $longest['name']);
     }
 
     public function testTwoCategoriesCannotShareANameWhateverItsCase(): void
     {
         $this->signInAsAdmin();
-        $taken = ['error' => 'A spread category with that name already exists.'];
+        $taken = 'A spread category with that name already exists.';
 
-        $this->assertSame($taken, $this->assertJsonResponse(409, $this->post('/admin/spread-categories', ['name' => 'CAREER'])));
-        $this->assertSame($taken, $this->assertJsonResponse(409, $this->request('PATCH', '/admin/spread-categories/1', ['name' => 'seasonal'])));
+        $this->assertSame($taken, $this->assertProblem(409, $this->post('/admin/spread-categories', ['name' => 'CAREER'])));
+        $this->assertSame($taken, $this->assertProblem(409, $this->request('PATCH', '/admin/spread-categories/1', ['name' => 'seasonal'])));
 
         $this->assertSame(self::STARTING, array_column($this->rows('SELECT name FROM spread_categories ORDER BY sort_order'), 'name'));
     }
@@ -108,8 +113,8 @@ final class SpreadCategoriesTest extends HttpTestCase
     {
         $this->signInAsAdmin();
 
-        $this->assertSame(['error' => 'A category needs a name.'], $this->assertJsonResponse(400, $this->request('PATCH', '/admin/spread-categories/2', ['name' => ' '])));
-        $this->assertSame(['error' => 'Category not found.'], $this->assertJsonResponse(404, $this->request('PATCH', '/admin/spread-categories/99', ['name' => 'Ghost'])));
+        $this->assertSame('A category needs a name.', $this->assertProblem(422, $this->request('PATCH', '/admin/spread-categories/2', ['name' => ' '])));
+        $this->assertSame('Category not found.', $this->assertProblem(404, $this->request('PATCH', '/admin/spread-categories/99', ['name' => 'Ghost'])));
 
         $this->assertSame([['name' => 'Love & relationships']], $this->rows('SELECT name FROM spread_categories WHERE category_id = 2'));
     }
@@ -134,7 +139,7 @@ final class SpreadCategoriesTest extends HttpTestCase
     public function testAReorderMustNameEveryCategoryOnce(): void
     {
         $this->signInAsAdmin();
-        $refused = ['error' => 'Send every category id once, in the new order.'];
+        $refused = 'Send every category id once, in the new order.';
 
         foreach ([
             [],
@@ -146,7 +151,7 @@ final class SpreadCategoriesTest extends HttpTestCase
             ['category_ids' => ['a' => 1, 'b' => 2, 'c' => 3, 'd' => 4, 'e' => 5, 'f' => 6]],
             ['category_ids' => '6,5,4,3,2,1'],
         ] as $body) {
-            $this->assertSame($refused, $this->assertJsonResponse(400, $this->request('PUT', '/admin/spread-categories/order', $body)), json_encode($body, JSON_THROW_ON_ERROR));
+            $this->assertSame($refused, $this->assertProblem(422, $this->request('PUT', '/admin/spread-categories/order', $body)), json_encode($body, JSON_THROW_ON_ERROR));
         }
 
         $this->assertSame([1, 2, 3, 4, 5, 6], array_column($this->rows('SELECT sort_order FROM spread_categories ORDER BY category_id'), 'sort_order'));
@@ -161,7 +166,7 @@ final class SpreadCategoriesTest extends HttpTestCase
         $this->assertSame(204, $response->getStatusCode());
         $this->assertSame('', (string) $response->getBody());
         $this->assertSame(array_slice(self::STARTING, 0, 5), array_column($this->rows('SELECT name FROM spread_categories ORDER BY sort_order'), 'name'));
-        $this->assertSame(['error' => 'Category not found.'], $this->assertJsonResponse(404, $this->request('DELETE', '/admin/spread-categories/6')));
+        $this->assertSame('Category not found.', $this->assertProblem(404, $this->request('DELETE', '/admin/spread-categories/6')));
     }
 
     /**
@@ -174,14 +179,14 @@ final class SpreadCategoriesTest extends HttpTestCase
         $this->spreadIn(3);
 
         $this->assertSame(
-            ['error' => "\u{201C}Career\u{201D} still holds 1 spread. Move it to another category first."],
-            $this->assertJsonResponse(409, $this->request('DELETE', '/admin/spread-categories/3'))
+            "\u{201C}Career\u{201D} still holds 1 spread. Move it to another category first.",
+            $this->assertProblem(409, $this->request('DELETE', '/admin/spread-categories/3'))
         );
 
         $this->spreadIn(3);
         $this->assertSame(
-            ['error' => "\u{201C}Career\u{201D} still holds 2 spreads. Move them to another category first."],
-            $this->assertJsonResponse(409, $this->request('DELETE', '/admin/spread-categories/3'))
+            "\u{201C}Career\u{201D} still holds 2 spreads. Move them to another category first.",
+            $this->assertProblem(409, $this->request('DELETE', '/admin/spread-categories/3'))
         );
         $this->assertSame(6, $this->rowCount('spread_categories'));
     }
@@ -194,8 +199,8 @@ final class SpreadCategoriesTest extends HttpTestCase
         }
 
         $this->assertSame(
-            ['error' => 'Keep at least one category: a spread with none chosen goes into the first.'],
-            $this->assertJsonResponse(409, $this->request('DELETE', '/admin/spread-categories/1'))
+            'Keep at least one category: a spread with none chosen goes into the first.',
+            $this->assertProblem(409, $this->request('DELETE', '/admin/spread-categories/1'))
         );
         $this->assertSame([['name' => 'General']], $this->rows('SELECT name FROM spread_categories'));
     }
@@ -210,12 +215,16 @@ final class SpreadCategoriesTest extends HttpTestCase
             ['DELETE', '/admin/spread-categories/6', null],
         ];
 
-        foreach (['a guest' => null, 'a reader' => 'reader@example.test'] as $who => $email) {
+        $refusals = [
+            'a guest'  => [null, 401, 'Not authenticated'],
+            'a reader' => ['reader@example.test', 403, 'Only an admin can do that.'],
+        ];
+        foreach ($refusals as $who => [$email, $status, $error]) {
             if ($email !== null) {
                 $this->signInAs($this->createUser($email)->user_id);
             }
             foreach ($calls as [$method, $path, $body]) {
-                $this->assertSame(['error' => 'Unauthorized'], $this->assertJsonResponse(401, $this->request($method, $path, $body)), "{$who}: {$method} {$path}");
+                $this->assertSame($error, $this->assertProblem($status, $this->request($method, $path, $body)), "{$who}: {$method} {$path}");
             }
         }
 

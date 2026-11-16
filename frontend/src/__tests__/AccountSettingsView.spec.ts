@@ -7,8 +7,9 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useToasts } from '@/composables/useToasts'
 import { useConfirm } from '@/composables/useConfirm'
 import { useUser } from '@/composables/useUser'
-import { mountWithApp, cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 import type { Passkey, PluginToken } from '@/types'
+import { formatDate } from '@/utils/datetime'
 
 // The view inside what App.vue gives it: the TooltipProvider its Tooltips need
 // and the shared ConfirmDialog its confirm() calls open.
@@ -91,7 +92,7 @@ const passkey = (passkey_id: number, name: string): Passkey => ({
   passkey_id,
   credential_id: `cred-${passkey_id}`,
   name,
-  created_at: '2026-09-01 10:00:00',
+  created_at: '2026-09-01T10:00:00Z',
   last_used_at: null,
 })
 
@@ -100,8 +101,8 @@ const pluginToken = (id: number, label: string, revoked_at: string | null = null
   user_id: 7,
   label,
   scope: 'plugin',
-  created_at: '2026-09-01 10:00:00',
-  last_used_at: '2026-10-01 10:00:00',
+  created_at: '2026-09-01T10:00:00Z',
+  last_used_at: '2026-10-01T10:00:00Z',
   expires_at: null,
   revoked_at,
 })
@@ -156,7 +157,7 @@ describe('AccountSettingsView', () => {
     })
 
     it("shows why the name wasn't saved", async () => {
-      stub({ 'PATCH /account': { status: 422, body: { error: 'That display name is taken.' } } })
+      stub({ 'PATCH /account': { status: 422, body: problem('That display name is taken.') } })
       await mountSettings()
 
       await type('Display Name', 'Admin')
@@ -204,7 +205,7 @@ describe('AccountSettingsView', () => {
       stub({
         'POST /account/change-password': {
           status: 403,
-          body: { error: 'Current password is incorrect.' },
+          body: problem('Current password is incorrect.'),
         },
       })
       await mountSettings()
@@ -250,7 +251,7 @@ describe('AccountSettingsView', () => {
       signIn(testUser({ google_linked: true }))
       const refusal =
         'That would leave you no way to sign in. First turn password login back on or add a passkey.'
-      stub({ 'POST /auth/google/unlink': { status: 409, body: { error: refusal } } })
+      stub({ 'POST /auth/google/unlink': { status: 409, body: problem(refusal) } })
       await mountSettings()
 
       await click(button('Unlink Google'))
@@ -343,7 +344,7 @@ describe('AccountSettingsView', () => {
       stub({
         'POST /auth/forgot-password': {
           status: 429,
-          body: { error: 'Too many requests. Please try again later.' },
+          body: problem('Too many requests. Please try again later.'),
         },
       })
       await mountSettings()
@@ -390,6 +391,7 @@ describe('AccountSettingsView', () => {
 
       expect(pageText()).toContain('Phone')
       expect(pageText()).toContain('Laptop')
+      expect(pageText()).toContain(`Added ${formatDate('2026-09-01T10:00:00Z')}`)
       expect(pageText()).not.toContain('No passkeys registered yet.')
     })
 
@@ -542,7 +544,7 @@ describe('AccountSettingsView', () => {
       )
       stub({
         'GET /auth/passkeys': { body: [passkey(3, 'Phone')] },
-        'PATCH /auth/passkeys/3': { status: 422, body: { error: 'Name is too long.' } },
+        'PATCH /auth/passkeys/3': { status: 422, body: problem('Name is too long.') },
       })
       await mountSettings()
 
@@ -639,13 +641,16 @@ describe('AccountSettingsView', () => {
         'GET /account/tokens': {
           body: [
             pluginToken(1, 'FFXIV plugin (Lyra)'),
-            pluginToken(2, 'Old install', '2026-10-02'),
+            pluginToken(2, 'Old install', '2026-10-02T08:00:00Z'),
           ],
         },
       })
       await mountSettings()
 
       expect(pageText()).toContain('FFXIV plugin (Lyra)')
+      expect(pageText()).toContain(
+        `Linked ${formatDate('2026-09-01T10:00:00Z')} · Last used ${formatDate('2026-10-01T10:00:00Z')}`,
+      )
       expect(pageText()).toMatch(/Old install.*Revoked/)
       expect(
         [...document.body.querySelectorAll('button')].filter((b) => text(b) === 'Revoke'),
@@ -749,7 +754,7 @@ describe('AccountSettingsView', () => {
       stub({
         'POST /account/sessions/end-others': {
           status: 429,
-          body: { error: 'Slow down a moment.' },
+          body: problem('Slow down a moment.'),
         },
       })
       await mountSettings()
@@ -819,7 +824,7 @@ describe('AccountSettingsView', () => {
     })
 
     it('stays signed in and says why when the password is wrong', async () => {
-      stub({ 'DELETE /account': { status: 403, body: { error: 'Incorrect password.' } } })
+      stub({ 'DELETE /account': { status: 403, body: problem('Incorrect password.') } })
       const { router } = await mountSettings()
 
       await type('Confirm your password', 'wrong')

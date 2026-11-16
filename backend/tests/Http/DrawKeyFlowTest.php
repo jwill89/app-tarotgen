@@ -80,7 +80,7 @@ final class DrawKeyFlowTest extends HttpTestCase
         // Signed in or not, the challenge is what the page asks for.
         $response = $this->post('/plugin/draw-keys/authorize', ['code_challenge' => $this->challenge, 'redirect_uri' => self::REDIRECT]);
 
-        $this->assertSame(['error' => 'Captcha verification failed. Please try again.'], $this->assertJsonResponse(400, $response));
+        $this->assertSame('Captcha verification failed. Please try again.', $this->assertProblem(422, $response));
     }
 
     /**
@@ -101,7 +101,7 @@ final class DrawKeyFlowTest extends HttpTestCase
 
         $response = $this->post('/plugin/draw-keys/authorize', ['code_challenge' => $this->challenge, 'redirect_uri' => self::REDIRECT] + $challenge);
 
-        $this->assertSame(['error' => 'Captcha verification failed. Please try again.'], $this->assertJsonResponse(400, $response));
+        $this->assertSame('Captcha verification failed. Please try again.', $this->assertProblem(422, $response));
         $this->assertSame(0, $this->rowCount('plugin_draw_keys'));
     }
 
@@ -114,10 +114,10 @@ final class DrawKeyFlowTest extends HttpTestCase
 
     public function testTheCodeNeedsAnS256Challenge(): void
     {
-        $required = ['error' => 'A valid S256 code_challenge is required.'];
+        $required = 'A valid S256 code_challenge is required.';
 
-        $this->assertSame($required, $this->assertJsonResponse(400, $this->post('/plugin/draw-keys/authorize', ['redirect_uri' => self::REDIRECT])));
-        $this->assertSame($required, $this->assertJsonResponse(400, $this->post('/plugin/draw-keys/authorize', [
+        $this->assertSame($required, $this->assertProblem(422, $this->post('/plugin/draw-keys/authorize', ['redirect_uri' => self::REDIRECT])));
+        $this->assertSame($required, $this->assertProblem(422, $this->post('/plugin/draw-keys/authorize', [
             'code_challenge' => $this->verifier, 'code_challenge_method' => 'plain', 'redirect_uri' => self::REDIRECT,
         ])));
         $this->assertSame(0, $this->rowCount('plugin_draw_keys'));
@@ -149,7 +149,7 @@ final class DrawKeyFlowTest extends HttpTestCase
             'code_challenge' => $this->challenge, 'redirect_uri' => $redirect, 'turnstile_token' => self::PASSED,
         ]);
 
-        $this->assertSame(['error' => 'redirect_uri must be a loopback address.'], $this->assertJsonResponse(400, $response));
+        $this->assertSame('redirect_uri must be a loopback address.', $this->assertProblem(422, $response));
         $this->assertSame(0, $this->rowCount('plugin_draw_keys'));
     }
 
@@ -168,7 +168,7 @@ final class DrawKeyFlowTest extends HttpTestCase
         $code = $this->authorize();
 
         $wrong = $this->post('/plugin/draw-keys/token', ['code' => $code, 'code_verifier' => strrev($this->verifier)]);
-        $this->assertSame(['error' => self::INVALID_CODE], $this->assertJsonResponse(400, $wrong));
+        $this->assertSame(self::INVALID_CODE, $this->assertProblem(400, $wrong, 'InvalidGrant'));
         $this->assertSame([['key_hash' => null]], $this->rows('SELECT key_hash FROM plugin_draw_keys'));
 
         // The real plugin, with the right verifier, can still finish.
@@ -182,7 +182,7 @@ final class DrawKeyFlowTest extends HttpTestCase
 
         $replayed = $this->post('/plugin/draw-keys/token', ['code' => $code, 'code_verifier' => $this->verifier]);
 
-        $this->assertSame(['error' => self::INVALID_CODE], $this->assertJsonResponse(400, $replayed));
+        $this->assertSame(self::INVALID_CODE, $this->assertProblem(400, $replayed, 'InvalidGrant'));
         $this->assertIsString($first['key']);
         $this->assertSame([['key_hash' => hash('sha256', $first['key'])]], $this->rows('SELECT key_hash FROM plugin_draw_keys'));
     }
@@ -190,11 +190,11 @@ final class DrawKeyFlowTest extends HttpTestCase
     public function testAnExpiredCodeIsRefused(): void
     {
         $code = $this->authorize();
-        $this->db->exec("UPDATE plugin_draw_keys SET code_expires_at = datetime('now', '-1 second')");
+        $this->db->exec("UPDATE plugin_draw_keys SET code_expires_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-1 second')");
 
         $response = $this->post('/plugin/draw-keys/token', ['code' => $code, 'code_verifier' => $this->verifier]);
 
-        $this->assertSame(['error' => self::INVALID_CODE], $this->assertJsonResponse(400, $response));
+        $this->assertSame(self::INVALID_CODE, $this->assertProblem(400, $response, 'InvalidGrant'));
         $this->assertSame([['key_hash' => null]], $this->rows('SELECT key_hash FROM plugin_draw_keys'));
     }
 
@@ -209,13 +209,13 @@ final class DrawKeyFlowTest extends HttpTestCase
 
     public function testAMissingOrMadeUpCodeIsRefused(): void
     {
-        $invalid = ['error' => self::INVALID_CODE];
+        $invalid = self::INVALID_CODE;
 
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->post('/plugin/draw-keys/token', [])));
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->post('/plugin/draw-keys/token', ['code' => $this->authorize()])));
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->post('/plugin/draw-keys/token', [
+        $this->assertSame($invalid, $this->assertProblem(400, $this->post('/plugin/draw-keys/token', []), 'InvalidGrant'));
+        $this->assertSame($invalid, $this->assertProblem(400, $this->post('/plugin/draw-keys/token', ['code' => $this->authorize()]), 'InvalidGrant'));
+        $this->assertSame($invalid, $this->assertProblem(400, $this->post('/plugin/draw-keys/token', [
             'code' => bin2hex(random_bytes(32)), 'code_verifier' => $this->verifier,
-        ])));
+        ]), 'InvalidGrant'));
         // An account link's code is no draw key's.
         $this->assertSame(0, $this->rowCount('plugin_tokens'));
     }
@@ -225,7 +225,7 @@ final class DrawKeyFlowTest extends HttpTestCase
         $this->configureTurnstile();
         // Failed challenges count as much as passed ones.
         for ($i = 0; $i < 9; $i++) {
-            $this->assertJsonResponse(400, $this->post('/plugin/draw-keys/authorize', ['code_challenge' => $this->challenge, 'redirect_uri' => self::REDIRECT]));
+            $this->assertProblem(422, $this->post('/plugin/draw-keys/authorize', ['code_challenge' => $this->challenge, 'redirect_uri' => self::REDIRECT]));
         }
         $this->assertJsonResponse(200, $this->post('/plugin/draw-keys/authorize', [
             'code_challenge' => $this->challenge, 'redirect_uri' => self::REDIRECT, 'turnstile_token' => self::PASSED,
@@ -235,7 +235,7 @@ final class DrawKeyFlowTest extends HttpTestCase
             'code_challenge' => $this->challenge, 'redirect_uri' => self::REDIRECT, 'turnstile_token' => self::PASSED,
         ]);
 
-        $this->assertSame(['error' => 'Too many attempts. Please try again later.'], $this->assertJsonResponse(429, $refused));
+        $this->assertSame('Too many attempts. Please try again later.', $this->assertProblem(429, $refused));
         $this->assertSame(1, $this->rowCount('plugin_draw_keys'));
     }
 
@@ -246,13 +246,13 @@ final class DrawKeyFlowTest extends HttpTestCase
             $codes[] = $this->authorize();
         }
         for ($i = 0; $i < 9; $i++) {
-            $this->assertJsonResponse(400, $this->post('/plugin/draw-keys/token', ['code' => bin2hex(random_bytes(32)), 'code_verifier' => $this->verifier]));
+            $this->assertProblem(400, $this->post('/plugin/draw-keys/token', ['code' => bin2hex(random_bytes(32)), 'code_verifier' => $this->verifier]), 'InvalidGrant');
         }
         $this->assertJsonResponse(200, $this->post('/plugin/draw-keys/token', ['code' => $codes[0], 'code_verifier' => $this->verifier]));
 
         $refused = $this->post('/plugin/draw-keys/token', ['code' => $codes[1], 'code_verifier' => $this->verifier]);
 
-        $this->assertSame(['error' => 'Too many attempts. Please try again later.'], $this->assertJsonResponse(429, $refused));
+        $this->assertSame('Too many attempts. Please try again later.', $this->assertProblem(429, $refused));
         $this->assertSame([['issued' => 1]], $this->rows('SELECT COUNT(*) AS issued FROM plugin_draw_keys WHERE key_hash IS NOT NULL'));
     }
 

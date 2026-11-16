@@ -65,7 +65,7 @@ final class SpreadsTest extends HttpTestCase
         );
 
         $missing = $this->get('/spreads/999');
-        $this->assertSame(['error' => 'InvalidSpreadID'], $this->assertJsonResponse(404, $missing));
+        $this->assertSame('InvalidSpreadID', $this->assertProblem(404, $missing));
         $this->assertSame('', $missing->getHeaderLine('Cache-Control'));
     }
 
@@ -107,7 +107,7 @@ final class SpreadsTest extends HttpTestCase
 
     public function testASubmissionNeedsANameAndAtLeastOnePosition(): void
     {
-        $required = ['error' => 'A spread name and at least one card position are required.'];
+        $required = 'A spread name and at least one card position are required.';
 
         foreach ([
             ['positions' => [self::POSITION]],
@@ -116,7 +116,7 @@ final class SpreadsTest extends HttpTestCase
             ['name' => 'Crossroads', 'positions' => []],
             ['name' => 'Crossroads', 'positions' => 'one'],
         ] as $submission) {
-            $this->assertSame($required, $this->assertJsonResponse(400, $this->post('/spreads', $submission)));
+            $this->assertSame($required, $this->assertProblem(422, $this->post('/spreads', $submission)));
         }
         $this->assertSame(0, $this->rowCount('pending_spreads'));
     }
@@ -124,23 +124,37 @@ final class SpreadsTest extends HttpTestCase
     public function testAVisitorCanSubmitFiveSpreadsAnHour(): void
     {
         // Refused submissions don't use up the allowance.
-        $this->assertJsonResponse(400, $this->post('/spreads', ['name' => 'Empty']));
+        $this->assertProblem(422, $this->post('/spreads', ['name' => 'Empty']));
         for ($i = 1; $i <= 5; $i++) {
             $this->assertJsonResponse(201, $this->post('/spreads', ['name' => "Spread {$i}", 'positions' => [self::POSITION]]));
         }
 
         $this->assertSame(
-            ['error' => 'You have submitted too many spreads recently. Please try again later.'],
-            $this->assertJsonResponse(429, $this->post('/spreads', ['name' => 'Spread 6', 'positions' => [self::POSITION]]))
+            'You have submitted too many spreads recently. Please try again later.',
+            $this->assertProblem(429, $this->post('/spreads', ['name' => 'Spread 6', 'positions' => [self::POSITION]]))
         );
         $this->assertSame(5, $this->rowCount('pending_spreads'));
     }
 
-    public function testASubmissionsPositionDescriptionsAreTrimmedAndCapped(): void
+    public function testASubmissionPastALimitIsRefusedNotCut(): void
+    {
+        $long = $this->post('/spreads', ['name' => 'Crossroads', 'positions' => [
+            ['order' => 1, 'title' => 'Here'],
+            ['order' => 2, 'title' => 'There', 'description' => str_repeat('a', 281)],
+        ]]);
+        $this->assertSame('description can be at most 280 characters.', $this->assertDocumentedProblem('post', '/spreads', 422, $long));
+        $this->assertSame(['body.positions[1].description'], array_keys($this->problemErrors($long)));
+
+        $name = $this->post('/spreads', ['name' => str_repeat('n', 201), 'positions' => [['order' => 1]]]);
+        $this->assertSame(['body.name'], array_keys($this->problemErrors($name)));
+        $this->assertSame(0, $this->rowCount('pending_spreads'));
+    }
+
+    public function testASubmissionsPositionDescriptionsAreTrimmed(): void
     {
         $this->assertJsonResponse(201, $this->post('/spreads', ['name' => 'Crossroads', 'positions' => [
             ['order' => 1, 'title' => 'Here', 'description' => '  What stands in your way  '],
-            ['order' => 2, 'title' => 'There', 'description' => str_repeat('a', 300)],
+            ['order' => 2, 'title' => 'There', 'description' => str_repeat('a', 280)],
             ['order' => 3, 'title' => 'Blank', 'description' => '   '],
             ['order' => 4, 'title' => 'Odd', 'description' => ['not', 'text']],
         ]]));
@@ -191,7 +205,7 @@ final class SpreadsTest extends HttpTestCase
         $spread = $this->service(SpreadData::class)->store(['name' => 'Three Card', 'positions' => [self::POSITION]]);
         $this->assertNotNull($spread);
 
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->post("/spreads/{$spread->spread_id}/copy")));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->post("/spreads/{$spread->spread_id}/copy")));
         $this->assertSame(0, $this->rowCount('user_spreads'));
     }
 
@@ -200,11 +214,11 @@ final class SpreadsTest extends HttpTestCase
         $pending = $this->service(PendingSpreadData::class)->store(['name' => 'Waiting', 'positions' => [self::POSITION]]);
         $this->assertNotNull($pending);
         $this->signInAs($this->createUser('reader@example.test')->user_id);
-        $notFound = ['error' => 'Spread not found.'];
+        $notFound = 'Spread not found.';
 
         // A submission still in review is no public spread, by its id or any other.
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->post("/spreads/{$pending->pending_id}/copy")));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->post('/spreads/999/copy')));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->post("/spreads/{$pending->pending_id}/copy")));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->post('/spreads/999/copy')));
         $this->assertSame(0, $this->rowCount('user_spreads'));
     }
 }

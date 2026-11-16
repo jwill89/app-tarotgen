@@ -1,7 +1,6 @@
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 
 namespace TarotGen.Plugin.Windows;
@@ -29,10 +28,19 @@ internal static class Ui
 
     // ── icons ──────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Puts Dalamud's icon font on until disposed. The plugin hands over its icon
+    /// font handle when it starts; the preview hands over its own copy of the face.
+    /// </summary>
+    public static Func<IDisposable>? IconFont { get; set; }
+
+    /// <summary>Draws in the icon font, until disposed.</summary>
+    public static IDisposable Icons() => IconFont?.Invoke() ?? ImRaii.PushId("icons");
+
     /// <summary>Render a FontAwesome glyph inline (default text colour).</summary>
     public static void Icon(FontAwesomeIcon icon)
     {
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (Icons())
             ImGui.TextUnformatted(icon.ToIconString());
     }
 
@@ -40,7 +48,7 @@ internal static class Ui
     public static void Icon(FontAwesomeIcon icon, Vector4 color)
     {
         using (ImRaii.PushColor(ImGuiCol.Text, color))
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (Icons())
             ImGui.TextUnformatted(icon.ToIconString());
     }
 
@@ -136,8 +144,10 @@ internal static class Ui
     /// <summary>A compact icon button with a hover tooltip (for toolbars).</summary>
     public static bool IconButton(string id, FontAwesomeIcon icon, string tooltip)
     {
-        using var _ = ImRaii.PushId(id);
-        var clicked = ImGuiComponents.IconButton(icon);
+        using var scope = ImRaii.PushId(id);
+        bool clicked;
+        using (Icons())
+            clicked = ImGui.Button(icon.ToIconString());
         if (!string.IsNullOrEmpty(tooltip) && ImGui.IsItemHovered())
             ImGui.SetTooltip(tooltip);
         return clicked;

@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import SpecialCardsView from '@/views/admin/SpecialCardsView.vue'
 import { useUser } from '@/composables/useUser'
-import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -103,7 +103,7 @@ describe('admin SpecialCardsView', () => {
     it("still lists the other decks' cards when one deck's cards fail to load", async () => {
       stubApi({
         ...loads(),
-        'GET /admin/decks/2/special-cards': { status: 500, body: { error: 'Database error' } },
+        'GET /admin/decks/2/special-cards': { status: 500, body: problem('Database error') },
       })
       await mountPage(SpecialCardsView, { path: '/admin/special-cards' })
 
@@ -154,7 +154,7 @@ describe('admin SpecialCardsView', () => {
     })
 
     it('drops to the login page when the session has expired', async () => {
-      stubApi({ 'GET /admin/decks': { status: 401, body: { error: 'Unauthorized' } } })
+      stubApi({ 'GET /admin/decks': { status: 401, body: problem('Unauthorized') } })
       const { router } = await mountPage(SpecialCardsView, { path: '/admin/special-cards' })
 
       // The login route's component loads lazily, so the navigation lands a beat later.
@@ -239,7 +239,7 @@ describe('admin SpecialCardsView', () => {
         ...loads(),
         'POST /admin/decks/1/special-cards': {
           status: 500,
-          body: { error: 'Card ID 79 is taken.' },
+          body: problem('Card ID 79 is taken.'),
         },
       })
       await mountPage(SpecialCardsView, { path: '/admin/special-cards' })
@@ -362,7 +362,7 @@ describe('admin SpecialCardsView', () => {
         ...loads(),
         'DELETE /admin/decks/2/special-cards/79': {
           status: 500,
-          body: { error: 'Failed to delete special card.' },
+          body: problem('Failed to delete special card.'),
         },
       })
       await mountPage(SpecialCardsView, { path: '/admin/special-cards' })

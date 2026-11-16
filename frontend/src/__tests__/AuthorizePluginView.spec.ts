@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import AuthorizePluginView from '@/views/AuthorizePluginView.vue'
-import { mountWithApp, cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, signIn, testUser, problem } from './helpers/app'
 
 const text = (el: Element) => el.textContent.replace(/\s+/g, ' ').trim()
 const pageText = () => text(document.body)
@@ -20,7 +20,7 @@ const authorizePath = (params: Record<string, string> = pkce) =>
   '/authorize?' + new URLSearchParams(params).toString()
 
 const me = (user = testUser({ display_name: 'Lyra' })) => ({ 'GET /auth/me': { body: { user } } })
-const signedOut = { 'GET /auth/me': { status: 401, body: { error: 'Not authenticated' } } }
+const signedOut = { 'GET /auth/me': { status: 401, body: problem('Not authenticated') } }
 
 describe('AuthorizePluginView', () => {
   beforeEach(() => {
@@ -68,7 +68,7 @@ describe('AuthorizePluginView', () => {
   it("shows the server's refusal and lets the user try again", async () => {
     stubApi({
       ...me(),
-      'POST /plugin/authorize': { status: 400, body: { error: 'This link request has expired.' } },
+      'POST /plugin/authorize': { status: 422, body: problem('This link request has expired.') },
     })
     await mountWithApp(AuthorizePluginView, { path: authorizePath() })
 

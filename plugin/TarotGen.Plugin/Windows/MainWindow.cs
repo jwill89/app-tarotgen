@@ -4,10 +4,8 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
-using Dalamud.Plugin;
 using Dalamud.Utility;
-using TarotGen.Plugin.Models;
-using TarotGen.Plugin.Services;
+using TarotGen.Plugin.Core;
 
 namespace TarotGen.Plugin.Windows;
 
@@ -24,7 +22,7 @@ public sealed class MainWindow : Window, IDisposable
     private readonly LinkService linkService;
     private readonly DrawKeyService drawKeys;
     private readonly Configuration config;
-    private readonly IDalamudPluginInterface pluginInterface;
+    private readonly Action saveConfig;
 
     private bool onboardingShown;
     private bool drawKeyNoticeShown;
@@ -32,11 +30,9 @@ public sealed class MainWindow : Window, IDisposable
     private static readonly string PluginVersion =
         typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
 
-    private IReadOnlyList<Spread> spreads = Array.Empty<Spread>();
-    private List<SpreadGroup> spreadGroups = new();
-    private List<DeckGroup> deckGroups = new();
+    private Catalog catalog = Catalog.Empty;
     private bool catalogRequested;
-    private bool catalogLoading;
+    private volatile bool catalogLoading;
     private string? catalogError;
 
     private Deck? selectedDeck;
@@ -58,17 +54,17 @@ public sealed class MainWindow : Window, IDisposable
     private string? myReadingsError;
     private string myReadingsFilter = string.Empty;
 
-    private bool switchToReadingTab;
-    private bool switchToNewReadingTab;
-    private bool switchToSettingsTab;
+    // The tab the next frame selects, once.
+    private Tab? requestedTab;
 
+    /// <param name="saveConfig">Persists <paramref name="config"/>.</param>
     public MainWindow(
         TarotApiClient api,
         ReadingPanel readingPanel,
         LinkService linkService,
         DrawKeyService drawKeys,
         Configuration config,
-        IDalamudPluginInterface pluginInterface)
+        Action saveConfig)
         : base("TarotGen###TarotGenMain")
     {
         this.api = api;
@@ -76,7 +72,7 @@ public sealed class MainWindow : Window, IDisposable
         this.linkService = linkService;
         this.drawKeys = drawKeys;
         this.config = config;
-        this.pluginInterface = pluginInterface;
+        this.saveConfig = saveConfig;
         this.freeDrawCount = Math.Max(1, config.FreeDrawCount);
         this.defaultFreeDrawCount = Math.Max(1, config.FreeDrawCount);
         this.Size = new Vector2(680, 780);
@@ -88,18 +84,32 @@ public sealed class MainWindow : Window, IDisposable
         };
     }
 
+    /// <summary>The window's tabs.</summary>
+    internal enum Tab
+    {
+        Reading,
+        NewReading,
+        MyReadings,
+        Settings,
+    }
+
+    /// <summary>Whether the catalog, a draw or My Readings is still waiting on the site.</summary>
+    internal bool Busy => this.catalogLoading || this.generating || this.myReadingsLoading || this.readingPanel.Busy;
+
     /// <summary>Open a reading by code and switch to the Reading tab.</summary>
     public void ShowReading(string idOrUrl)
     {
         this.readingPanel.OpenReading(idOrUrl);
-        this.switchToReadingTab = true;
-        this.IsOpen = true;
+        this.Show(Tab.Reading);
     }
 
     /// <summary>Open the window on the Settings tab (the config/gear button).</summary>
-    public void ShowSettings()
+    public void ShowSettings() => this.Show(Tab.Settings);
+
+    /// <summary>Open the window on <paramref name="tab"/>.</summary>
+    internal void Show(Tab tab)
     {
-        this.switchToSettingsTab = true;
+        this.requestedTab = tab;
         this.IsOpen = true;
     }
 
@@ -131,17 +141,17 @@ public sealed class MainWindow : Window, IDisposable
         {
             if (tabs)
             {
-                var readingFlags = this.switchToReadingTab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
-                this.switchToReadingTab = false;
-                using (var t = ImRaii.TabItem("Reading", readingFlags))
+                var requested = this.requestedTab;
+                this.requestedTab = null;
+                ImGuiTabItemFlags Flags(Tab tab) => requested == tab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+
+                using (var t = ImRaii.TabItem("Reading", Flags(Tab.Reading)))
                 {
                     if (t)
                         this.readingPanel.Draw();
                 }
 
-                var newReadingFlags = this.switchToNewReadingTab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
-                this.switchToNewReadingTab = false;
-                using (var t = ImRaii.TabItem("New Reading", newReadingFlags))
+                using (var t = ImRaii.TabItem("New Reading", Flags(Tab.NewReading)))
                 {
                     if (t)
                         this.DrawNewReadingTab();
@@ -150,14 +160,12 @@ public sealed class MainWindow : Window, IDisposable
                 // My Readings requires an actual linked TarotGen account (not a guest).
                 if (this.api.IsLinked)
                 {
-                    using var t = ImRaii.TabItem("My Readings");
+                    using var t = ImRaii.TabItem("My Readings", Flags(Tab.MyReadings));
                     if (t)
                         this.DrawMyReadingsTab();
                 }
 
-                var settingsFlags = this.switchToSettingsTab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
-                this.switchToSettingsTab = false;
-                using (var t = ImRaii.TabItem("Settings", settingsFlags))
+                using (var t = ImRaii.TabItem("Settings", Flags(Tab.Settings)))
                 {
                     if (t)
                         this.DrawSettingsTab();
@@ -213,7 +221,7 @@ public sealed class MainWindow : Window, IDisposable
         this.config.OnboardingComplete = true;
         // Onboarding already explains draw keys; the upgrade notice is not for this install.
         this.config.DrawKeyNoticeSeen = true;
-        this.config.Save(this.pluginInterface);
+        this.saveConfig();
         ImGui.CloseCurrentPopup();
     }
 
@@ -251,7 +259,7 @@ public sealed class MainWindow : Window, IDisposable
         {
             this.drawKeys.StartGetKey();
             // Its progress and any error show on the New Reading tab.
-            this.switchToNewReadingTab = true;
+            this.requestedTab = Tab.NewReading;
             this.CloseDrawKeyNotice();
         }
 
@@ -259,7 +267,7 @@ public sealed class MainWindow : Window, IDisposable
         if (Ui.Button("Link my account"))
         {
             this.linkService.StartLink();
-            this.switchToSettingsTab = true;
+            this.requestedTab = Tab.Settings;
             this.CloseDrawKeyNotice();
         }
 
@@ -277,7 +285,7 @@ public sealed class MainWindow : Window, IDisposable
     private void MarkDrawKeyNoticeSeen()
     {
         this.config.DrawKeyNoticeSeen = true;
-        this.config.Save(this.pluginInterface);
+        this.saveConfig();
     }
 
     // ── New Reading tab ───────────────────────────────────────────────────────
@@ -409,7 +417,7 @@ public sealed class MainWindow : Window, IDisposable
             return;
 
         var first = true;
-        foreach (var group in this.deckGroups)
+        foreach (var group in this.catalog.DeckGroups)
         {
             if (!first)
                 ImGui.Separator();
@@ -431,7 +439,7 @@ public sealed class MainWindow : Window, IDisposable
     {
         this.selectedDeck = deck;
         this.config.UseAdditionalCards = false;
-        this.config.Save(this.pluginInterface);
+        this.saveConfig();
     }
 
     private void SelectSpread(Spread? spread)
@@ -459,7 +467,7 @@ public sealed class MainWindow : Window, IDisposable
     /// </summary>
     private void DrawSpreadItems(string id, Func<Spread, bool> isSelected, Action<Spread> pick)
     {
-        foreach (var group in this.spreadGroups)
+        foreach (var group in this.catalog.SpreadGroups)
         {
             if (group.Header != null)
             {
@@ -575,7 +583,7 @@ public sealed class MainWindow : Window, IDisposable
         }
 
         var q = this.myReadingsFilter.Trim();
-        var rows = this.myReadings.Where(r => this.Matches(r, q)).ToList();
+        var rows = this.myReadings.Where(r => ReadingFormat.Matches(r, this.DeckName(r), q)).ToList();
         if (rows.Count == 0)
         {
             ImGui.TextDisabled(q.Length > 0 ? "No readings match your filter." : "No saved readings yet.");
@@ -604,17 +612,8 @@ public sealed class MainWindow : Window, IDisposable
             ImGui.TableNextColumn();
             ImGui.TextUnformatted(this.DeckName(r));
             ImGui.TableNextColumn();
-            ImGui.TextUnformatted(r.ReadingTime ?? string.Empty);
+            ImGui.TextUnformatted(ReadingFormat.Time(r.ReadingTime));
         }
-    }
-
-    private bool Matches(Reading r, string query)
-    {
-        if (query.Length == 0)
-            return true;
-        return ReadingFormat.Title(r).Contains(query, StringComparison.OrdinalIgnoreCase)
-            || r.ReadingId.Contains(query, StringComparison.OrdinalIgnoreCase)
-            || this.DeckName(r).Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 
     private string DeckName(Reading r)
@@ -691,20 +690,20 @@ public sealed class MainWindow : Window, IDisposable
     private void SaveDefaults()
     {
         this.config.FreeDrawCount = this.defaultFreeDrawCount;
-        this.config.Save(this.pluginInterface);
+        this.saveConfig();
         this.defaultsSavedAt = DateTime.UtcNow;
     }
 
     private void DrawDefaultDeckCombo()
     {
-        var current = this.deckGroups.SelectMany(g => g.Decks).FirstOrDefault(d => d.DeckId == this.config.DefaultDeckId);
+        var current = this.catalog.DeckById(this.config.DefaultDeckId);
         ImGui.SetNextItemWidth(-1);
         using var combo = ImRaii.Combo("##defaultdeck", current?.Name ?? "Select a deck…");
         if (!combo)
             return;
 
         var first = true;
-        foreach (var group in this.deckGroups)
+        foreach (var group in this.catalog.DeckGroups)
         {
             if (!first)
                 ImGui.Separator();
@@ -718,7 +717,7 @@ public sealed class MainWindow : Window, IDisposable
                 if (ImGui.Selectable($"{d.Name}{artist}{extra}##ddeck{d.DeckId}", d.DeckId == this.config.DefaultDeckId))
                 {
                     this.config.DefaultDeckId = d.DeckId;
-                    this.config.Save(this.pluginInterface);
+                    this.saveConfig();
                     this.defaultsSavedAt = DateTime.UtcNow;
                 }
             }
@@ -727,9 +726,7 @@ public sealed class MainWindow : Window, IDisposable
 
     private void DrawDefaultSpreadCombo()
     {
-        var current = this.config.DefaultSpreadId is { } sid
-            ? this.spreads.FirstOrDefault(s => s.SpreadId == sid)
-            : null;
+        var current = this.catalog.SpreadById(this.config.DefaultSpreadId);
         ImGui.SetNextItemWidth(-1);
         using var combo = ImRaii.Combo("##defaultspread", current?.Name ?? "Free draw");
         if (!combo)
@@ -744,7 +741,7 @@ public sealed class MainWindow : Window, IDisposable
     private void SaveDefaultSpread(int? spreadId)
     {
         this.config.DefaultSpreadId = spreadId;
-        this.config.Save(this.pluginInterface);
+        this.saveConfig();
         this.defaultsSavedAt = DateTime.UtcNow;
     }
 
@@ -839,15 +836,7 @@ public sealed class MainWindow : Window, IDisposable
 
     // ── Loading + actions ─────────────────────────────────────────────────────
 
-    private int MaxCardsForDeck()
-    {
-        if (this.selectedDeck == null)
-            return 78;
-        var total = this.selectedDeck.EffectiveTotalCards;
-        if (this.config.UseAdditionalCards)
-            total += this.selectedDeck.AdditionalCards;
-        return Math.Max(1, total);
-    }
+    private int MaxCardsForDeck() => this.selectedDeck?.MaxDrawCount(this.config.UseAdditionalCards) ?? 78;
 
     private void StartCatalogLoad()
     {
@@ -862,20 +851,10 @@ public sealed class MainWindow : Window, IDisposable
                 var spreadsTask = this.api.GetSpreadsAsync(this.api.Token);
                 await Task.WhenAll(decksTask, spreadsTask).ConfigureAwait(false);
 
-                var spreads = spreadsTask.Result.OrderBy(s => s.CardCount).ThenBy(s => s.Name).ToList();
-                this.spreads = spreads;
-                this.spreadGroups = BuildSpreadGroups(spreads);
-                this.deckGroups = BuildDeckGroups(decksTask.Result);
-
-                this.selectedDeck = null;
-                var allDecks = this.deckGroups.SelectMany(g => g.Decks).ToList();
-                if (this.config.DefaultDeckId is { } deckId)
-                    this.selectedDeck = allDecks.FirstOrDefault(d => d.DeckId == deckId);
-                this.selectedDeck ??= allDecks.FirstOrDefault();
-
-                this.selectedSpread = this.config.DefaultSpreadId is { } spreadId
-                    ? this.spreads.FirstOrDefault(s => s.SpreadId == spreadId)
-                    : null;
+                var loaded = new Catalog(await decksTask.ConfigureAwait(false), await spreadsTask.ConfigureAwait(false));
+                this.selectedDeck = loaded.StartingDeck(this.config.DefaultDeckId);
+                this.selectedSpread = loaded.SpreadById(this.config.DefaultSpreadId);
+                this.catalog = loaded;
             }
             catch (Exception ex)
             {
@@ -888,39 +867,8 @@ public sealed class MainWindow : Window, IDisposable
         });
     }
 
-    /// <summary>
-    /// Public spreads under their library category, in the admins' order, as New
-    /// Draw groups them on the site. An API before 5.2.0 sends no categories: one
-    /// group with no heading, a flat picker.
-    /// </summary>
-    private static List<SpreadGroup> BuildSpreadGroups(List<Spread> spreads)
-    {
-        if (spreads.TrueForAll(s => string.IsNullOrWhiteSpace(s.CategoryName)))
-            return [new SpreadGroup(null, spreads)];
-
-        return spreads
-            .GroupBy(s => s.CategoryId)
-            .OrderBy(g => g.First().CategorySortOrder)
-            .Select(g => new SpreadGroup(g.First().CategoryName, g.ToList()))
-            .ToList();
-    }
-
-    private static List<DeckGroup> BuildDeckGroups(IReadOnlyList<Deck> decks)
-    {
-        return decks
-            .GroupBy(d => string.IsNullOrWhiteSpace(d.SystemShortName) ? "Other" : d.SystemShortName)
-            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
-            .Select(g =>
-            {
-                var ordered = g.OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase).ToList();
-                var total = ordered[0].EffectiveTotalCards;
-                var header = $"{g.Key.ToUpperInvariant()}  ·  {total} cards";
-                return new DeckGroup(header, ordered);
-            })
-            .ToList();
-    }
-
-    private void StartGenerate()
+    /// <summary>Draw a reading with the New Reading tab's choices (its Generate button).</summary>
+    internal void StartGenerate()
     {
         if (this.selectedDeck == null)
             return;
@@ -957,7 +905,7 @@ public sealed class MainWindow : Window, IDisposable
                     }
 
                     this.readingPanel.SetReading(reading);
-                    this.switchToReadingTab = true;
+                    this.requestedTab = Tab.Reading;
                     this.myReadingsRequested = false; // refresh the list next view
                 }
             }
@@ -998,9 +946,4 @@ public sealed class MainWindow : Window, IDisposable
     public void Dispose()
     {
     }
-
-    private sealed record DeckGroup(string Header, List<Deck> Decks);
-
-    /// <summary>A category's spreads; no <see cref="Header"/> when the API sent no categories.</summary>
-    private sealed record SpreadGroup(string? Header, List<Spread> Spreads);
 }

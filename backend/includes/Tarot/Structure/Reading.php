@@ -20,7 +20,7 @@ class Reading extends AbstractStructure
     #[OAS\Property(schema: new OAS\Schema(ref: '#/components/schemas/ReadingInfo', description: 'What was drawn.'))]
     public private(set) string $reading_info = '';
 
-    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string', format: 'date-time', examples: ['2026-11-07T09:18:09Z']))]
     public private(set) string $reading_time = '';
 
     #[OAS\Property(schema: new OAS\Schema(type: 'integer', nullable: true))]
@@ -47,7 +47,7 @@ class Reading extends AbstractStructure
      * Derived — the local day ("Y-m-d") this reading is the owner's daily card
      * for, or null for any other reading (see DailyCardData).
      */
-    #[OAS\Property(schema: new OAS\Schema(description: 'The day ("Y-m-d", the owner\'s local date) this reading is their daily card for; null for any other reading.', type: 'string', nullable: true))]
+    #[OAS\Property(schema: new OAS\Schema(description: 'The day ("Y-m-d", the owner\'s local date) this reading is their daily card for; null for any other reading.', type: 'string', format: 'date', nullable: true, examples: ['2026-11-07']))]
     public private(set) ?string $daily_card_day = null;
 
     /** Owner-only: never in what anyone else is sent (ReadingController, og.php). */
@@ -79,7 +79,7 @@ class Reading extends AbstractStructure
     #[OAS\Property(schema: new OAS\Schema(description: 'Who can open it: anyone with the link, anyone with its password, or (private) only its owner.', type: 'string', enum: ['link', 'password', 'private']))]
     public private(set) string $visibility = 'link';
 
-    #[OAS\Property(schema: new OAS\Schema(description: 'When a guest reading will be deleted, UTC ("Y-m-d H:i:s"), as its maker chose; null for the usual retention. A reading made signed in never has one.', type: 'string', nullable: true))]
+    #[OAS\Property(schema: new OAS\Schema(description: 'When a guest reading will be deleted, in UTC, as its maker chose; null for the usual retention. A reading made signed in never has one.', type: 'string', format: 'date-time', nullable: true, examples: ['2026-11-07T09:18:09Z']))]
     public private(set) ?string $expires_at = null;
 
     /** Whether $userId (null for a guest) owns it. */

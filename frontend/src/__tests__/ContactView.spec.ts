@@ -5,7 +5,7 @@ import { TooltipProvider } from 'reka-ui'
 import ContactView from '@/views/ContactView.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import { useToasts } from '@/composables/useToasts'
-import { mountWithApp, cleanup, stubApi, signIn, testUser } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, signIn, testUser, problem } from './helpers/app'
 
 const text = (el: Element) => el.textContent.replace(/\s+/g, ' ').trim()
 const pageText = () => text(document.body)
@@ -149,7 +149,7 @@ describe('ContactView', () => {
 
   it("keeps the message and shows the server's reason when it isn't sent", async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
-    stub({ 'POST /contacts': { status: 400, body: { error: 'Please enter a valid email.' } } })
+    stub({ 'POST /contacts': { status: 422, body: problem('Please enter a valid email.') } })
     const wrapper = await mountContact()
 
     await type('Name', 'Alice')
@@ -211,8 +211,8 @@ describe('ContactView', () => {
       stub(
         {
           'POST /contacts': {
-            status: 400,
-            body: { error: 'Captcha verification failed. Please try again.' },
+            status: 422,
+            body: problem('Captcha verification failed. Please try again.'),
           },
         },
         { turnstile_sitekey: '0x4AAA' },

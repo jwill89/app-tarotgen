@@ -133,4 +133,23 @@ describe('MarkdownEditor', () => {
     expect(editor.textbox().get('strong').text()).toBe('Reset')
     expect(editor.updates).toEqual([])
   })
+
+  // The page's Content-Security-Policy admits TipTap's <style> only with its nonce.
+  it("gives TipTap's style element the page's nonce", async () => {
+    document.querySelector('style[data-tiptap-style]')?.remove()
+    const meta = document.createElement('meta')
+    meta.setAttribute('property', 'csp-nonce')
+    meta.setAttribute('nonce', 'abc123==')
+    document.head.append(meta)
+
+    try {
+      await mountEditor('Hello')
+
+      const style = document.querySelector('style[data-tiptap-style]')
+      expect(style?.getAttribute('nonce')).toBe('abc123==')
+    } finally {
+      meta.remove()
+      document.querySelector('style[data-tiptap-style]')?.remove()
+    }
+  })
 })

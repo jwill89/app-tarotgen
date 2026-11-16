@@ -112,9 +112,9 @@ final class AdminDashboardTest extends HttpTestCase
     {
         $this->signInAs($this->createUser('reader@example.test')->user_id);
 
-        $this->assertSame(['error' => 'Unauthorized'], $this->assertJsonResponse(401, $this->get('/admin/summary')));
-        $this->assertSame(['error' => 'Unauthorized'], $this->assertJsonResponse(401, $this->get('/admin/stats')));
-        $this->assertSame(['error' => 'Unauthorized'], $this->assertJsonResponse(401, $this->get('/admin/auth-check')));
+        $this->assertSame('Only an admin can do that.', $this->assertProblem(403, $this->get('/admin/summary')));
+        $this->assertSame('Only an admin can do that.', $this->assertProblem(403, $this->get('/admin/stats')));
+        $this->assertSame('Only an admin can do that.', $this->assertProblem(403, $this->get('/admin/auth-check')));
 
         $this->signInAs($this->createUser('admin@example.test', admin: true)->user_id);
         $checked = $this->assertJsonResponse(200, $this->get('/admin/auth-check'));

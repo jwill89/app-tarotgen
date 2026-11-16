@@ -1202,7 +1202,9 @@ export interface paths {
         /**
          * Redirect to Google's consent screen
          * @description Initiate the OAuth flow. Accepts an optional ?intent query param
-         *     ('login', 'register', or 'link') so the callback knows what to do.
+         *     ('login', 'register', or 'link') so the callback knows what to do. The
+         *     browser navigates here, so a flow that can't start sends it back to the
+         *     page it came from with the reason, as the callback does.
          */
         get: operations["eac6533cfebab1e8ffaeaaadc83f09d3"];
         put?: never;
@@ -1846,7 +1848,11 @@ export interface components {
             reading_id: string;
             /** @description What was drawn. */
             reading_info: components["schemas"]["ReadingInfo"];
-            /** @description When it was made, UTC ("Y-m-d H:i:s"). */
+            /**
+             * Format: date-time
+             * @description When it was made, in UTC.
+             * @example 2026-11-07T09:18:09Z
+             */
             reading_time: string;
             /** @description The owner's title for it, if any. */
             reading_name: string | null;
@@ -1870,7 +1876,11 @@ export interface components {
              * @enum {string}
              */
             visibility: "link" | "password" | "private";
-            /** @description When this guest reading will be deleted, UTC ("Y-m-d H:i:s"), as its maker chose; null for the usual retention. */
+            /**
+             * Format: date-time
+             * @description When this guest reading will be deleted, in UTC, as its maker chose; null for the usual retention.
+             * @example 2026-11-07T09:18:09Z
+             */
             expires_at: string | null;
             /** @description What was asked. Only in the owner's payload. */
             question?: string | null;
@@ -1893,7 +1903,11 @@ export interface components {
         };
         /** @description Every reading the user owns: the JSON journal download. */
         JournalExport: {
-            /** @description When the file was made, UTC ("Y-m-d H:i:s"). */
+            /**
+             * Format: date-time
+             * @description When the file was made, in UTC.
+             * @example 2026-11-07T09:18:09Z
+             */
             exported_at: string;
             /** @description Newest first. */
             readings: components["schemas"]["JournalReading"][];
@@ -1904,7 +1918,11 @@ export interface components {
             reading_id: string;
             /** @description The reading's share link. */
             link: string;
-            /** @description When it was made, UTC ("Y-m-d H:i:s"). */
+            /**
+             * Format: date-time
+             * @description When it was made, in UTC.
+             * @example 2026-11-07T09:18:09Z
+             */
             reading_time: string;
             /** @description The owner's title for it, if any. */
             reading_name: string | null;
@@ -1957,9 +1975,16 @@ export interface components {
             passkey_id: number;
             /** @description The name given, or "My Passkey". */
             name: string;
-            /** @description When it was registered, UTC ("Y-m-d H:i:s"). */
+            /**
+             * Format: date-time
+             * @description When it was registered, in UTC.
+             * @example 2026-11-07T09:18:09Z
+             */
             created_at: string;
-            /** @description Always null: it has not signed in yet. */
+            /**
+             * Format: date-time
+             * @description Always null: it has not signed in yet.
+             */
             last_used_at: string | null;
         };
         /** @description Usage analytics over the stored readings, for the admin dashboard. */
@@ -1999,10 +2024,63 @@ export interface components {
             }[];
             /** @description Readings per UTC day over the last 14 days, oldest first; a day with none is left out. */
             daily: {
-                /** @description "Y-m-d", UTC. */
+                /**
+                 * Format: date
+                 * @description The UTC day.
+                 * @example 2026-11-07
+                 */
                 date: string;
                 count: number;
             }[];
+        };
+        /** @description An error, as RFC 9457 problem details: what every 4xx and 5xx answers with, as application/problem+json. */
+        ProblemDetails: {
+            /**
+             * @description Always about:blank: the status says what kind of problem it is.
+             * @enum {string}
+             */
+            type: "about:blank";
+            /** @description The status's reason phrase, e.g. "Unprocessable Entity". */
+            title: string;
+            /** @description The HTTP status code, repeated. */
+            status: number;
+            /** @description Why the request failed, in words to show the user. */
+            detail: string;
+            /** @description On a failed validation (422) only: each field that was refused. */
+            errors?: components["schemas"]["ProblemFieldError"][];
+            /** @description Outside production, on an unexpected error (500) only: the exception chain, outermost first. */
+            exception?: {
+                /** @description The exception's class. */
+                type: string;
+                /** @description The exception's code. */
+                code: number | string;
+                /** @description The exception's message. */
+                message: string;
+                /** @description The file it was thrown in. */
+                file: string;
+                /** @description The line it was thrown at. */
+                line: number;
+            }[];
+        };
+        /** @description One field a failed validation refused. */
+        ProblemFieldError: {
+            /** @description Why the field was refused, in words to show beside it. */
+            message: string;
+            /** @description Where the field was sent: `body.email`, `body.positions[2].x`, `query.limit`, `path.deck_id`, or `body` for the body as a whole. */
+            location: string;
+        };
+        /** @description The problem a second daily card for one day answers with (409). */
+        DailyCardTaken: components["schemas"]["ProblemDetails"] & {
+            /** @description The reading already drawn for the day; null when it was deleted. */
+            reading_id: string | null;
+        };
+        /** @description The problem a plugin's code exchange answers with when the code or verifier is wrong (400): RFC 6749's invalid_grant, which `error` names for an OAuth client. */
+        InvalidGrant: components["schemas"]["ProblemDetails"] & {
+            /**
+             * @description The OAuth error code.
+             * @enum {string}
+             */
+            error: "invalid_grant";
         };
         /** @description One card and how often it was drawn. */
         CardCount: {
@@ -2038,9 +2116,21 @@ export interface components {
             card_name: string;
             /** @description How many times this card has been reported. */
             report_count: number;
-            /** @description When an admin marked it handled; null = open. */
+            /**
+             * Format: date-time
+             * @description When an admin marked it handled; null = open.
+             * @example 2026-11-07T09:18:09Z
+             */
             resolved_at: string | null;
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             first_reported_at: string;
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             last_reported_at: string;
             /** @description Goes up each time the card is reported again after being resolved. */
             round: number;
@@ -2061,6 +2151,10 @@ export interface components {
             reason: components["schemas"]["CardReportReason"];
             /** @description What the reporter wrote; may be empty. */
             details: string;
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             submitted_at: string;
         };
         /** @description A contact-form submission. */
@@ -2071,11 +2165,19 @@ export interface components {
             email: string;
             message: string;
             is_read: number;
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             submitted_at: string;
         };
         /** @description A day's daily card: the reading drawn for that day and the card it holds. A day whose reading was deleted stays drawn, with reading_id and every card field null. */
         DailyCard: {
-            /** @description The day it was drawn for: the owner's local date, "Y-m-d". */
+            /**
+             * Format: date
+             * @description The day it was drawn for: the owner's local date, "Y-m-d".
+             * @example 2026-11-07
+             */
             day: string;
             /** @description The reading drawn for the day; null once that reading was deleted. */
             reading_id: string | null;
@@ -2149,7 +2251,15 @@ export interface components {
             /** @description The WebAuthn credential id, base64url-encoded. */
             credential_id: string;
             name: string;
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             created_at: string;
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             last_used_at: string | null;
         };
         /** @description A user-submitted spread awaiting moderation. */
@@ -2167,6 +2277,10 @@ export interface components {
             /** @description Resolved submitter label: the linked account's display name, or "Guest". */
             submitter: string;
             user_id: number | null;
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             submitted_at: string;
         };
         /** @description A linked-plugin personal access token (no secret value exposed). */
@@ -2175,9 +2289,25 @@ export interface components {
             user_id: number;
             label: string;
             scope: string;
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             created_at: string;
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             last_used_at: string | null;
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             expires_at: string | null;
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             revoked_at: string | null;
         };
         /** @description A saved reading as stored — what the account pages and custom-reading creation return. Viewing a reading returns ReadingView instead. */
@@ -2185,6 +2315,10 @@ export interface components {
             reading_id: string;
             /** @description What was drawn. */
             reading_info: components["schemas"]["ReadingInfo"];
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             reading_time: string;
             user_id: number | null;
             hide_user: boolean;
@@ -2194,7 +2328,11 @@ export interface components {
             is_final: boolean;
             /** @description Derived flag — true when a view password is set. The hash itself is never exposed. */
             password_protected: boolean;
-            /** @description The day ("Y-m-d", the owner's local date) this reading is their daily card for; null for any other reading. */
+            /**
+             * Format: date
+             * @description The day ("Y-m-d", the owner's local date) this reading is their daily card for; null for any other reading.
+             * @example 2026-11-07
+             */
             daily_card_day: string | null;
             /** @description What was asked. Only its owner ever sees it. */
             question: string | null;
@@ -2207,7 +2345,11 @@ export interface components {
              * @enum {string}
              */
             visibility: "link" | "password" | "private";
-            /** @description When a guest reading will be deleted, UTC ("Y-m-d H:i:s"), as its maker chose; null for the usual retention. A reading made signed in never has one. */
+            /**
+             * Format: date-time
+             * @description When a guest reading will be deleted, in UTC, as its maker chose; null for the usual retention. A reading made signed in never has one.
+             * @example 2026-11-07T09:18:09Z
+             */
             expires_at: string | null;
         };
         /** @description A spread the signed-in user's readings were laid out in, with how many. */
@@ -2220,6 +2362,10 @@ export interface components {
         /** @description A reading as the admin readings list shows it. */
         ReadingSummary: {
             reading_id: string;
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             reading_time: string;
             /** @description The owner, or null for a guest reading. */
             user_id: number | null;
@@ -2285,7 +2431,15 @@ export interface components {
             display_name: string;
             is_active: boolean;
             is_admin: boolean;
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             registered_at: string;
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             last_login_at: string | null;
             google_linked: boolean;
             /** @description Whether the account has a password at all. An account made by signing in with Google has none until the user sets one through a password-reset link. */
@@ -2301,7 +2455,15 @@ export interface components {
             description: string;
             card_count: number;
             positions: components["schemas"]["SpreadPosition"][];
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             created_at: string;
+            /**
+             * Format: date-time
+             * @example 2026-11-07T09:18:09Z
+             */
             updated_at: string;
         };
     };
@@ -2318,6 +2480,7 @@ export interface operations {
             query?: {
                 /** @description Page size (1–100). Omit to get every reading. */
                 limit?: number;
+                /** @description How many readings to skip (with ?limit). */
                 offset?: number;
                 /** @description Text in the name, notes, question or querent (ignoring case for unaccented letters). */
                 q?: string;
@@ -2353,12 +2516,14 @@ export interface operations {
                     "application/json": components["schemas"]["Reading"][];
                 };
             };
-            /** @description A filter that cannot be one (a bad date, deck id, time zone or daily value; from after to) */
-            400: {
+            /** @description A filter that cannot be one (a bad date, deck id, time zone or daily value; from after to), or a limit or offset out of range */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2425,7 +2590,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2467,26 +2634,23 @@ export interface operations {
                     "application/json": components["schemas"]["Reading"];
                 };
             };
-            /** @description No changes provided, an unknown visibility, or tags over the limits */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Reading not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
-            /** @description Password too short, or Password chosen without one */
+            /** @description No changes provided, an unknown visibility, tags or text over the limits, a password too short, or Password chosen without one */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2515,11 +2679,13 @@ export interface operations {
                 };
             };
             /** @description Unknown format */
-            400: {
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2551,7 +2717,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2582,12 +2750,23 @@ export interface operations {
                     };
                 };
             };
-            /** @description Policy/uniqueness failure */
+            /** @description The display name is taken */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A display name the rules refuse */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2622,12 +2801,23 @@ export interface operations {
                     };
                 };
             };
-            /** @description Wrong current password or weak new password */
+            /** @description The current password is wrong */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The new password is too weak */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2700,12 +2890,14 @@ export interface operations {
                     "application/json": components["schemas"]["UserSpread"];
                 };
             };
-            /** @description Name and positions required, or a position that is not an object */
-            400: {
+            /** @description Name (of at most 200 characters) and positions required, or a position that is not an object or is past a limit */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2733,19 +2925,23 @@ export interface operations {
                     "application/json": components["schemas"]["UserSpread"];
                 };
             };
-            /** @description No changes provided, a blank name, or positions that are empty or not objects */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Spread not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No changes provided, a blank or over-long name, or positions that are empty, not objects or past a limit */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2772,7 +2968,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2803,7 +3001,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2856,11 +3056,13 @@ export interface operations {
                 };
             };
             /** @description Invalid spread type or ID */
-            400: {
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2884,11 +3086,13 @@ export interface operations {
                 content?: never;
             };
             /** @description Invalid spread type or ID */
-            400: {
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2939,11 +3143,13 @@ export interface operations {
                 };
             };
             /** @description Invalid deck ID: no such deck, or one not yet approved */
-            400: {
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2966,11 +3172,13 @@ export interface operations {
                 content?: never;
             };
             /** @description Invalid deck ID */
-            400: {
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3024,19 +3232,23 @@ export interface operations {
                     };
                 };
             };
-            /** @description Invalid report ID */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Report not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid report ID */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3060,33 +3272,41 @@ export interface operations {
                     "application/json": components["schemas"]["CardReport"];
                 };
             };
-            /** @description Invalid report ID */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Report (or its deck) not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Already resolved, or the card has no master scan on the server */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid report ID */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description The scan could not be turned into web images; the report stays open */
             500: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3141,19 +3361,23 @@ export interface operations {
                     };
                 };
             };
-            /** @description Invalid contact ID */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Contact not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid contact ID */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3289,19 +3513,23 @@ export interface operations {
                     "application/json": components["schemas"]["Deck"];
                 };
             };
-            /** @description Name is required */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description A deck with that name already exists */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Name is required */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3350,7 +3578,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3380,11 +3610,13 @@ export interface operations {
                 };
             };
             /** @description Invalid deck ID */
-            400: {
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3436,7 +3668,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3469,26 +3703,32 @@ export interface operations {
                     "application/json": components["schemas"]["Deck"];
                 };
             };
-            /** @description Name is required (a name sent blank) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Deck not found or no valid fields */
+            /** @description Deck not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Another deck already has that name */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Name is required (a name sent blank), or no field it can change */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3546,14 +3786,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description The deck already has a special card with that card_id */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3589,7 +3833,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3617,7 +3863,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3686,7 +3934,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3719,26 +3969,32 @@ export interface operations {
                     "application/json": components["schemas"]["DeckSystem"];
                 };
             };
-            /** @description Name or short name is required (one sent blank) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Deck system not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Another deck system already has that name */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Name or short name is required (one sent blank) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3765,7 +4021,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3794,7 +4052,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3848,7 +4108,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3876,11 +4138,13 @@ export interface operations {
                 };
             };
             /** @description Invalid day range */
-            400: {
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3914,7 +4178,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description Trimmed; cut to 60 characters. */
+                    /** @description Trimmed. */
                     name: string;
                 };
             };
@@ -3929,19 +4193,23 @@ export interface operations {
                     "application/json": components["schemas"]["SpreadCategory"];
                 };
             };
-            /** @description A category needs a name */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Another category has that name (case-insensitively) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A category needs a name, of at most 60 characters */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3968,14 +4236,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description It still holds spreads (move them first), or it is the last category */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -3991,7 +4263,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description Trimmed; cut to 60 characters. */
+                    /** @description Trimmed. */
                     name: string;
                 };
             };
@@ -4006,26 +4278,32 @@ export interface operations {
                     "application/json": components["schemas"]["SpreadCategory"];
                 };
             };
-            /** @description A category needs a name */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description No such category */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Another category has that name (case-insensitively) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A category needs a name, of at most 60 characters */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4055,11 +4333,13 @@ export interface operations {
                 };
             };
             /** @description Not every category id exactly once */
-            400: {
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4110,19 +4390,23 @@ export interface operations {
                     "application/json": components["schemas"]["Spread"];
                 };
             };
-            /** @description Name is required, or an unknown category */
-            400: {
+            /** @description Name is required (of at most 200 characters), a position past a limit, or an unknown category */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Failed to create spread */
             500: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4151,7 +4435,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4184,19 +4470,23 @@ export interface operations {
                     "application/json": components["schemas"]["Spread"];
                 };
             };
-            /** @description Name is required (a name sent blank), or an unknown category */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Spread not found or no valid fields */
+            /** @description Spread not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Name is required (a name sent blank, or one over 200 characters), a position past a limit, an unknown category, or no field it can change */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4267,26 +4557,32 @@ export interface operations {
                     "application/json": components["schemas"]["Spread"];
                 };
             };
-            /** @description Unknown category */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Pending spread not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unknown category */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Failed to approve spread */
             500: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4313,7 +4609,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4364,7 +4662,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4391,14 +4691,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description User not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4433,14 +4737,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description User not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4470,12 +4778,23 @@ export interface operations {
                     };
                 };
             };
-            /** @description Could not resend activation */
-            400: {
+            /** @description User not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The account is already active */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4502,19 +4821,23 @@ export interface operations {
                     "application/json": components["schemas"]["CardFrequency"];
                 };
             };
-            /** @description deck_id or days is not a whole number in range */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Not signed in */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description deck_id or days is not a whole number in range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4561,19 +4884,25 @@ export interface operations {
                     };
                 };
             };
-            /** @description Missing/invalid deck or card id, unknown reason, or `other` without details */
-            400: {
+            /** @description Missing/invalid deck or card id, unknown reason, `other` without details, or a card name or details over the limit */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
-            /** @description Too many reports from this IP */
+            /** @description Too many reports from this IP: 20/hour */
             429: {
                 headers: {
+                    /** @description Seconds until the limit lets the caller in again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4631,18 +4960,24 @@ export interface operations {
                 };
             };
             /** @description Missing/invalid fields, or captcha failed */
-            400: {
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
-            /** @description Rate limit exceeded */
+            /** @description Rate limit exceeded: 5 messages/IP/hour */
             429: {
                 headers: {
+                    /** @description Seconds until the limit lets the caller in again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4667,19 +5002,23 @@ export interface operations {
                     "application/json": components["schemas"]["DailyCard"][];
                 };
             };
-            /** @description month is missing or not YYYY-MM */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Not signed in */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description month is missing or not YYYY-MM */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4693,7 +5032,11 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description The local date, YYYY-MM-DD. */
+                    /**
+                     * Format: date
+                     * @description The local date, YYYY-MM-DD.
+                     * @example 2026-11-07
+                     */
                     day: string;
                     deck_id: number;
                     /** @description Off when omitted. */
@@ -4711,19 +5054,14 @@ export interface operations {
                     "application/json": components["schemas"]["DailyCard"];
                 };
             };
-            /** @description day is not a date within a day of today (UTC), or the deck is missing, unknown or awaiting approval */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Not signed in */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description The day already has its card, or had one whose reading was deleted */
             409: {
@@ -4731,11 +5069,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        error: string;
-                        /** @description The reading already drawn for the day; null when it was deleted. */
-                        reading_id: string | null;
-                    };
+                    "application/problem+json": components["schemas"]["DailyCardTaken"];
+                };
+            };
+            /** @description day is not a date within a day of today (UTC), or the deck is missing, unknown or awaiting approval */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
         };
@@ -4788,26 +5131,32 @@ export interface operations {
                     "application/json": components["schemas"]["Deck"];
                 };
             };
-            /** @description Name and artist are required */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Not authenticated */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description A deck with that name already exists */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Name and artist are required */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4836,7 +5185,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4868,7 +5219,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4921,26 +5274,32 @@ export interface operations {
                     "application/json": components["schemas"]["DeckSystem"];
                 };
             };
-            /** @description Validation failure */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Not authenticated */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description A deck system with that name already exists */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -4969,7 +5328,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5007,18 +5368,24 @@ export interface operations {
                 };
             };
             /** @description Invalid challenge, non-loopback redirect_uri, or captcha failed */
-            400: {
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
-            /** @description Rate limit exceeded */
+            /** @description Rate limit exceeded: 10 attempts/IP/hour */
             429: {
                 headers: {
+                    /** @description Seconds until the limit lets the caller in again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5049,19 +5416,25 @@ export interface operations {
                     };
                 };
             };
-            /** @description Invalid, expired or already used code, or the wrong verifier */
+            /** @description Invalid, expired or already used code, or the wrong verifier: OAuth's invalid_grant, which the problem's `error` names */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["InvalidGrant"];
+                };
             };
-            /** @description Rate limit exceeded */
+            /** @description Rate limit exceeded: 10 attempts/IP/minute */
             429: {
                 headers: {
+                    /** @description Seconds until the limit lets the caller in again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5076,23 +5449,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Redirect to Google */
+            /** @description To Google's consent screen; or, when the flow can't start (Google OAuth isn't configured, or linking without a session), back to the page the intent came from (/login, /register or /account/settings) with the reason in `oauth_error` */
             302: {
                 headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description The link intent requires a session */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Google OAuth is not configured */
-            503: {
-                headers: {
+                    /** @description Where the browser goes next. */
+                    Location?: string;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -5111,9 +5472,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Redirect into the SPA */
+            /** @description Into the SPA: on success, the home page or (linking) /account/settings with `oauth_success`; on any failure, /login, /register or /login again with the reason in `oauth_error` */
             302: {
                 headers: {
+                    /** @description Where the browser goes next. */
+                    Location?: string;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -5146,14 +5509,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Google is the last way to sign in; the message says what to set up first */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5185,7 +5552,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5218,19 +5587,32 @@ export interface operations {
                     };
                 };
             };
-            /** @description Missing/invalid attestation */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Not authenticated */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No registration ceremony is pending (ask for options first), or the passkey is already registered */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Missing attestation data, an attestation that fails verification, or a name over 50 characters */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5296,26 +5678,41 @@ export interface operations {
                     };
                 };
             };
-            /** @description Missing assertion data */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Authentication failed */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Account not activated */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No sign-in ceremony is pending (ask for options first) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Missing assertion data */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5342,7 +5739,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5369,21 +5768,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Passkey not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description The last way to sign in; the message says what to set up first */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5420,21 +5825,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Passkey not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
-            /** @description Name is required */
+            /** @description Name is required, of at most 50 characters */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5473,14 +5884,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Turning it off would leave no way to sign in; the message says what to set up first */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5515,19 +5930,23 @@ export interface operations {
                     };
                 };
             };
-            /** @description Invalid challenge or non-loopback redirect_uri */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Not authenticated */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid challenge or non-loopback redirect_uri */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5561,19 +5980,25 @@ export interface operations {
                     };
                 };
             };
-            /** @description Invalid or expired authorization code */
+            /** @description Invalid or expired authorization code, or the wrong verifier: OAuth's invalid_grant, which the problem's `error` names */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["InvalidGrant"];
+                };
             };
-            /** @description Rate limit exceeded */
+            /** @description Rate limit exceeded: 10 attempts/IP/minute */
             429: {
                 headers: {
+                    /** @description Seconds until the limit lets the caller in again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5620,7 +6045,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5649,14 +6076,20 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
-            /** @description Rate limit exceeded */
+            /** @description Rate limit exceeded: 120 fetches/IP/minute */
             429: {
                 headers: {
+                    /** @description Seconds until the limit lets the caller in again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5687,25 +6120,33 @@ export interface operations {
                 };
             };
             /** @description Incorrect password */
-            401: {
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description InvalidReadingID: no such reading, one past its expiry, or someone else's private reading */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
-            /** @description Too many password attempts */
+            /** @description Too many password attempts: 10/IP/minute, every attempt counted */
             429: {
                 headers: {
+                    /** @description Seconds until the limit lets the caller in again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5732,26 +6173,34 @@ export interface operations {
                     "application/json": components["schemas"]["ReadingView"];
                 };
             };
-            /** @description Invalid draw spec (InvalidDeckID also for a deck awaiting approval, unless an admin draws); or, with Turnstile on, neither a signed-in user nor a draw key nor a passed challenge ("Captcha verification failed. Please try again."; from a plugin too old for draw keys: "This version of the TarotGen plugin can no longer draw without an account. Update the plugin to get a draw key, or link your account.") */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description With Turnstile on: a draw key that is unknown or revoked ("This draw key is no longer valid. Get a new one from the plugin."), or a plugin account token that no longer is ("This account link is no longer valid. Link your account again in the plugin.") */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid draw spec (InvalidDeckID also for a deck awaiting approval, unless an admin draws); or, with Turnstile on, neither a signed-in user nor a draw key nor a passed challenge ("Captcha verification failed. Please try again."; from a plugin too old for draw keys: "This version of the TarotGen plugin can no longer draw without an account. Update the plugin to get a draw key, or link your account.") */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Rate limit exceeded: 30 draws/IP/minute; with a draw key, 10/key/minute, 300/key/day and 30/IP/minute ("Too many readings with this draw key. Please try again later.") */
             429: {
                 headers: {
+                    /** @description Seconds until the limit lets the caller in again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5778,26 +6227,34 @@ export interface operations {
                     "application/json": components["schemas"]["Reading"];
                 };
             };
-            /** @description Invalid input (InvalidDeckID also for a deck awaiting approval, unless an admin records it); or, with Turnstile on, neither a signed-in user nor a draw key nor a passed challenge ("Captcha verification failed. Please try again."; from a plugin too old for draw keys: "This version of the TarotGen plugin can no longer draw without an account. Update the plugin to get a draw key, or link your account.") */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description With Turnstile on: a draw key that is unknown or revoked ("This draw key is no longer valid. Get a new one from the plugin."), or a plugin account token that no longer is ("This account link is no longer valid. Link your account again in the plugin.") */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid input (InvalidDeckID also for a deck awaiting approval, unless an admin records it); or, with Turnstile on, neither a signed-in user nor a draw key nor a passed challenge ("Captcha verification failed. Please try again."; from a plugin too old for draw keys: "This version of the TarotGen plugin can no longer draw without an account. Update the plugin to get a draw key, or link your account.") */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Rate limit exceeded: with a draw key, 10/key/minute, 300/key/day and 30/IP/minute ("Too many readings with this draw key. Please try again later.") */
             429: {
                 headers: {
+                    /** @description Seconds until the limit lets the caller in again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5831,33 +6288,41 @@ export interface operations {
                     };
                 };
             };
-            /** @description Position count mismatch or invalid data */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Not the owner */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Reading not found: no such reading, one past its expiry, or someone else's private reading */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Reading is final */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Position count mismatch, or a position that is not an object or is past a limit (a title over 100 characters, x or y outside 0–100), or a spread name over 100 characters */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5885,33 +6350,32 @@ export interface operations {
                     "application/json": components["schemas"]["ReadingView"];
                 };
             };
-            /** @description Custom readings cannot draw */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Not the owner */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Reading not found: no such reading, one past its expiry, or someone else's private reading */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
-            /** @description Reading is final */
+            /** @description Reading is final, a custom reading (which cannot draw), or every card of the deck is drawn */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5940,14 +6404,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Reading not found: no such reading, one past its expiry, or someone else's private reading */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -5999,19 +6467,25 @@ export interface operations {
                     };
                 };
             };
-            /** @description Validation failure */
-            400: {
+            /** @description Validation failure: a name (of at most 200 characters) and at least one position are required, and each position must be within the limits */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
-            /** @description Rate limit exceeded */
+            /** @description Rate limit exceeded: 5 submissions/IP/hour */
             429: {
                 headers: {
+                    /** @description Seconds until the limit lets the caller in again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -6040,7 +6514,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -6069,14 +6545,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description No such public spread */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -6114,19 +6594,34 @@ export interface operations {
                     };
                 };
             };
-            /** @description Validation failure, or a display name that is taken */
+            /** @description The display name is taken */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Validation failure: each field the rules refuse is listed in `errors` */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
-            /** @description Rate limit exceeded */
+            /** @description Rate limit exceeded: 5 sign-ups/IP/hour */
             429: {
                 headers: {
+                    /** @description Seconds until the limit lets the caller in again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -6159,11 +6654,13 @@ export interface operations {
                 };
             };
             /** @description Invalid/expired token */
-            400: {
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -6198,12 +6695,16 @@ export interface operations {
                     };
                 };
             };
-            /** @description Rate limit exceeded */
+            /** @description Rate limit exceeded: 5 requests/IP/hour */
             429: {
                 headers: {
+                    /** @description Seconds until the limit lets the caller in again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -6237,19 +6738,14 @@ export interface operations {
                     };
                 };
             };
-            /** @description Invalid/expired token */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description New password too weak (token not consumed) */
+            /** @description Invalid/expired token, or a new password too weak (the token is then not consumed) */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -6286,33 +6782,43 @@ export interface operations {
                     };
                 };
             };
-            /** @description Captcha failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Invalid credentials (an unknown email, or an account without a password, takes as long to answer as a wrong password) */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
             /** @description Inactive or password-login disabled */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
-            /** @description Rate limit exceeded */
-            429: {
+            /** @description Captcha failed */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Rate limit exceeded: 10 failed attempts/IP/15 minutes */
+            429: {
+                headers: {
+                    /** @description Seconds until the limit lets the caller in again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -6363,7 +6869,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };

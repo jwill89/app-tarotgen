@@ -16,7 +16,7 @@ use Tarot\Service\Mailer;
 #[CoversClass(Mailer::class)]
 final class MailerTest extends TestCase
 {
-    private const array KEYS = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_SECURE', 'MAIL_FROM', 'MAIL_FROM_NAME'];
+    private const array KEYS = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_SECURE', 'MAIL_FROM', 'MAIL_FROM_NAME', 'APP_URL'];
 
     /** @var array<string,mixed> */
     private array $saved = [];
@@ -49,6 +49,20 @@ final class MailerTest extends TestCase
 
         ini_set('error_log', $this->savedErrorLog === false ? '' : $this->savedErrorLog);
         @unlink($this->log);
+    }
+
+    public function testMailComesFromMailFromThenTheSmtpUserThenNoreplyAtTheSitesHost(): void
+    {
+        $this->assertSame('noreply@localhost', Mailer::fromAddress());
+
+        $_ENV['APP_URL'] = 'https://tarot.example.test/';
+        $this->assertSame('noreply@tarot.example.test', Mailer::fromAddress());
+
+        $_ENV['SMTP_USER'] = 'relay@example.test';
+        $this->assertSame('relay@example.test', Mailer::fromAddress());
+
+        $_ENV['MAIL_FROM'] = 'readings@example.test';
+        $this->assertSame('readings@example.test', Mailer::fromAddress());
     }
 
     public function testWithoutSmtpTheActivationEmailIsLoggedWithItsLinkInsteadOfSent(): void

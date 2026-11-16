@@ -40,8 +40,8 @@ final class FavoriteDeckDataTest extends TestCase
         $this->favorites->add(1, 3);
         $this->favorites->add(1, 1);
         // Both land in the same second; spell out which came first.
-        $this->db->exec("UPDATE user_favorite_decks SET created_at = '2026-01-01 00:00:00' WHERE deck_id = 3");
-        $this->db->exec("UPDATE user_favorite_decks SET created_at = '2026-01-02 00:00:00' WHERE deck_id = 1");
+        $this->db->exec("UPDATE user_favorite_decks SET created_at = '2026-01-01T00:00:00Z' WHERE deck_id = 3");
+        $this->db->exec("UPDATE user_favorite_decks SET created_at = '2026-01-02T00:00:00Z' WHERE deck_id = 1");
 
         $this->assertSame([3, 1], $this->favorites->listByUser(1));
     }

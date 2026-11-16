@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Problem;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Exception\ApiException;
@@ -16,6 +17,7 @@ use Tarot\Repository\UserSpreadRepository;
 use Tarot\Service\AuthService;
 use Tarot\Service\JournalExport;
 use Tarot\Service\ReadingInput;
+use Tarot\Service\SpreadInput;
 use Tarot\Structure\Deck;
 use Tarot\Utility\Clock;
 use Tarot\Utility\Input;
@@ -55,9 +57,9 @@ class AccountController extends AbstractController
                 in: 'query',
                 required: false,
                 description: 'Page size (1–' . self::READINGS_PAGE_MAX . '). Omit to get every reading.',
-                schema: new OAS\Schema(type: 'integer')
+                schema: new OAS\Schema(type: 'integer', maximum: self::READINGS_PAGE_MAX, minimum: 1)
             ),
-            new OAS\Parameter(name: 'offset', in: 'query', required: false, schema: new OAS\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'offset', in: 'query', required: false, description: 'How many readings to skip (with ?limit).', schema: new OAS\Schema(type: 'integer', minimum: 0)),
             new OAS\Parameter(name: 'q', in: 'query', required: false, description: 'Text in the name, notes, question or querent (ignoring case for unaccented letters).', schema: new OAS\Schema(type: 'string')),
             new OAS\Parameter(name: 'deck_id', in: 'query', required: false, description: 'Drawn from this deck.', schema: new OAS\Schema(type: 'integer')),
             new OAS\Parameter(name: 'spread', in: 'query', required: false, description: 'Laid out in a spread of this name, as the reading recorded it (personal spreads have no public id); "Free Draw" also matches a free draw never placed.', schema: new OAS\Schema(type: 'string')),
@@ -80,7 +82,7 @@ class AccountController extends AbstractController
                 ],
                 content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/Reading'))
             ),
-            new OAS\Response(response: 400, description: 'A filter that cannot be one (a bad date, deck id, time zone or daily value; from after to)'),
+            new OAS\Response(response: 422, description: 'A filter that cannot be one (a bad date, deck id, time zone or daily value; from after to), or a limit or offset out of range'),
         ]
     )]
     /**
@@ -97,15 +99,22 @@ class AccountController extends AbstractController
         try {
             $filter = ReadingInput::filter($params);
         } catch (ApiException $e) {
-            return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
+            return Problem::fromException($response, $e);
         }
 
         if (!isset($params['limit'])) {
             return $response->withJson($this->readings->listByUser($userId, filter: $filter));
         }
 
-        $limit  = min(self::READINGS_PAGE_MAX, max(1, (int) $params['limit']));
-        $offset = max(0, (int) ($params['offset'] ?? 0));
+        $limit = filter_var($params['limit'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => self::READINGS_PAGE_MAX]]);
+        if ($limit === false) {
+            return Problem::invalid($response, 'query.limit', 'limit must be a whole number from 1 to ' . self::READINGS_PAGE_MAX . '.');
+        }
+
+        $offset = filter_var($params['offset'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+        if ($offset === false) {
+            return Problem::invalid($response, 'query.offset', 'offset must be a whole number from 0.');
+        }
 
         return $response
             ->withJson($this->readings->listByUser($userId, $limit, $offset, $filter))
@@ -173,8 +182,8 @@ class AccountController extends AbstractController
         ],
         requestBody: new OAS\RequestBody(
             content: new OAS\MediaType\Json(properties: [
-                new OAS\Property(property: 'reading_name', schema: new OAS\Schema(type: 'string', nullable: true)),
-                new OAS\Property(property: 'reading_notes', schema: new OAS\Schema(type: 'string', nullable: true)),
+                new OAS\Property(property: 'reading_name', schema: new OAS\Schema(type: 'string', maxLength: ReadingInput::NAME_MAX, nullable: true)),
+                new OAS\Property(property: 'reading_notes', schema: new OAS\Schema(type: 'string', maxLength: ReadingInput::NOTES_MAX, nullable: true)),
                 new OAS\Property(property: 'question', schema: new OAS\Schema(description: 'Up to ' . ReadingInput::QUESTION_MAX . ' characters; blank or null clears it.', type: 'string', nullable: true)),
                 new OAS\Property(property: 'querent', schema: new OAS\Schema(description: 'Up to ' . ReadingInput::QUERENT_MAX . ' characters; blank or null clears it.', type: 'string', nullable: true)),
                 new OAS\Property(property: 'tags', schema: new OAS\Schema(description: 'Replaces every tag: at most ' . ReadingInput::TAGS_MAX . ', of at most ' . ReadingInput::TAG_MAX . ' characters each; stored lower-case, a leading # dropped, repeats merged. [] clears them.', type: 'array', items: new OAS\Schema\Items(type: 'string'))),
@@ -190,9 +199,8 @@ class AccountController extends AbstractController
                 description: 'The updated reading',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Reading')
             ),
-            new OAS\Response(response: 400, description: 'No changes provided, an unknown visibility, or tags over the limits'),
             new OAS\Response(response: 404, description: 'Reading not found'),
-            new OAS\Response(response: 422, description: 'Password too short, or Password chosen without one'),
+            new OAS\Response(response: 422, description: 'No changes provided, an unknown visibility, tags or text over the limits, a password too short, or Password chosen without one'),
         ]
     )]
     public function updateReadingMeta(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -206,46 +214,41 @@ class AccountController extends AbstractController
         // without a new one means, and someone else's reading is a 404 either way.
         $reading = $this->readings->get($reading_id);
         if ($reading === null || !$reading->isOwnedBy($userId)) {
-            return $response->withJson(['error' => 'Reading not found.'], 404);
-        }
-
-        if (array_key_exists('reading_name', $body)) {
-            $fields['reading_name'] = Input::nullableString($body['reading_name'], 100);
-        }
-
-        if (array_key_exists('reading_notes', $body)) {
-            // Notes keep internal whitespace (only the empty check is trimmed).
-            $fields['reading_notes'] = Input::nullableString($body['reading_notes'], 20000, trim: false);
+            return Problem::respond($response, 404, 'Reading not found.');
         }
 
         if (array_key_exists('hide_user', $body)) {
             $fields['hide_user'] = Input::bool($body['hide_user']);
         }
 
-        if (array_key_exists('question', $body)) {
-            $fields['question'] = ReadingInput::question($body['question']);
-        }
-
-        if (array_key_exists('querent', $body)) {
-            $fields['querent'] = ReadingInput::querent($body['querent']);
-        }
-
         try {
+            if (array_key_exists('reading_name', $body)) {
+                $fields['reading_name'] = ReadingInput::name($body['reading_name']);
+            }
+            if (array_key_exists('reading_notes', $body)) {
+                $fields['reading_notes'] = ReadingInput::notes($body['reading_notes']);
+            }
+            if (array_key_exists('question', $body)) {
+                $fields['question'] = ReadingInput::question($body['question']);
+            }
+            if (array_key_exists('querent', $body)) {
+                $fields['querent'] = ReadingInput::querent($body['querent']);
+            }
             if (array_key_exists('tags', $body)) {
                 $fields['tags'] = ReadingInput::tags($body['tags']);
             }
-            $fields += ReadingInput::access($body, $reading->password_protected, 422);
+            $fields += ReadingInput::access($body, $reading->password_protected);
         } catch (ApiException $e) {
-            return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
+            return Problem::fromException($response, $e);
         }
 
         if ($fields === []) {
-            return $response->withJson(['error' => 'No changes provided.'], 400);
+            return Problem::invalid($response, 'body', 'No changes provided.');
         }
 
         $updated = $this->readings->updateMeta($reading_id, $userId, $fields);
         if ($updated === null) {
-            return $response->withJson(['error' => 'Reading not found.'], 404);
+            return Problem::respond($response, 404, 'Reading not found.');
         }
 
         return $response->withJson($updated);
@@ -274,7 +277,7 @@ class AccountController extends AbstractController
         $reading_id = $args['reading_id'] ?? '';
 
         if (!$this->readings->deleteOwned($reading_id, $this->userId($request))) {
-            return $response->withJson(['error' => 'Reading not found.'], 404);
+            return Problem::respond($response, 404, 'Reading not found.');
         }
 
         return $response->withStatus(204);
@@ -317,14 +320,14 @@ class AccountController extends AbstractController
                     ),
                 ]
             ),
-            new OAS\Response(response: 400, description: 'Unknown format'),
+            new OAS\Response(response: 422, description: 'Unknown format'),
         ]
     )]
     public function exportReadings(Request $request, Response $response): Response|ResponseInterface
     {
         $format = $request->getQueryParams()['format'] ?? 'json';
         if ($format !== 'json' && $format !== 'csv') {
-            return $response->withJson(['error' => 'Choose an export format: json or csv.'], 400);
+            return Problem::invalid($response, 'query.format', 'Choose an export format: json or csv.');
         }
 
         $userId = $this->userId($request);
@@ -360,7 +363,8 @@ class AccountController extends AbstractController
                     new OAS\Property(property: 'user', schema: new OAS\Schema(ref: '#/components/schemas/User')),
                 ])
             ),
-            new OAS\Response(response: 422, description: 'Policy/uniqueness failure'),
+            new OAS\Response(response: 409, description: 'The display name is taken'),
+            new OAS\Response(response: 422, description: 'A display name the rules refuse'),
         ]
     )]
     public function updateProfile(Request $request, Response $response): Response|ResponseInterface
@@ -370,7 +374,13 @@ class AccountController extends AbstractController
         if (array_key_exists('display_name', $body)) {
             $result = $this->auth->changeDisplayName($this->userId($request), (string) $body['display_name']);
             if (!$result['ok']) {
-                return $response->withJson(['error' => $result['error'] ?? 'Could not update display name.'], 422);
+                $error = $result['error'] ?? 'Could not update display name.';
+
+                return match ($result['reason'] ?? null) {
+                    'taken'   => Problem::respond($response, 409, $error),
+                    'missing' => Problem::respond($response, 404, $error),
+                    default   => Problem::invalid($response, 'body.display_name', $error),
+                };
             }
         }
 
@@ -405,7 +415,8 @@ class AccountController extends AbstractController
                     ]
                 )
             ),
-            new OAS\Response(response: 422, description: 'Wrong current password or weak new password'),
+            new OAS\Response(response: 403, description: 'The current password is wrong'),
+            new OAS\Response(response: 422, description: 'The new password is too weak'),
         ]
     )]
     public function changePassword(Request $request, Response $response): Response|ResponseInterface
@@ -416,7 +427,11 @@ class AccountController extends AbstractController
 
         $result = $this->auth->changePassword($this->userId($request), $current, $new, Session::id());
         if (!$result['ok']) {
-            return $response->withJson(['error' => $result['error'] ?? 'Could not change password.'], 422);
+            $error = $result['error'] ?? 'Could not change password.';
+
+            return ($result['reason'] ?? null) === 'wrong_password'
+                ? Problem::respond($response, 403, $error)
+                : Problem::invalid($response, 'body.new_password', $error);
         }
 
         // Every other session just ended; this one carries on under a new id, so
@@ -478,7 +493,7 @@ class AccountController extends AbstractController
 
         $result = $this->auth->deleteAccount($this->userId($request), $password);
         if (!$result['ok']) {
-            return $response->withJson(['error' => $result['error'] ?? 'Could not delete account.'], 403);
+            return Problem::respond($response, 403, $result['error'] ?? 'Could not delete account.');
         }
 
         // End the session, whose account is gone.
@@ -530,31 +545,31 @@ class AccountController extends AbstractController
                 description: 'The created spread (card_count is the number of positions)',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/UserSpread')
             ),
-            new OAS\Response(response: 400, description: 'Name and positions required, or a position that is not an object'),
+            new OAS\Response(response: 422, description: 'Name (of at most 200 characters) and positions required, or a position that is not an object or is past a limit'),
         ]
     )]
     /** Create a new personal spread. */
     public function createSpread(Request $request, Response $response): Response|ResponseInterface
     {
         $params    = $this->parsedBody($request);
-        $name      = trim((string) ($params['name'] ?? ''));
         $positions = $params['positions'] ?? [];
 
-        if ($name === '' || !is_array($positions) || count($positions) === 0) {
-            return $response->withJson(
-                ['error' => 'A spread name and at least one card position are required.'],
-                400
-            );
-        }
-
-        if (self::hasNonObjectPosition($positions)) {
-            return $response->withJson(['error' => 'Invalid position data.'], 400);
+        try {
+            if (SpreadInput::name($params['name'] ?? null) === '') {
+                return Problem::invalid($response, 'body.name', 'A spread name and at least one card position are required.');
+            }
+            if (!is_array($positions) || count($positions) === 0) {
+                return Problem::invalid($response, 'body.positions', 'A spread name and at least one card position are required.');
+            }
+            SpreadInput::positions($positions);
+        } catch (ApiException $e) {
+            return Problem::fromException($response, $e);
         }
 
         $created = $this->userSpreads->create($this->userId($request), $params);
 
         if ($created === null) {
-            return $response->withJson(['error' => 'Failed to save the spread.'], 500);
+            return Problem::respond($response, 500, 'Failed to save the spread.');
         }
 
         return $response->withJson($created, 201);
@@ -580,8 +595,8 @@ class AccountController extends AbstractController
                 description: 'The updated spread (card_count is the number of positions)',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/UserSpread')
             ),
-            new OAS\Response(response: 400, description: 'No changes provided, a blank name, or positions that are empty or not objects'),
             new OAS\Response(response: 404, description: 'Spread not found'),
+            new OAS\Response(response: 422, description: 'No changes provided, a blank or over-long name, or positions that are empty, not objects or past a limit'),
         ]
     )]
     public function updateSpread(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -590,28 +605,30 @@ class AccountController extends AbstractController
         $changes  = array_intersect_key($this->parsedBody($request), array_flip(['name', 'description', 'positions']));
 
         if ($changes === []) {
-            return $response->withJson(['error' => 'No changes provided.'], 400);
+            return Problem::invalid($response, 'body', 'No changes provided.');
         }
 
-        // Saved trimmed, so a blank name would leave the spread nameless — which
-        // creating one refuses.
-        if (array_key_exists('name', $changes) && (!is_scalar($changes['name']) || trim((string) $changes['name']) === '')) {
-            return $response->withJson(['error' => 'A spread needs a name.'], 400);
-        }
+        try {
+            // Saved trimmed, so a blank name would leave the spread nameless — which
+            // creating one refuses.
+            if (array_key_exists('name', $changes) && SpreadInput::name($changes['name']) === '') {
+                return Problem::invalid($response, 'body.name', 'A spread needs a name.');
+            }
 
-        if (array_key_exists('positions', $changes)) {
-            $positions = $changes['positions'];
-            if (!is_array($positions) || $positions === []) {
-                return $response->withJson(['error' => 'A spread needs at least one card position.'], 400);
+            if (array_key_exists('positions', $changes)) {
+                $positions = $changes['positions'];
+                if (!is_array($positions) || $positions === []) {
+                    return Problem::invalid($response, 'body.positions', 'A spread needs at least one card position.');
+                }
+                SpreadInput::positions($positions);
             }
-            if (self::hasNonObjectPosition($positions)) {
-                return $response->withJson(['error' => 'Invalid position data.'], 400);
-            }
+        } catch (ApiException $e) {
+            return Problem::fromException($response, $e);
         }
 
         $updated = $this->userSpreads->update($this->userId($request), $spreadId, $changes);
         if ($updated === null) {
-            return $response->withJson(['error' => 'Spread not found.'], 404);
+            return Problem::respond($response, 404, 'Spread not found.');
         }
 
         return $response->withJson($updated);
@@ -640,7 +657,7 @@ class AccountController extends AbstractController
         $spreadId = (int) ($args['user_spread_id'] ?? 0);
 
         if (!$this->userSpreads->delete($this->userId($request), $spreadId)) {
-            return $response->withJson(['error' => 'Spread not found.'], 404);
+            return Problem::respond($response, 404, 'Spread not found.');
         }
 
         // Remove any favorites pointing to this deleted personal spread.
@@ -678,7 +695,7 @@ class AccountController extends AbstractController
         $spread   = $this->userSpreads->get($this->userId($request), $spreadId);
 
         if ($spread === null) {
-            return $response->withJson(['error' => 'Spread not found.'], 404);
+            return Problem::respond($response, 404, 'Spread not found.');
         }
 
         $pending = $this->pendingSpreads->create([
@@ -689,7 +706,7 @@ class AccountController extends AbstractController
         ], $this->userId($request));
 
         if ($pending === null) {
-            return $response->withJson(['error' => 'Failed to submit the spread for review.'], 500);
+            return Problem::respond($response, 500, 'Failed to submit the spread for review.');
         }
 
         return $response->withJson(['success' => true], 201);
@@ -731,7 +748,7 @@ class AccountController extends AbstractController
                 description: 'Added (or already a favorite)',
                 content: new OAS\MediaType\Json(required: ['success'], properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
             ),
-            new OAS\Response(response: 400, description: 'Invalid spread type or ID'),
+            new OAS\Response(response: 422, description: 'Invalid spread type or ID'),
         ]
     )]
     /** Add a spread to the current user's favorites. */
@@ -741,8 +758,12 @@ class AccountController extends AbstractController
         $spreadType = (string) ($params['spread_type'] ?? '');
         $spreadId   = (int) ($params['spread_id'] ?? 0);
 
-        if (!in_array($spreadType, ['public', 'personal'], true) || $spreadId < 1) {
-            return $response->withJson(['error' => 'Invalid spread type or ID.'], 400);
+        if (!in_array($spreadType, ['public', 'personal'], true)) {
+            return Problem::invalid($response, 'body.spread_type', 'Invalid spread type or ID.');
+        }
+
+        if ($spreadId < 1) {
+            return Problem::invalid($response, 'body.spread_id', 'Invalid spread type or ID.');
         }
 
         $this->favorites->add($this->userId($request), $spreadType, $spreadId);
@@ -767,7 +788,7 @@ class AccountController extends AbstractController
         ],
         responses: [
             new OAS\Response(response: 204, description: 'Removed'),
-            new OAS\Response(response: 400, description: 'Invalid spread type or ID'),
+            new OAS\Response(response: 422, description: 'Invalid spread type or ID'),
         ]
     )]
     public function removeFavorite(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -775,8 +796,12 @@ class AccountController extends AbstractController
         $spreadType = $args['spread_type'] ?? '';
         $spreadId   = (int) ($args['spread_id'] ?? 0);
 
-        if (!in_array($spreadType, ['public', 'personal'], true) || $spreadId < 1) {
-            return $response->withJson(['error' => 'Invalid spread type or ID.'], 400);
+        if (!in_array($spreadType, ['public', 'personal'], true)) {
+            return Problem::invalid($response, 'path.spread_type', 'Invalid spread type or ID.');
+        }
+
+        if ($spreadId < 1) {
+            return Problem::invalid($response, 'path.spread_id', 'Invalid spread type or ID.');
         }
 
         $this->favorites->remove($this->userId($request), $spreadType, $spreadId);
@@ -819,7 +844,7 @@ class AccountController extends AbstractController
                 description: 'Added (or already a favorite)',
                 content: new OAS\MediaType\Json(required: ['success'], properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
             ),
-            new OAS\Response(response: 400, description: 'Invalid deck ID: no such deck, or one not yet approved'),
+            new OAS\Response(response: 422, description: 'Invalid deck ID: no such deck, or one not yet approved'),
         ]
     )]
     public function addFavoriteDeck(Request $request, Response $response): Response|ResponseInterface
@@ -832,7 +857,7 @@ class AccountController extends AbstractController
         // gets the same answer: only admins may learn that its id exists.
         $deck = $deckId < 1 ? null : $this->decks->get($deckId);
         if (!$deck instanceof Deck || !$deck->approved) {
-            return $response->withJson(['error' => 'Invalid deck ID.'], 400);
+            return Problem::invalid($response, 'body.deck_id', 'Invalid deck ID.');
         }
 
         $this->favoriteDecks->add($this->userId($request), $deckId);
@@ -853,7 +878,7 @@ class AccountController extends AbstractController
         ],
         responses: [
             new OAS\Response(response: 204, description: 'Removed'),
-            new OAS\Response(response: 400, description: 'Invalid deck ID'),
+            new OAS\Response(response: 422, description: 'Invalid deck ID'),
         ]
     )]
     public function removeFavoriteDeck(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -861,23 +886,12 @@ class AccountController extends AbstractController
         $deckId = (int) ($args['deck_id'] ?? 0);
 
         if ($deckId < 1) {
-            return $response->withJson(['error' => 'Invalid deck ID.'], 400);
+            return Problem::invalid($response, 'path.deck_id', 'Invalid deck ID.');
         }
 
         $this->favoriteDecks->remove($this->userId($request), $deckId);
 
         return $response->withStatus(204);
-    }
-
-    /**
-     * A spread position is an object; anything else in the list would be dropped
-     * on save, leaving a spread with fewer cards (or none) than the client sent.
-     *
-     * @param array<mixed> $positions
-     */
-    private static function hasNonObjectPosition(array $positions): bool
-    {
-        return array_any($positions, static fn(mixed $position): bool => !is_array($position));
     }
 
     private function userId(Request $request): int

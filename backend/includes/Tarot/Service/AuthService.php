@@ -3,6 +3,7 @@
 namespace Tarot\Service;
 
 use Tarot\Config\Env;
+use Tarot\Repository\PluginTokenRepository;
 use Tarot\Repository\UserRepository;
 use Tarot\Repository\UserTokenRepository;
 use Tarot\Structure\User;
@@ -44,6 +45,7 @@ class AuthService
     public function __construct(
         private readonly UserRepository $users,
         private readonly UserTokenRepository $tokens,
+        private readonly PluginTokenRepository $pluginTokens,
         private readonly Mailer $mailer,
         private readonly DbSessionHandler $sessions,
         private readonly AccountProtection $protection,
@@ -77,11 +79,13 @@ class AuthService
      * can tell: nothing is created, and the address's owner is emailed that
      * someone tried (so sign-up can't be used to find out who has an account).
      * Only a new account comes back with `user` and `activation_link`. A taken
-     * display name is still an error: names are public anyway.
+     * display name is still an error (`reason` taken): names are public anyway.
+     * `errors` holds each refused field's message, keyed by the field's name.
      *
      * @return array{
      *   ok: bool,
-     *   errors?: string[],
+     *   reason?: 'invalid'|'taken'|'failed',
+     *   errors?: array<string,string>,
      *   user?: User,
      *   emailed?: bool,
      *   activation_link?: string
@@ -94,12 +98,12 @@ class AuthService
 
         $errors = $this->validateRegistration($email, $displayName, $password);
         if ($errors !== []) {
-            return ['ok' => false, 'errors' => $errors];
+            return ['ok' => false, 'reason' => 'invalid', 'errors' => $errors];
         }
 
         // Uniqueness (the columns are COLLATE NOCASE, so case-insensitive).
         if ($this->users->displayNameExists($displayName)) {
-            return ['ok' => false, 'errors' => ['That display name is already taken.']];
+            return ['ok' => false, 'reason' => 'taken', 'errors' => ['display_name' => 'That display name is already taken.']];
         }
 
         // Hashed whether or not the account gets made, so a taken email takes as
@@ -122,7 +126,7 @@ class AuthService
         $user = $this->users->create($email, $displayName, $hash);
 
         if ($user === null) {
-            return ['ok' => false, 'errors' => ['Could not create the account. Please try again.']];
+            return ['ok' => false, 'reason' => 'failed', 'errors' => ['email' => 'Could not create the account. Please try again.']];
         }
 
         $link    = $this->issueActivationLink($user->user_id);
@@ -162,16 +166,16 @@ class AuthService
      * Re-issue and (re)send an activation email for an existing, not-yet-active
      * account. Used by the admin user-management screen.
      *
-     * @return array{ok:bool, error?:string, emailed?:bool, activation_link?:string}
+     * @return array{ok:bool, reason?:'missing'|'active', error?:string, emailed?:bool, activation_link?:string}
      */
     public function resendActivation(int $userId): array
     {
         $user = $this->users->findById($userId);
         if ($user === null) {
-            return ['ok' => false, 'error' => 'User not found.'];
+            return ['ok' => false, 'reason' => 'missing', 'error' => 'User not found.'];
         }
         if ($user->is_active) {
-            return ['ok' => false, 'error' => 'That account is already active.'];
+            return ['ok' => false, 'reason' => 'active', 'error' => 'That account is already active.'];
         }
 
         $link    = $this->issueActivationLink($userId);
@@ -257,8 +261,9 @@ class AuthService
      * Complete a password reset from a raw token. The new password must satisfy
      * the policy; a weak password is reported without consuming the token so the
      * user can retry with the same link. On success the password is updated, the
-     * token consumed, every session of the account ended (whoever knew the old
-     * password is signed out; linked plugins keep their tokens), and — since
+     * token consumed, every session of the account ended and every linked
+     * plugin's token revoked (whoever knew the old password is signed out, and
+     * a plugin is linked again from the new sign-in), and — since
      * clicking the emailed link proves control of the inbox — the account is
      * also marked active.
      *
@@ -289,6 +294,7 @@ class AuthService
         $this->users->updatePasswordHash($userId, password_hash($newPassword, self::passwordAlgo()));
         $this->tokens->markUsed($token->token_id);
         $this->users->activate($userId);
+        $this->pluginTokens->revokeAllForUser($userId);
         $this->sessions->destroyForUser($userId);
 
         return ['status' => 'ok'];
@@ -296,9 +302,10 @@ class AuthService
 
     /**
      * Change a user's display name (enforcing the same rules and case-insensitive
-     * uniqueness as registration).
+     * uniqueness as registration). `reason` says why one is refused: a name the
+     * rules refuse, one someone else has, or an account that isn't there.
      *
-     * @return array{ok:bool, error?:string}
+     * @return array{ok:bool, reason?:'invalid'|'taken'|'missing', error?:string}
      */
     public function changeDisplayName(int $userId, string $displayName): array
     {
@@ -306,12 +313,12 @@ class AuthService
 
         $error = $this->validateDisplayName($displayName);
         if ($error !== null) {
-            return ['ok' => false, 'error' => $error];
+            return ['ok' => false, 'reason' => 'invalid', 'error' => $error];
         }
 
         $current = $this->users->findById($userId);
         if ($current === null) {
-            return ['ok' => false, 'error' => 'Account not found.'];
+            return ['ok' => false, 'reason' => 'missing', 'error' => 'Account not found.'];
         }
 
         // Allow keeping the same name (e.g. a capitalisation change); otherwise
@@ -320,7 +327,7 @@ class AuthService
             mb_strtolower($displayName) !== mb_strtolower($current->display_name)
             && $this->users->displayNameExists($displayName)
         ) {
-            return ['ok' => false, 'error' => 'That display name is already taken.'];
+            return ['ok' => false, 'reason' => 'taken', 'error' => 'That display name is already taken.'];
         }
 
         $this->users->updateDisplayName($userId, $displayName);
@@ -330,9 +337,12 @@ class AuthService
     /**
      * Change a user's password after verifying their current one. Every other
      * session of the account ends; the one whose id is $keepSessionId (the
-     * browser making the change) stays. Linked plugins keep their tokens.
+     * browser making the change) stays. Every linked plugin's token is revoked,
+     * so a plugin is linked again after the change.
+     * `reason` says why one is refused: the current password is wrong, or the
+     * new one is too weak.
      *
-     * @return array{ok:bool, error?:string}
+     * @return array{ok:bool, reason?:'wrong_password'|'weak', error?:string}
      */
     public function changePassword(
         int $userId,
@@ -344,15 +354,16 @@ class AuthService
     ): array {
         $hash = $this->users->getPasswordHash($userId);
         if ($hash === null || !password_verify($currentPassword, $hash)) {
-            return ['ok' => false, 'error' => 'Your current password is incorrect.'];
+            return ['ok' => false, 'reason' => 'wrong_password', 'error' => 'Your current password is incorrect.'];
         }
 
         $pwError = PasswordPolicy::validate($newPassword);
         if ($pwError !== null) {
-            return ['ok' => false, 'error' => $pwError];
+            return ['ok' => false, 'reason' => 'weak', 'error' => $pwError];
         }
 
         $this->users->updatePasswordHash($userId, password_hash($newPassword, self::passwordAlgo()));
+        $this->pluginTokens->revokeAllForUser($userId);
         $this->sessions->destroyForUser($userId, $keepSessionId);
         return ['ok' => true];
     }
@@ -461,23 +472,23 @@ class AuthService
         return hash('sha256', $rawToken);
     }
 
-    /** @return string[] */
+    /** @return array<string,string> Each refused field's message, keyed by the field's name. */
     private function validateRegistration(string $email, string $displayName, string $password): array
     {
         $errors = [];
 
         if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-            $errors[] = 'Please enter a valid email address.';
+            $errors['email'] = 'Please enter a valid email address.';
         }
 
         $nameError = $this->validateDisplayName($displayName);
         if ($nameError !== null) {
-            $errors[] = $nameError;
+            $errors['display_name'] = $nameError;
         }
 
         $pwError = PasswordPolicy::validate($password);
         if ($pwError !== null) {
-            $errors[] = $pwError;
+            $errors['password'] = $pwError;
         }
 
         return $errors;

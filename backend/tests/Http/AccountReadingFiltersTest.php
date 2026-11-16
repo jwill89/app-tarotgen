@@ -37,11 +37,11 @@ final class AccountReadingFiltersTest extends HttpTestCase
         $other = $this->createUser('other@example.test')->user_id;
 
         // Times are UTC, as stored.
-        $this->insert('celtic', $this->userId, '2026-03-01 10:00:00', ['deck_id' => 1, 'spread' => self::spread(3, 'Celtic Cross')], name: 'Career check', tags: ['career']);
-        $this->insert('mine', $this->userId, '2026-03-05 23:30:00', ['deck_id' => 2, 'spread' => self::spread(0, 'My Own Spread')], querent: 'Alex');
-        $this->insert('free', $this->userId, '2026-03-10 08:00:00', ['deck_id' => 1], question: 'Will it rain?', tags: ['career', 'weather']);
-        $this->insert('notes', $this->userId, '2026-03-20 08:00:00', ['deck_id' => 2], notes: 'The Tower again.');
-        $this->insert('theirs', $other, '2026-03-10 09:00:00', ['deck_id' => 1], name: 'Career', tags: ['career']);
+        $this->insert('celtic', $this->userId, '2026-03-01T10:00:00Z', ['deck_id' => 1, 'spread' => self::spread(3, 'Celtic Cross')], name: 'Career check', tags: ['career']);
+        $this->insert('mine', $this->userId, '2026-03-05T23:30:00Z', ['deck_id' => 2, 'spread' => self::spread(0, 'My Own Spread')], querent: 'Alex');
+        $this->insert('free', $this->userId, '2026-03-10T08:00:00Z', ['deck_id' => 1], question: 'Will it rain?', tags: ['career', 'weather']);
+        $this->insert('notes', $this->userId, '2026-03-20T08:00:00Z', ['deck_id' => 2], notes: 'The Tower again.');
+        $this->insert('theirs', $other, '2026-03-10T09:00:00Z', ['deck_id' => 1], name: 'Career', tags: ['career']);
         $this->db->exec("INSERT INTO daily_cards (user_id, day, reading_id) VALUES ({$this->userId}, '2026-03-10', 'free')");
 
         $this->signInAs($this->userId);
@@ -123,7 +123,7 @@ final class AccountReadingFiltersTest extends HttpTestCase
     #[DataProvider('badFilters')]
     public function testAFilterThatCannotBeOneIsRefused(string $query, string $error): void
     {
-        $this->assertSame(['error' => $error], $this->assertJsonResponse(400, $this->get('/account/readings?limit=25&' . $query)));
+        $this->assertSame($error, $this->assertProblem(422, $this->get('/account/readings?limit=25&' . $query)));
     }
 
     public function testTheSpreadListIsYourOwnByNameWithCounts(): void
@@ -175,10 +175,10 @@ final class AccountReadingFiltersTest extends HttpTestCase
     public function testTheSpreadListIsForASignedInBrowserOnly(): void
     {
         $this->useSessionCookie(null);
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->get('/account/reading-spreads')));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->get('/account/reading-spreads')));
 
         $bearer = ['Authorization' => 'Bearer ' . $this->service(PluginTokenService::class)->issueToken($this->userId)];
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $this->get('/account/reading-spreads', $bearer)));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $this->get('/account/reading-spreads', $bearer)));
     }
 
     /**
@@ -188,14 +188,14 @@ final class AccountReadingFiltersTest extends HttpTestCase
      */
     private function addSpreadVariety(): void
     {
-        $this->insert('lower', $this->userId, '2026-03-02 10:00:00', ['deck_id' => 1, 'spread' => self::spread(3, 'celtic cross')]);
-        $this->insert('padded', $this->userId, '2026-03-03 10:00:00', ['deck_id' => 1, 'spread' => self::spread(4, '  Past, Present, Future ')]);
-        $this->insert('long', $this->userId, '2026-03-04 10:00:00', ['deck_id' => 1, 'spread' => self::spread(0, self::longName())]);
-        $this->insert('nameless', $this->userId, '2026-03-06 10:00:00', ['deck_id' => 1, 'spread' => ['spread_id' => 0, 'positions' => []]]);
-        $this->insert('blank', $this->userId, '2026-03-07 10:00:00', ['deck_id' => 1, 'spread' => self::spread(0, '   ')]);
-        $this->db->prepare("INSERT INTO readings (reading_id, reading_info, reading_time, user_id) VALUES ('broken', '{not json', '2026-03-08 10:00:00', ?)")
+        $this->insert('lower', $this->userId, '2026-03-02T10:00:00Z', ['deck_id' => 1, 'spread' => self::spread(3, 'celtic cross')]);
+        $this->insert('padded', $this->userId, '2026-03-03T10:00:00Z', ['deck_id' => 1, 'spread' => self::spread(4, '  Past, Present, Future ')]);
+        $this->insert('long', $this->userId, '2026-03-04T10:00:00Z', ['deck_id' => 1, 'spread' => self::spread(0, self::longName())]);
+        $this->insert('nameless', $this->userId, '2026-03-06T10:00:00Z', ['deck_id' => 1, 'spread' => ['spread_id' => 0, 'positions' => []]]);
+        $this->insert('blank', $this->userId, '2026-03-07T10:00:00Z', ['deck_id' => 1, 'spread' => self::spread(0, '   ')]);
+        $this->db->prepare("INSERT INTO readings (reading_id, reading_info, reading_time, user_id) VALUES ('broken', '{not json', '2026-03-08T10:00:00Z', ?)")
             ->execute([$this->userId]);
-        $this->insert('horseshoe', $this->createUser('third@example.test')->user_id, '2026-03-09 10:00:00', ['deck_id' => 1, 'spread' => self::spread(5, 'Horseshoe')]);
+        $this->insert('horseshoe', $this->createUser('third@example.test')->user_id, '2026-03-09T10:00:00Z', ['deck_id' => 1, 'spread' => self::spread(5, 'Horseshoe')]);
     }
 
     /** A personal spread's name of 140 characters (they keep up to 200). */

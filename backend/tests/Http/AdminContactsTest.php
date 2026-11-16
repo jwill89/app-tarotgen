@@ -27,9 +27,9 @@ final class AdminContactsTest extends HttpTestCase
 
     public function testTheInboxShowsUnreadMessagesNewestFirst(): void
     {
-        $this->message('Old', '2026-01-01 09:00:00');
-        $this->message('New', '2026-01-03 09:00:00');
-        $this->message('Handled', '2026-01-02 09:00:00', read: true);
+        $this->message('Old', '2026-01-01T09:00:00Z');
+        $this->message('New', '2026-01-03T09:00:00Z');
+        $this->message('Handled', '2026-01-02T09:00:00Z', read: true);
 
         $unread = $this->assertJsonResponse(200, $this->get('/admin/contacts'));
         $this->assertDocumented('get', '/admin/contacts', 200, $unread);
@@ -58,7 +58,7 @@ final class AdminContactsTest extends HttpTestCase
 
     public function testMarkingAMessageReadFilesItAwayUntilItIsMarkedUnread(): void
     {
-        $id = $this->message('Hello', '2026-01-01 09:00:00');
+        $id = $this->message('Hello', '2026-01-01T09:00:00Z');
 
         $body = $this->assertJsonResponse(200, $this->request('PATCH', "/admin/contacts/{$id}", ['is_read' => true]));
 
@@ -74,7 +74,7 @@ final class AdminContactsTest extends HttpTestCase
 
     public function testAnUpdateWithoutTheReadFlagChangesNothing(): void
     {
-        $id = $this->message('Hello', '2026-01-01 09:00:00', read: true);
+        $id = $this->message('Hello', '2026-01-01T09:00:00Z', read: true);
 
         $this->assertSame(['success' => true], $this->assertJsonResponse(200, $this->request('PATCH', "/admin/contacts/{$id}", ['message' => 'Edited'])));
 
@@ -83,29 +83,29 @@ final class AdminContactsTest extends HttpTestCase
 
     public function testAContactIdThatIsNotAPositiveNumberIsRefused(): void
     {
-        $invalid = ['error' => 'Invalid contact ID'];
+        $invalid = 'Invalid contact ID';
 
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->request('PATCH', '/admin/contacts/0', ['is_read' => true])));
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->request('PATCH', '/admin/contacts/latest', ['is_read' => true])));
+        $this->assertSame($invalid, $this->assertProblem(422, $this->request('PATCH', '/admin/contacts/0', ['is_read' => true])));
+        $this->assertSame($invalid, $this->assertProblem(422, $this->request('PATCH', '/admin/contacts/latest', ['is_read' => true])));
     }
 
     public function testAMessageThatDoesNotExistIsNotFound(): void
     {
-        $this->message('Hello', '2026-01-01 09:00:00');
-        $notFound = ['error' => 'Contact not found'];
+        $this->message('Hello', '2026-01-01T09:00:00Z');
+        $notFound = 'Contact not found';
 
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('PATCH', '/admin/contacts/999', ['is_read' => true])));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('PATCH', '/admin/contacts/999', [])));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->request('PATCH', '/admin/contacts/999', ['is_read' => true])));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->request('PATCH', '/admin/contacts/999', [])));
         $this->assertSame([['is_read' => 0]], $this->rows('SELECT is_read FROM contacts'));
     }
 
     public function testTheInboxNeedsAnAdmin(): void
     {
-        $id = $this->message('Hello', '2026-01-01 09:00:00');
+        $id = $this->message('Hello', '2026-01-01T09:00:00Z');
         $this->signInAs($this->createUser('reader@example.test')->user_id);
 
-        $this->assertJsonResponse(401, $this->get('/admin/contacts'));
-        $this->assertJsonResponse(401, $this->request('PATCH', "/admin/contacts/{$id}", ['is_read' => true]));
+        $this->assertProblem(403, $this->get('/admin/contacts'));
+        $this->assertProblem(403, $this->request('PATCH', "/admin/contacts/{$id}", ['is_read' => true]));
         $this->assertSame([['is_read' => 0]], $this->rows('SELECT is_read FROM contacts'));
     }
 

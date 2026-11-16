@@ -37,10 +37,10 @@ final class ReadingAccessTest extends HttpTestCase
 
     public function testAnUnknownReadingIs404(): void
     {
-        $this->assertSame(['error' => 'InvalidReadingID'], $this->assertJsonResponse(404, $this->get('/readings/0000000000')));
+        $this->assertSame('InvalidReadingID', $this->assertProblem(404, $this->get('/readings/0000000000')));
         $this->assertSame(
-            ['error' => 'InvalidReadingID'],
-            $this->assertJsonResponse(404, $this->post('/readings/0000000000/unlock', ['password' => self::PASSWORD]))
+            'InvalidReadingID',
+            $this->assertProblem(404, $this->post('/readings/0000000000/unlock', ['password' => self::PASSWORD]))
         );
     }
 
@@ -110,10 +110,10 @@ final class ReadingAccessTest extends HttpTestCase
         $this->useSessionCookie(null);
 
         $wrong = $this->post("/readings/{$id}/unlock", ['password' => 'not ' . self::PASSWORD]);
-        $this->assertSame(['error' => 'Incorrect password.'], $this->assertJsonResponse(401, $wrong));
+        $this->assertSame('Incorrect password.', $this->assertDocumentedProblem('post', '/readings/{reading_id}/unlock', 403, $wrong));
 
         $missing = $this->post("/readings/{$id}/unlock");
-        $this->assertSame(['error' => 'Incorrect password.'], $this->assertJsonResponse(401, $missing));
+        $this->assertSame('Incorrect password.', $this->assertProblem(403, $missing));
 
         $this->assertTrue($this->assertJsonResponse(200, $this->get("/readings/{$id}"))['locked']);
     }
@@ -154,16 +154,18 @@ final class ReadingAccessTest extends HttpTestCase
         $this->useSessionCookie(null);
 
         for ($attempt = 1; $attempt <= 10; $attempt++) {
-            $this->assertJsonResponse(401, $this->post("/readings/{$id}/unlock", ['password' => "guess {$attempt}"]));
+            $this->assertProblem(403, $this->post("/readings/{$id}/unlock", ['password' => "guess {$attempt}"]));
         }
 
         // Every attempt counts, so not even the right password gets through now.
         $limited = $this->post("/readings/{$id}/unlock", ['password' => self::PASSWORD]);
 
         $this->assertSame(
-            ['error' => 'Too many password attempts. Please wait a minute and try again.'],
-            $this->assertJsonResponse(429, $limited)
+            'Too many password attempts. Please wait a minute and try again.',
+            $this->assertDocumentedProblem('post', '/readings/{reading_id}/unlock', 429, $limited)
         );
+        $this->assertGreaterThanOrEqual(1, (int) $limited->getHeaderLine('Retry-After'));
+        $this->assertLessThanOrEqual(61, (int) $limited->getHeaderLine('Retry-After'));
         $this->assertTrue($this->assertJsonResponse(200, $this->get("/readings/{$id}"))['locked']);
     }
 
@@ -176,8 +178,8 @@ final class ReadingAccessTest extends HttpTestCase
         }
 
         $this->assertSame(
-            ['error' => 'Too many requests. Please slow down and try again shortly.'],
-            $this->assertJsonResponse(429, $this->get("/readings/{$id}"))
+            'Too many requests. Please slow down and try again shortly.',
+            $this->assertProblem(429, $this->get("/readings/{$id}"))
         );
     }
 

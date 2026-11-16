@@ -39,8 +39,8 @@ final class AccountSpreadsTest extends HttpTestCase
             'name' => '  Crossroads  ',
             'description' => 'Two paths',
             'positions' => [
-                ['order' => 1, 'title' => 'Left', 'x' => -20, 'y' => 50, 'rotation' => 0],
-                ['order' => 2, 'title' => 'Right', 'x' => 80, 'y' => 120, 'rotation' => -90],
+                ['order' => 1, 'title' => 'Left', 'x' => 0, 'y' => 50, 'rotation' => 0],
+                ['order' => 2, 'title' => 'Right', 'x' => 80, 'y' => 100, 'rotation' => -90],
             ],
         ]));
 
@@ -78,8 +78,8 @@ final class AccountSpreadsTest extends HttpTestCase
         $this->signInAs($this->userId);
 
         $this->assertSame(
-            ['error' => 'A spread name and at least one card position are required.'],
-            $this->assertJsonResponse(400, $this->post('/account/spreads', $body))
+            'A spread name and at least one card position are required.',
+            $this->assertProblem(422, $this->post('/account/spreads', $body))
         );
         $this->assertSame(0, $this->rowCount('user_spreads'));
     }
@@ -88,18 +88,50 @@ final class AccountSpreadsTest extends HttpTestCase
     {
         $id = $this->storeSpread($this->userId, 'Kept');
         $this->signInAs($this->userId);
-        $invalid = ['error' => 'Invalid position data.'];
+        $invalid = 'Invalid position data.';
 
         // A position that isn't an object is refused, not dropped on save,
         // which would leave a spread of no (or fewer) cards.
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->post('/account/spreads', ['name' => 'Numbers', 'positions' => [1, 2]])));
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->post('/account/spreads', [
+        $this->assertSame($invalid, $this->assertProblem(422, $this->post('/account/spreads', ['name' => 'Numbers', 'positions' => [1, 2]])));
+        $this->assertSame($invalid, $this->assertProblem(422, $this->post('/account/spreads', [
             'name' => 'Mixed', 'positions' => [['order' => 1, 'title' => 'Real'], 'not a position'],
         ])));
-        $this->assertSame($invalid, $this->assertJsonResponse(400, $this->request('PUT', "/account/spreads/{$id}", ['positions' => [1, 2]])));
-        $none = ['error' => 'A spread needs at least one card position.'];
-        $this->assertSame($none, $this->assertJsonResponse(400, $this->request('PUT', "/account/spreads/{$id}", ['positions' => []])));
-        $this->assertSame($none, $this->assertJsonResponse(400, $this->request('PUT', "/account/spreads/{$id}", ['name' => 'Renamed', 'positions' => 'one, two'])));
+        $this->assertSame($invalid, $this->assertProblem(422, $this->request('PUT', "/account/spreads/{$id}", ['positions' => [1, 2]])));
+        $none = 'A spread needs at least one card position.';
+        $this->assertSame($none, $this->assertProblem(422, $this->request('PUT', "/account/spreads/{$id}", ['positions' => []])));
+        $this->assertSame($none, $this->assertProblem(422, $this->request('PUT', "/account/spreads/{$id}", ['name' => 'Renamed', 'positions' => 'one, two'])));
+
+        $this->assertSame([['name' => 'Kept', 'card_count' => 1]], $this->rows('SELECT name, card_count FROM user_spreads'));
+    }
+
+    /**
+     * @return iterable<string,array{array<string,mixed>,string,string}>
+     */
+    public static function spreadsPastALimit(): iterable
+    {
+        $at = static fn(array $position): array => ['name' => 'Crossroads', 'positions' => [$position + ['order' => 1, 'title' => 'Left']]];
+
+        yield 'left of the canvas' => [$at(['x' => -20]), 'body.positions[0].x', 'x must be a number from 0 to 100.'];
+        yield 'below the canvas' => [$at(['y' => 120]), 'body.positions[0].y', 'y must be a number from 0 to 100.'];
+        yield 'a coordinate that is no number' => [$at(['x' => 'middle']), 'body.positions[0].x', 'x must be a number from 0 to 100.'];
+        yield 'a long title' => [$at(['title' => str_repeat('t', 101)]), 'body.positions[0].title', 'title can be at most 100 characters.'];
+        yield 'a long description' => [$at(['description' => str_repeat('ü', 281)]), 'body.positions[0].description', 'description can be at most 280 characters.'];
+        yield 'a long name' => [['name' => str_repeat('n', 201), 'positions' => [['order' => 1]]], 'body.name', 'name can be at most 200 characters.'];
+    }
+
+    /** @param array<string,mixed> $body */
+    #[DataProvider('spreadsPastALimit')]
+    public function testAValuePastALimitIsRefusedNotCutOrMoved(array $body, string $location, string $error): void
+    {
+        $id = $this->storeSpread($this->userId, 'Kept');
+        $this->signInAs($this->userId);
+
+        $created = $this->post('/account/spreads', $body);
+        $this->assertSame($error, $this->assertDocumentedProblem('post', '/account/spreads', 422, $created));
+        $this->assertSame([$location => $error], $this->problemErrors($created));
+
+        $updated = $this->request('PUT', "/account/spreads/{$id}", $body);
+        $this->assertSame($error, $this->assertDocumentedProblem('put', '/account/spreads/{user_spread_id}', 422, $updated));
 
         $this->assertSame([['name' => 'Kept', 'card_count' => 1]], $this->rows('SELECT name, card_count FROM user_spreads'));
     }
@@ -119,7 +151,7 @@ final class AccountSpreadsTest extends HttpTestCase
         $this->assertSame(1, $updated['card_count']);
 
         $countOnly = $this->request('PUT', "/account/spreads/{$id}", ['card_count' => 9]);
-        $this->assertSame(['error' => 'No changes provided.'], $this->assertJsonResponse(400, $countOnly));
+        $this->assertSame('No changes provided.', $this->assertProblem(422, $countOnly));
         $this->assertSame([['card_count' => 1]], $this->rows('SELECT card_count FROM user_spreads'));
     }
 
@@ -127,11 +159,11 @@ final class AccountSpreadsTest extends HttpTestCase
     {
         $id = $this->storeSpread($this->userId, 'Kept');
         $this->signInAs($this->userId);
-        $nameless = ['error' => 'A spread needs a name.'];
+        $nameless = 'A spread needs a name.';
 
-        $this->assertSame($nameless, $this->assertJsonResponse(400, $this->request('PUT', "/account/spreads/{$id}", ['name' => '   '])));
-        $this->assertSame($nameless, $this->assertJsonResponse(400, $this->request('PUT', "/account/spreads/{$id}", ['name' => '', 'description' => 'New'])));
-        $this->assertSame($nameless, $this->assertJsonResponse(400, $this->request('PUT', "/account/spreads/{$id}", ['name' => ['Kept']])));
+        $this->assertSame($nameless, $this->assertProblem(422, $this->request('PUT', "/account/spreads/{$id}", ['name' => '   '])));
+        $this->assertSame($nameless, $this->assertProblem(422, $this->request('PUT', "/account/spreads/{$id}", ['name' => '', 'description' => 'New'])));
+        $this->assertSame($nameless, $this->assertProblem(422, $this->request('PUT', "/account/spreads/{$id}", ['name' => ['Kept']])));
 
         $this->assertSame([['name' => 'Kept', 'description' => '']], $this->rows('SELECT name, description FROM user_spreads'));
     }
@@ -141,8 +173,8 @@ final class AccountSpreadsTest extends HttpTestCase
         $id = $this->storeSpread($this->userId, 'Mine');
         $this->signInAs($this->userId);
 
-        $this->assertSame(['error' => 'No changes provided.'], $this->assertJsonResponse(400, $this->request('PUT', "/account/spreads/{$id}", [])));
-        $this->assertSame(['error' => 'No changes provided.'], $this->assertJsonResponse(400, $this->request('PUT', "/account/spreads/{$id}", ['user_id' => 99])));
+        $this->assertSame('No changes provided.', $this->assertProblem(422, $this->request('PUT', "/account/spreads/{$id}", [])));
+        $this->assertSame('No changes provided.', $this->assertProblem(422, $this->request('PUT', "/account/spreads/{$id}", ['user_id' => 99])));
         $this->assertSame([['name' => 'Mine', 'user_id' => $this->userId]], $this->rows('SELECT name, user_id FROM user_spreads'));
     }
 
@@ -205,7 +237,7 @@ final class AccountSpreadsTest extends HttpTestCase
         $this->assertSame([['user_spread_id' => $id, 'user_id' => $this->userId]], $this->rows('SELECT user_spread_id, user_id FROM user_spreads'));
     }
 
-    public function testPositionDescriptionsAreKeptTrimmedAndCapped(): void
+    public function testPositionDescriptionsAreKeptTrimmed(): void
     {
         $this->signInAs($this->userId);
 
@@ -221,7 +253,7 @@ final class AccountSpreadsTest extends HttpTestCase
         $this->assertArrayNotHasKey('description', $created['positions'][1]);
 
         $updated = $this->assertJsonResponse(200, $this->request('PUT', "/account/spreads/{$created['user_spread_id']}", [
-            'positions' => [['order' => 1, 'title' => 'Left', 'description' => str_repeat('ü', 290)]],
+            'positions' => [['order' => 1, 'title' => 'Left', 'description' => str_repeat('ü', 280)]],
         ]));
         $this->assertDocumented('put', '/account/spreads/{user_spread_id}', 200, $updated);
         $this->assertSame(str_repeat('ü', 280), $updated['positions'][0]['description']);
@@ -241,11 +273,11 @@ final class AccountSpreadsTest extends HttpTestCase
         $this->service(FavoriteSpreadRepository::class)->add($owner->user_id, 'personal', $theirs);
         $this->signInAs($this->userId);
 
-        $notFound = ['error' => 'Spread not found.'];
+        $notFound = 'Spread not found.';
         $edit = $this->request('PUT', "/account/spreads/{$theirs}", ['name' => 'Hijacked']);
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $edit));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('DELETE', "/account/spreads/{$theirs}")));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->post("/account/spreads/{$theirs}/submit")));
+        $this->assertSame($notFound, $this->assertProblem(404, $edit));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->request('DELETE', "/account/spreads/{$theirs}")));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->post("/account/spreads/{$theirs}/submit")));
 
         $this->assertSame([['name' => 'Theirs', 'user_id' => $owner->user_id]], $this->rows('SELECT name, user_id FROM user_spreads'));
         $this->assertSame(1, $this->rowCount('user_favorite_spreads'));
@@ -256,10 +288,10 @@ final class AccountSpreadsTest extends HttpTestCase
     {
         $this->signInAs($this->userId);
 
-        $notFound = ['error' => 'Spread not found.'];
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('PUT', '/account/spreads/999', ['name' => 'Nothing'])));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('DELETE', '/account/spreads/999')));
-        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->post('/account/spreads/999/submit')));
+        $notFound = 'Spread not found.';
+        $this->assertSame($notFound, $this->assertProblem(404, $this->request('PUT', '/account/spreads/999', ['name' => 'Nothing'])));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->request('DELETE', '/account/spreads/999')));
+        $this->assertSame($notFound, $this->assertProblem(404, $this->post('/account/spreads/999/submit')));
     }
 
     private function storeSpread(int $userId, string $name, string $description = ''): int

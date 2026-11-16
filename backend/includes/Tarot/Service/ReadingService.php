@@ -169,9 +169,10 @@ class ReadingService
         $use_reversals        = Input::bool($params['use_reversals'] ?? null);
         $use_additional_cards = Input::bool($params['use_additional_cards'] ?? null);
 
+        // The reading's deck has been deleted since it was drawn.
         $deck = $this->decks->get((int) ($info['deck_id'] ?? 0));
         if (!($deck instanceof Deck)) {
-            throw new ApiException('InvalidDeckID', 400);
+            throw new ApiException('InvalidDeckID', 409);
         }
 
         $total_cards = $deck->getEffectiveTotalCards();
@@ -239,7 +240,7 @@ class ReadingService
     {
         $deck_id = (int) ($params['deck_id'] ?? 0);
 
-        $name = Input::string($params['name'] ?? null, 100);
+        $name = Input::text($params['name'] ?? null, 100, 'body.name');
         if ($name === '') {
             $name = 'Custom Reading';
         }
@@ -253,33 +254,33 @@ class ReadingService
         }
 
         if (!is_array($cards) || count($cards) === 0) {
-            throw new ApiException('At least one card is required.', 400);
+            throw new ApiException('At least one card is required.', 422, location: 'body.cards');
         }
 
         $deck = $this->deckForNewReading($deck_id, $isAdmin);
 
+        // A physical deck holds each card once, so no more cards than it has can
+        // pass the checks below.
         $available = max(1, $deck->getEffectiveTotalCards() + $deck->additional_cards);
 
-        // Never store more cards than the deck physically holds.
-        $cards = array_slice(array_values($cards), 0, $available);
-
-        // First pass: sanitize each entry and collect the card IDs to resolve.
+        // First pass: check each entry and collect the card IDs to resolve.
         $entries  = [];
         $seen_ids = [];
 
-        foreach ($cards as $idx => $card) {
+        foreach (array_values($cards) as $idx => $card) {
+            $at = "body.cards[{$idx}]";
             if (!is_array($card)) {
-                throw new ApiException('Invalid card data.', 400);
+                throw new ApiException('Invalid card data.', 422, location: $at);
             }
 
             $card_id = (int) ($card['card_id'] ?? 0);
             if ($card_id < 1 || $card_id > $available) {
-                throw new ApiException('A selected card is not part of this deck.', 400);
+                throw new ApiException('A selected card is not part of this deck.', 422, location: "{$at}.card_id");
             }
 
             // A physical deck holds each card once, so disallow duplicates.
             if (isset($seen_ids[$card_id])) {
-                throw new ApiException('Each card can only be used once in a reading.', 400);
+                throw new ApiException('Each card can only be used once in a reading.', 422, location: "{$at}.card_id");
             }
             $seen_ids[$card_id] = true;
 
@@ -292,9 +293,9 @@ class ReadingService
                 'order'    => $idx + 1,
                 'card_id'  => $card_id,
                 'reversed' => Input::bool($card['reversed'] ?? null),
-                'title'    => Input::string($card['title'] ?? null, 100),
-                'x'        => max(0.0, min(100.0, round((float) ($card['x'] ?? 50), 2))),
-                'y'        => max(0.0, min(100.0, round((float) ($card['y'] ?? 50), 2))),
+                'title'    => SpreadInput::title($card['title'] ?? null, "{$at}.title"),
+                'x'        => SpreadInput::coordinate($card['x'] ?? null, "{$at}.x"),
+                'y'        => SpreadInput::coordinate($card['y'] ?? null, "{$at}.y"),
                 'rotation' => $rotation,
             ];
         }
@@ -311,7 +312,7 @@ class ReadingService
             $card_name = $card_names[$card_id] ?? null;
 
             if ($card_name === null) {
-                throw new ApiException('A selected card could not be found.', 400);
+                throw new ApiException('A selected card could not be found.', 422, location: "body.cards[{$key}].card_id");
             }
 
             $positions[] = [
@@ -342,7 +343,7 @@ class ReadingService
             'draw'    => $draw,
         ];
 
-        return $this->persist($reading_data, $this->buildOwnerOptions($userId, $params), 500);
+        return $this->persist($reading_data, $this->buildOwnerOptions($userId, $params));
     }
 
     /**
@@ -357,7 +358,7 @@ class ReadingService
     {
         $deck = $this->decks->get($deckId);
         if (!($deck instanceof Deck) || (!$deck->approved && !$isAdmin)) {
-            throw new ApiException('InvalidDeckID', 400);
+            throw new ApiException('InvalidDeckID', 422, location: 'body.deck_id');
         }
 
         return $deck;
@@ -385,9 +386,8 @@ class ReadingService
         return [
             'user_id'       => $userId,
             'hide_user'     => Input::bool($params['hide_user'] ?? null),
-            'reading_name'  => Input::nullableString($params['reading_name'] ?? null, 100),
-            // Notes keep internal whitespace (only the empty check is trimmed).
-            'reading_notes' => Input::nullableString($params['reading_notes'] ?? null, 20000, trim: false),
+            'reading_name'  => ReadingInput::name($params['reading_name'] ?? null),
+            'reading_notes' => ReadingInput::notes($params['reading_notes'] ?? null),
             'question'      => ReadingInput::question($params['question'] ?? null),
             'querent'       => ReadingInput::querent($params['querent'] ?? null),
             'tags'          => ReadingInput::tags($params['tags'] ?? null),
@@ -406,6 +406,7 @@ class ReadingService
      * for the spread's own title, and the reader has made the position theirs.
      *
      * @return array<string,mixed>
+     * @throws ApiException A title over SpreadInput::TITLE_MAX characters.
      */
     private function buildSpreadSnapshot(Spread $spread, mixed $rawTitles): array
     {
@@ -423,7 +424,7 @@ class ReadingService
         foreach ($positions as $idx => $pos) {
             $custom = $custom_titles[$idx] ?? null;
             if (is_string($custom)) {
-                $custom = Input::string($custom, 100);
+                $custom = SpreadInput::title($custom, "body.position_titles[{$idx}]");
                 if ($custom !== '' && $custom !== ($pos['title'] ?? '')) {
                     $positions[$idx]['title'] = $custom;
                     unset($positions[$idx]['description']);
@@ -463,7 +464,7 @@ class ReadingService
      * @throws JsonException
      * @throws RandomException
      */
-    private function persist(array $reading_data, array $owner = [], int $failureStatus = 404): Reading
+    private function persist(array $reading_data, array $owner = []): Reading
     {
         $reading = new Reading();
         $reading->setReadingInfo(json_encode($reading_data, JSON_THROW_ON_ERROR));
@@ -501,7 +502,7 @@ class ReadingService
         }
 
         if (!($saved instanceof Reading)) {
-            throw new ApiException('ErrorGeneratingReading', $failureStatus);
+            throw new ApiException('ErrorGeneratingReading', 500);
         }
 
         return $saved;

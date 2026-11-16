@@ -2,8 +2,8 @@
     "openapi": "3.1.0",
     "info": {
         "title": "TarotGen.io API",
-        "description": "The backend for **TarotGen.io** — a PHP 8.5 / Slim 4 hybrid-REST API.\n\n- Resources are plural nouns (`/decks`, `/readings`); items are `/{id}`.\n- `GET` reads, `POST` creates (→`201`) or runs a command, `PUT` replaces,\n  `PATCH` applies a partial update / flag toggle, `DELETE` removes (→`204`).\n- State transitions that aren't a plain field-set are `POST …/{id}/{verb}`\n  (e.g. `…/finalize`, `…/approve`, `…/draw`).\n- Errors are `{ \"error\": \"…\" }`; multi-message validation is `{ \"errors\": […] }`.\n- Auth is a session cookie (`PHPSESSID`) set by the `/auth/*` endpoints —\n  there are no API keys or bearer tokens for first-party calls.",
-        "version": "1.0.0"
+        "description": "The backend for **TarotGen.io** — a PHP 8.5 / Slim 4 hybrid-REST API.\n\n- Resources are plural nouns (`/decks`, `/readings`); items are `/{id}`.\n- `GET` reads, `POST` creates (→`201`) or runs a command, `PUT` replaces,\n  `PATCH` applies a partial update / flag toggle, `DELETE` removes (→`204`).\n- State transitions that aren't a plain field-set are `POST …/{id}/{verb}`\n  (e.g. `…/finalize`, `…/approve`, `…/draw`).\n- Every error is RFC 9457 problem details (`application/problem+json`, the\n  `ProblemDetails` schema), whatever the request's `Accept`: `detail` says\n  why, in words to show the user. A failed validation answers `422` and lists\n  each field it refused in `errors` (`message`, and `location` such as\n  `body.email` or `query.limit`); `400` is only for a body that isn't a JSON\n  object, and for a plugin code exchange's `invalid_grant` (RFC 6749). `401`\n  is not signed in, `403` signed in but not allowed, `404` an\n  unknown id or one the requester may not see, `409` a conflict, and `429` a\n  rate limit, with `Retry-After`.\n- Auth is a session cookie (`__Host-tarotgen`) set by the `/auth/*` endpoints —\n  there are no API keys or bearer tokens for first-party calls.",
+        "version": "2.0.0"
     },
     "servers": [
         {
@@ -27,15 +27,19 @@
                         "description": "Page size (1–100). Omit to get every reading.",
                         "required": false,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
                         }
                     },
                     {
                         "name": "offset",
                         "in": "query",
+                        "description": "How many readings to skip (with ?limit).",
                         "required": false,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "minimum": 0
                         }
                     },
                     {
@@ -137,8 +141,15 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "A filter that cannot be one (a bad date, deck id, time zone or daily value; from after to)"
+                    "422": {
+                        "description": "A filter that cannot be one (a bad date, deck id, time zone or daily value; from after to), or a limit or offset out of range",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -239,13 +250,15 @@
                                         "type": [
                                             "string",
                                             "null"
-                                        ]
+                                        ],
+                                        "maxLength": 100
                                     },
                                     "reading_notes": {
                                         "type": [
                                             "string",
                                             "null"
-                                        ]
+                                        ],
+                                        "maxLength": 20000
                                     },
                                     "question": {
                                         "type": [
@@ -301,14 +314,25 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "No changes provided, an unknown visibility, or tags over the limits"
-                    },
                     "404": {
-                        "description": "Reading not found"
+                        "description": "Reading not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Password too short, or Password chosen without one"
+                        "description": "No changes provided, an unknown visibility, tags or text over the limits, a password too short, or Password chosen without one",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -339,7 +363,14 @@
                         "description": "Deleted"
                     },
                     "404": {
-                        "description": "Reading not found"
+                        "description": "Reading not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -397,8 +428,15 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Unknown format"
+                    "422": {
+                        "description": "Unknown format",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -453,8 +491,25 @@
                             }
                         }
                     },
+                    "409": {
+                        "description": "The display name is taken",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
                     "422": {
-                        "description": "Policy/uniqueness failure"
+                        "description": "A display name the rules refuse",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -494,7 +549,14 @@
                         "description": "Account deleted"
                     },
                     "403": {
-                        "description": "Wrong password, or a protected account"
+                        "description": "Wrong password, or a protected account",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -560,8 +622,25 @@
                             }
                         }
                     },
+                    "403": {
+                        "description": "The current password is wrong",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
                     "422": {
-                        "description": "Wrong current password or weak new password"
+                        "description": "The new password is too weak",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -683,8 +762,15 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Name and positions required, or a position that is not an object"
+                    "422": {
+                        "description": "Name (of at most 200 characters) and positions required, or a position that is not an object or is past a limit",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -732,11 +818,25 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "No changes provided, a blank name, or positions that are empty or not objects"
-                    },
                     "404": {
-                        "description": "Spread not found"
+                        "description": "Spread not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "No changes provided, a blank or over-long name, or positions that are empty, not objects or past a limit",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -767,7 +867,14 @@
                         "description": "Deleted"
                     },
                     "404": {
-                        "description": "Spread not found"
+                        "description": "Spread not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -815,7 +922,14 @@
                         }
                     },
                     "404": {
-                        "description": "Spread not found"
+                        "description": "Spread not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -906,8 +1020,15 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Invalid spread type or ID"
+                    "422": {
+                        "description": "Invalid spread type or ID",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -951,8 +1072,15 @@
                     "204": {
                         "description": "Removed"
                     },
-                    "400": {
-                        "description": "Invalid spread type or ID"
+                    "422": {
+                        "description": "Invalid spread type or ID",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1033,8 +1161,15 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Invalid deck ID: no such deck, or one not yet approved"
+                    "422": {
+                        "description": "Invalid deck ID: no such deck, or one not yet approved",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1065,8 +1200,15 @@
                     "204": {
                         "description": "Removed"
                     },
-                    "400": {
-                        "description": "Invalid deck ID"
+                    "422": {
+                        "description": "Invalid deck ID",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1166,11 +1308,25 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Invalid report ID"
-                    },
                     "404": {
-                        "description": "Report not found"
+                        "description": "Report not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid report ID",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1209,17 +1365,45 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Invalid report ID"
-                    },
                     "404": {
-                        "description": "Report (or its deck) not found"
+                        "description": "Report (or its deck) not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "409": {
-                        "description": "Already resolved, or the card has no master scan on the server"
+                        "description": "Already resolved, or the card has no master scan on the server",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid report ID",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "500": {
-                        "description": "The scan could not be turned into web images; the report stays open"
+                        "description": "The scan could not be turned into web images; the report stays open",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1325,11 +1509,25 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Invalid contact ID"
-                    },
                     "404": {
-                        "description": "Contact not found"
+                        "description": "Contact not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid contact ID",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1565,11 +1763,25 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Name is required"
-                    },
                     "409": {
-                        "description": "A deck with that name already exists"
+                        "description": "A deck with that name already exists",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Name is required",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1637,7 +1849,14 @@
                         }
                     },
                     "404": {
-                        "description": "Deck not found"
+                        "description": "Deck not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1695,8 +1914,15 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Invalid deck ID"
+                    "422": {
+                        "description": "Invalid deck ID",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1802,14 +2028,35 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Name is required (a name sent blank)"
-                    },
                     "404": {
-                        "description": "Deck not found or no valid fields"
+                        "description": "Deck not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "409": {
-                        "description": "Another deck already has that name"
+                        "description": "Another deck already has that name",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Name is required (a name sent blank), or no field it can change",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1839,7 +2086,14 @@
                         "description": "Deleted"
                     },
                     "500": {
-                        "description": "Failed to delete deck"
+                        "description": "Failed to delete deck",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1936,10 +2190,24 @@
                         }
                     },
                     "404": {
-                        "description": "Deck not found"
+                        "description": "Deck not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "409": {
-                        "description": "The deck already has a special card with that card_id"
+                        "description": "The deck already has a special card with that card_id",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2001,7 +2269,14 @@
                         }
                     },
                     "404": {
-                        "description": "Special card not found"
+                        "description": "Special card not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2039,7 +2314,14 @@
                         "description": "Deleted"
                     },
                     "500": {
-                        "description": "Failed to delete special card"
+                        "description": "Failed to delete special card",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2136,7 +2418,14 @@
                         }
                     },
                     "404": {
-                        "description": "Deck system not found"
+                        "description": "Deck system not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2199,14 +2488,35 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Name or short name is required (one sent blank)"
-                    },
                     "404": {
-                        "description": "Deck system not found"
+                        "description": "Deck system not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "409": {
-                        "description": "Another deck system already has that name"
+                        "description": "Another deck system already has that name",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Name or short name is required (one sent blank)",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2236,7 +2546,14 @@
                         "description": "Deleted"
                     },
                     "404": {
-                        "description": "Deck system not found"
+                        "description": "Deck system not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2275,7 +2592,14 @@
                         }
                     },
                     "404": {
-                        "description": "Deck system not found"
+                        "description": "Deck system not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2367,7 +2691,14 @@
                         "description": "Deleted"
                     },
                     "404": {
-                        "description": "Reading not found"
+                        "description": "Reading not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2424,8 +2755,15 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Invalid day range"
+                    "422": {
+                        "description": "Invalid day range",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2477,7 +2815,8 @@
                                 "properties": {
                                     "name": {
                                         "type": "string",
-                                        "description": "Trimmed; cut to 60 characters."
+                                        "description": "Trimmed.",
+                                        "maxLength": 60
                                     }
                                 },
                                 "required": [
@@ -2499,11 +2838,25 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "A category needs a name"
-                    },
                     "409": {
-                        "description": "Another category has that name (case-insensitively)"
+                        "description": "Another category has that name (case-insensitively)",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "A category needs a name, of at most 60 characters",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2538,7 +2891,8 @@
                                 "properties": {
                                     "name": {
                                         "type": "string",
-                                        "description": "Trimmed; cut to 60 characters."
+                                        "description": "Trimmed.",
+                                        "maxLength": 60
                                     }
                                 },
                                 "required": [
@@ -2560,14 +2914,35 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "A category needs a name"
-                    },
                     "404": {
-                        "description": "No such category"
+                        "description": "No such category",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "409": {
-                        "description": "Another category has that name (case-insensitively)"
+                        "description": "Another category has that name (case-insensitively)",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "A category needs a name, of at most 60 characters",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2597,10 +2972,24 @@
                         "description": "Removed"
                     },
                     "404": {
-                        "description": "No such category"
+                        "description": "No such category",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "409": {
-                        "description": "It still holds spreads (move them first), or it is the last category"
+                        "description": "It still holds spreads (move them first), or it is the last category",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2653,8 +3042,15 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Not every category id exactly once"
+                    "422": {
+                        "description": "Not every category id exactly once",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2737,11 +3133,25 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Name is required, or an unknown category"
+                    "422": {
+                        "description": "Name is required (of at most 200 characters), a position past a limit, or an unknown category",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "500": {
-                        "description": "Failed to create spread"
+                        "description": "Failed to create spread",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2781,7 +3191,14 @@
                         }
                     },
                     "404": {
-                        "description": "Spread not found"
+                        "description": "Spread not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2842,11 +3259,25 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Name is required (a name sent blank), or an unknown category"
-                    },
                     "404": {
-                        "description": "Spread not found or no valid fields"
+                        "description": "Spread not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Name is required (a name sent blank, or one over 200 characters), a position past a limit, an unknown category, or no field it can change",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2956,14 +3387,35 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Unknown category"
-                    },
                     "404": {
-                        "description": "Pending spread not found"
+                        "description": "Pending spread not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Unknown category",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "500": {
-                        "description": "Failed to approve spread"
+                        "description": "Failed to approve spread",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2995,7 +3447,14 @@
                         "description": "Rejected"
                     },
                     "500": {
-                        "description": "Failed to reject spread"
+                        "description": "Failed to reject spread",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3071,7 +3530,14 @@
                         }
                     },
                     "404": {
-                        "description": "User not found"
+                        "description": "User not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3126,10 +3592,24 @@
                         }
                     },
                     "403": {
-                        "description": "Removing your own admin flag, or a protected account's"
+                        "description": "Removing your own admin flag, or a protected account's",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "User not found"
+                        "description": "User not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3160,10 +3640,24 @@
                         "description": "Deleted"
                     },
                     "403": {
-                        "description": "Your own account, or a protected one"
+                        "description": "Your own account, or a protected one",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "User not found"
+                        "description": "User not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3218,8 +3712,25 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Could not resend activation"
+                    "404": {
+                        "description": "User not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "The account is already active",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3270,11 +3781,25 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "deck_id or days is not a whole number in range"
-                    },
                     "401": {
-                        "description": "Not signed in"
+                        "description": "Not signed in",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "deck_id or days is not a whole number in range",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3304,7 +3829,8 @@
                                         "type": "integer"
                                     },
                                     "card_name": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "maxLength": 120
                                     },
                                     "reason": {
                                         "$ref": "#/components/schemas/CardReportReason",
@@ -3362,11 +3888,34 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Missing/invalid deck or card id, unknown reason, or `other` without details"
+                    "422": {
+                        "description": "Missing/invalid deck or card id, unknown reason, `other` without details, or a card name or details over the limit",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "429": {
-                        "description": "Too many reports from this IP"
+                        "description": "Too many reports from this IP: 20/hour",
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds until the limit lets the caller in again.",
+                                "schema": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -3418,11 +3967,13 @@
                                 "type": "object",
                                 "properties": {
                                     "name": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "maxLength": 200
                                     },
                                     "email": {
                                         "type": "string",
-                                        "format": "email"
+                                        "format": "email",
+                                        "maxLength": 320
                                     },
                                     "message": {
                                         "type": "string"
@@ -3461,11 +4012,34 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Missing/invalid fields, or captcha failed"
+                    "422": {
+                        "description": "Missing/invalid fields, or captcha failed",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "429": {
-                        "description": "Rate limit exceeded"
+                        "description": "Rate limit exceeded: 5 messages/IP/hour",
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds until the limit lets the caller in again.",
+                                "schema": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -3502,11 +4076,25 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "month is missing or not YYYY-MM"
-                    },
                     "401": {
-                        "description": "Not signed in"
+                        "description": "Not signed in",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "month is missing or not YYYY-MM",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3530,7 +4118,11 @@
                                 "properties": {
                                     "day": {
                                         "type": "string",
-                                        "description": "The local date, YYYY-MM-DD."
+                                        "format": "date",
+                                        "description": "The local date, YYYY-MM-DD.",
+                                        "examples": [
+                                            "2026-11-07"
+                                        ]
                                     },
                                     "deck_id": {
                                         "type": "integer"
@@ -3560,34 +4152,32 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "day is not a date within a day of today (UTC), or the deck is missing, unknown or awaiting approval"
-                    },
                     "401": {
-                        "description": "Not signed in"
+                        "description": "Not signed in",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "409": {
                         "description": "The day already has its card, or had one whose reading was deleted",
                         "content": {
-                            "application/json": {
+                            "application/problem+json": {
                                 "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "error": {
-                                            "type": "string"
-                                        },
-                                        "reading_id": {
-                                            "type": [
-                                                "string",
-                                                "null"
-                                            ],
-                                            "description": "The reading already drawn for the day; null when it was deleted."
-                                        }
-                                    },
-                                    "required": [
-                                        "error",
-                                        "reading_id"
-                                    ]
+                                    "$ref": "#/components/schemas/DailyCardTaken"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "day is not a date within a day of today (UTC), or the deck is missing, unknown or awaiting approval",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
                                 }
                             }
                         }
@@ -3672,14 +4262,35 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Name and artist are required"
-                    },
                     "401": {
-                        "description": "Not authenticated"
+                        "description": "Not authenticated",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "409": {
-                        "description": "A deck with that name already exists"
+                        "description": "A deck with that name already exists",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Name and artist are required",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3718,7 +4329,14 @@
                         }
                     },
                     "404": {
-                        "description": "InvalidDeckID: no such deck, or one awaiting approval and the viewer is not an admin"
+                        "description": "InvalidDeckID: no such deck, or one awaiting approval and the viewer is not an admin",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -3764,7 +4382,14 @@
                         }
                     },
                     "404": {
-                        "description": "InvalidDeckID: no such deck, or one awaiting approval and the viewer is not an admin"
+                        "description": "InvalidDeckID: no such deck, or one awaiting approval and the viewer is not an admin",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -3848,14 +4473,35 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Validation failure"
-                    },
                     "401": {
-                        "description": "Not authenticated"
+                        "description": "Not authenticated",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "409": {
-                        "description": "A deck system with that name already exists"
+                        "description": "A deck system with that name already exists",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failure",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3895,7 +4541,14 @@
                         }
                     },
                     "404": {
-                        "description": "Deck system not found, or awaiting approval and the viewer is not an admin"
+                        "description": "Deck system not found, or awaiting approval and the viewer is not an admin",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -3960,11 +4613,34 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Invalid challenge, non-loopback redirect_uri, or captcha failed"
+                    "422": {
+                        "description": "Invalid challenge, non-loopback redirect_uri, or captcha failed",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "429": {
-                        "description": "Rate limit exceeded"
+                        "description": "Rate limit exceeded: 10 attempts/IP/hour",
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds until the limit lets the caller in again.",
+                                "schema": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -4018,10 +4694,33 @@
                         }
                     },
                     "400": {
-                        "description": "Invalid, expired or already used code, or the wrong verifier"
+                        "description": "Invalid, expired or already used code, or the wrong verifier: OAuth's invalid_grant, which the problem's `error` names",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InvalidGrant"
+                                }
+                            }
+                        }
                     },
                     "429": {
-                        "description": "Rate limit exceeded"
+                        "description": "Rate limit exceeded: 10 attempts/IP/minute",
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds until the limit lets the caller in again.",
+                                "schema": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -4032,7 +4731,7 @@
                     "Authentication"
                 ],
                 "summary": "Redirect to Google's consent screen",
-                "description": "Initiate the OAuth flow. Accepts an optional ?intent query param\n('login', 'register', or 'link') so the callback knows what to do.",
+                "description": "Initiate the OAuth flow. Accepts an optional ?intent query param\n('login', 'register', or 'link') so the callback knows what to do. The\nbrowser navigates here, so a flow that can't start sends it back to the\npage it came from with the reason, as the callback does.",
                 "operationId": "eac6533cfebab1e8ffaeaaadc83f09d3",
                 "parameters": [
                     {
@@ -4051,13 +4750,15 @@
                 ],
                 "responses": {
                     "302": {
-                        "description": "Redirect to Google"
-                    },
-                    "401": {
-                        "description": "The link intent requires a session"
-                    },
-                    "503": {
-                        "description": "Google OAuth is not configured"
+                        "description": "To Google's consent screen; or, when the flow can't start (Google OAuth isn't configured, or linking without a session), back to the page the intent came from (/login, /register or /account/settings) with the reason in `oauth_error`",
+                        "headers": {
+                            "Location": {
+                                "description": "Where the browser goes next.",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -4090,7 +4791,15 @@
                 ],
                 "responses": {
                     "302": {
-                        "description": "Redirect into the SPA"
+                        "description": "Into the SPA: on success, the home page or (linking) /account/settings with `oauth_success`; on any failure, /login, /register or /login again with the reason in `oauth_error`",
+                        "headers": {
+                            "Location": {
+                                "description": "Where the browser goes next.",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -4127,10 +4836,24 @@
                         }
                     },
                     "401": {
-                        "description": "Not authenticated"
+                        "description": "Not authenticated",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "409": {
-                        "description": "Google is the last way to sign in; the message says what to set up first"
+                        "description": "Google is the last way to sign in; the message says what to set up first",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -4170,7 +4893,14 @@
                         }
                     },
                     "401": {
-                        "description": "Not authenticated"
+                        "description": "Not authenticated",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -4201,7 +4931,8 @@
                                         "type": "string"
                                     },
                                     "name": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "maxLength": 50
                                     }
                                 },
                                 "required": [
@@ -4236,11 +4967,35 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Missing/invalid attestation"
-                    },
                     "401": {
-                        "description": "Not authenticated"
+                        "description": "Not authenticated",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "No registration ceremony is pending (ask for options first), or the passkey is already registered",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Missing attestation data, an attestation that fails verification, or a name over 50 characters",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -4358,14 +5113,45 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Missing assertion data"
-                    },
                     "401": {
-                        "description": "Authentication failed"
+                        "description": "Authentication failed",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "403": {
-                        "description": "Account not activated"
+                        "description": "Account not activated",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "No sign-in ceremony is pending (ask for options first)",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Missing assertion data",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -4393,7 +5179,14 @@
                         }
                     },
                     "401": {
-                        "description": "Not authenticated"
+                        "description": "Not authenticated",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -4428,7 +5221,8 @@
                                 "type": "object",
                                 "properties": {
                                     "name": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "maxLength": 50
                                     }
                                 },
                                 "required": [
@@ -4459,13 +5253,34 @@
                         }
                     },
                     "401": {
-                        "description": "Not authenticated"
+                        "description": "Not authenticated",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Passkey not found"
+                        "description": "Passkey not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Name is required"
+                        "description": "Name is required, of at most 50 characters",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -4496,13 +5311,34 @@
                         "description": "Deleted"
                     },
                     "401": {
-                        "description": "Not authenticated"
+                        "description": "Not authenticated",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Passkey not found"
+                        "description": "Passkey not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "409": {
-                        "description": "The last way to sign in; the message says what to set up first"
+                        "description": "The last way to sign in; the message says what to set up first",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -4565,10 +5401,24 @@
                         }
                     },
                     "401": {
-                        "description": "Not authenticated"
+                        "description": "Not authenticated",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "409": {
-                        "description": "Turning it off would leave no way to sign in; the message says what to set up first"
+                        "description": "Turning it off would leave no way to sign in; the message says what to set up first",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -4634,11 +5484,25 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Invalid challenge or non-loopback redirect_uri"
-                    },
                     "401": {
-                        "description": "Not authenticated"
+                        "description": "Not authenticated",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid challenge or non-loopback redirect_uri",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -4709,10 +5573,33 @@
                         }
                     },
                     "400": {
-                        "description": "Invalid or expired authorization code"
+                        "description": "Invalid or expired authorization code, or the wrong verifier: OAuth's invalid_grant, which the problem's `error` names",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InvalidGrant"
+                                }
+                            }
+                        }
                     },
                     "429": {
-                        "description": "Rate limit exceeded"
+                        "description": "Rate limit exceeded: 10 attempts/IP/minute",
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds until the limit lets the caller in again.",
+                                "schema": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -4768,7 +5655,14 @@
                         "description": "Revoked"
                     },
                     "404": {
-                        "description": "Token not found"
+                        "description": "Token not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -4814,10 +5708,33 @@
                         }
                     },
                     "404": {
-                        "description": "InvalidReadingID: no such reading, one past its expiry, or someone else's private reading"
+                        "description": "InvalidReadingID: no such reading, one past its expiry, or someone else's private reading",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "429": {
-                        "description": "Rate limit exceeded"
+                        "description": "Rate limit exceeded: 120 fetches/IP/minute",
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds until the limit lets the caller in again.",
+                                "schema": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -4868,14 +5785,44 @@
                             }
                         }
                     },
-                    "401": {
-                        "description": "Incorrect password"
+                    "403": {
+                        "description": "Incorrect password",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "InvalidReadingID: no such reading, one past its expiry, or someone else's private reading"
+                        "description": "InvalidReadingID: no such reading, one past its expiry, or someone else's private reading",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "429": {
-                        "description": "Too many password attempts"
+                        "description": "Too many password attempts: 10/IP/minute, every attempt counted",
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds until the limit lets the caller in again.",
+                                "schema": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -4909,14 +5856,44 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Invalid draw spec (InvalidDeckID also for a deck awaiting approval, unless an admin draws); or, with Turnstile on, neither a signed-in user nor a draw key nor a passed challenge (\"Captcha verification failed. Please try again.\"; from a plugin too old for draw keys: \"This version of the TarotGen plugin can no longer draw without an account. Update the plugin to get a draw key, or link your account.\")"
-                    },
                     "401": {
-                        "description": "With Turnstile on: a draw key that is unknown or revoked (\"This draw key is no longer valid. Get a new one from the plugin.\"), or a plugin account token that no longer is (\"This account link is no longer valid. Link your account again in the plugin.\")"
+                        "description": "With Turnstile on: a draw key that is unknown or revoked (\"This draw key is no longer valid. Get a new one from the plugin.\"), or a plugin account token that no longer is (\"This account link is no longer valid. Link your account again in the plugin.\")",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid draw spec (InvalidDeckID also for a deck awaiting approval, unless an admin draws); or, with Turnstile on, neither a signed-in user nor a draw key nor a passed challenge (\"Captcha verification failed. Please try again.\"; from a plugin too old for draw keys: \"This version of the TarotGen plugin can no longer draw without an account. Update the plugin to get a draw key, or link your account.\")",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "429": {
-                        "description": "Rate limit exceeded: 30 draws/IP/minute; with a draw key, 10/key/minute, 300/key/day and 30/IP/minute (\"Too many readings with this draw key. Please try again later.\")"
+                        "description": "Rate limit exceeded: 30 draws/IP/minute; with a draw key, 10/key/minute, 300/key/day and 30/IP/minute (\"Too many readings with this draw key. Please try again later.\")",
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds until the limit lets the caller in again.",
+                                "schema": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -4950,14 +5927,44 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Invalid input (InvalidDeckID also for a deck awaiting approval, unless an admin records it); or, with Turnstile on, neither a signed-in user nor a draw key nor a passed challenge (\"Captcha verification failed. Please try again.\"; from a plugin too old for draw keys: \"This version of the TarotGen plugin can no longer draw without an account. Update the plugin to get a draw key, or link your account.\")"
-                    },
                     "401": {
-                        "description": "With Turnstile on: a draw key that is unknown or revoked (\"This draw key is no longer valid. Get a new one from the plugin.\"), or a plugin account token that no longer is (\"This account link is no longer valid. Link your account again in the plugin.\")"
+                        "description": "With Turnstile on: a draw key that is unknown or revoked (\"This draw key is no longer valid. Get a new one from the plugin.\"), or a plugin account token that no longer is (\"This account link is no longer valid. Link your account again in the plugin.\")",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid input (InvalidDeckID also for a deck awaiting approval, unless an admin records it); or, with Turnstile on, neither a signed-in user nor a draw key nor a passed challenge (\"Captcha verification failed. Please try again.\"; from a plugin too old for draw keys: \"This version of the TarotGen plugin can no longer draw without an account. Update the plugin to get a draw key, or link your account.\")",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "429": {
-                        "description": "Rate limit exceeded: with a draw key, 10/key/minute, 300/key/day and 30/IP/minute (\"Too many readings with this draw key. Please try again later.\")"
+                        "description": "Rate limit exceeded: with a draw key, 10/key/minute, 300/key/day and 30/IP/minute (\"Too many readings with this draw key. Please try again later.\")",
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds until the limit lets the caller in again.",
+                                "schema": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -4993,7 +6000,8 @@
                                         }
                                     },
                                     "spread_name": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "maxLength": 100
                                     }
                                 },
                                 "required": [
@@ -5027,17 +6035,45 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Position count mismatch or invalid data"
-                    },
                     "403": {
-                        "description": "Not the owner"
+                        "description": "Not the owner",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Reading not found: no such reading, one past its expiry, or someone else's private reading"
+                        "description": "Reading not found: no such reading, one past its expiry, or someone else's private reading",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "409": {
-                        "description": "Reading is final"
+                        "description": "Reading is final",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Position count mismatch, or a position that is not an object or is past a limit (a title over 100 characters, x or y outside 0–100), or a spread name over 100 characters",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -5080,17 +6116,35 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Custom readings cannot draw"
-                    },
                     "403": {
-                        "description": "Not the owner"
+                        "description": "Not the owner",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Reading not found: no such reading, one past its expiry, or someone else's private reading"
+                        "description": "Reading not found: no such reading, one past its expiry, or someone else's private reading",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "409": {
-                        "description": "Reading is final"
+                        "description": "Reading is final, a custom reading (which cannot draw), or every card of the deck is drawn",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -5125,10 +6179,24 @@
                         }
                     },
                     "403": {
-                        "description": "Not the owner"
+                        "description": "Not the owner",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Reading not found: no such reading, one past its expiry, or someone else's private reading"
+                        "description": "Reading not found: no such reading, one past its expiry, or someone else's private reading",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -5210,11 +6278,34 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Validation failure"
+                    "422": {
+                        "description": "Validation failure: a name (of at most 200 characters) and at least one position are required, and each position must be within the limits",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "429": {
-                        "description": "Rate limit exceeded"
+                        "description": "Rate limit exceeded: 5 submissions/IP/hour",
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds until the limit lets the caller in again.",
+                                "schema": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -5248,7 +6339,14 @@
                         }
                     },
                     "404": {
-                        "description": "InvalidSpreadID"
+                        "description": "InvalidSpreadID",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -5283,10 +6381,24 @@
                         }
                     },
                     "401": {
-                        "description": "Not signed in"
+                        "description": "Not signed in",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "No such public spread"
+                        "description": "No such public spread",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -5361,11 +6473,44 @@
                             }
                         }
                     },
+                    "409": {
+                        "description": "The display name is taken",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
                     "422": {
-                        "description": "Validation failure, or a display name that is taken"
+                        "description": "Validation failure: each field the rules refuse is listed in `errors`",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "429": {
-                        "description": "Rate limit exceeded"
+                        "description": "Rate limit exceeded: 5 sign-ups/IP/hour",
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds until the limit lets the caller in again.",
+                                "schema": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -5419,8 +6564,15 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Invalid/expired token"
+                    "422": {
+                        "description": "Invalid/expired token",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -5480,7 +6632,23 @@
                         }
                     },
                     "429": {
-                        "description": "Rate limit exceeded"
+                        "description": "Rate limit exceeded: 5 requests/IP/hour",
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds until the limit lets the caller in again.",
+                                "schema": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -5540,11 +6708,15 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Invalid/expired token"
-                    },
                     "422": {
-                        "description": "New password too weak (token not consumed)"
+                        "description": "Invalid/expired token, or a new password too weak (the token is then not consumed)",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -5610,17 +6782,54 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Captcha failed"
-                    },
                     "401": {
-                        "description": "Invalid credentials (an unknown email, or an account without a password, takes as long to answer as a wrong password)"
+                        "description": "Invalid credentials (an unknown email, or an account without a password, takes as long to answer as a wrong password)",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "403": {
-                        "description": "Inactive or password-login disabled"
+                        "description": "Inactive or password-login disabled",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Captcha failed",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     },
                     "429": {
-                        "description": "Rate limit exceeded"
+                        "description": "Rate limit exceeded: 10 failed attempts/IP/15 minutes",
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds until the limit lets the caller in again.",
+                                "schema": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -5681,7 +6890,14 @@
                         }
                     },
                     "401": {
-                        "description": "Not authenticated"
+                        "description": "Not authenticated",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -5859,7 +7075,11 @@
                     },
                     "reading_time": {
                         "type": "string",
-                        "description": "When it was made, UTC (\"Y-m-d H:i:s\")."
+                        "format": "date-time",
+                        "description": "When it was made, in UTC.",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     },
                     "reading_name": {
                         "type": [
@@ -5912,7 +7132,11 @@
                             "string",
                             "null"
                         ],
-                        "description": "When this guest reading will be deleted, UTC (\"Y-m-d H:i:s\"), as its maker chose; null for the usual retention."
+                        "format": "date-time",
+                        "description": "When this guest reading will be deleted, in UTC, as its maker chose; null for the usual retention.",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     },
                     "question": {
                         "type": [
@@ -5985,7 +7209,11 @@
                 "properties": {
                     "exported_at": {
                         "type": "string",
-                        "description": "When the file was made, UTC (\"Y-m-d H:i:s\")."
+                        "format": "date-time",
+                        "description": "When the file was made, in UTC.",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     },
                     "readings": {
                         "type": "array",
@@ -6014,7 +7242,11 @@
                     },
                     "reading_time": {
                         "type": "string",
-                        "description": "When it was made, UTC (\"Y-m-d H:i:s\")."
+                        "format": "date-time",
+                        "description": "When it was made, in UTC.",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     },
                     "reading_name": {
                         "type": [
@@ -6185,13 +7417,18 @@
                     },
                     "created_at": {
                         "type": "string",
-                        "description": "When it was registered, UTC (\"Y-m-d H:i:s\")."
+                        "format": "date-time",
+                        "description": "When it was registered, in UTC.",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     },
                     "last_used_at": {
                         "type": [
                             "string",
                             "null"
                         ],
+                        "format": "date-time",
                         "description": "Always null: it has not signed in yet."
                     }
                 },
@@ -6306,7 +7543,11 @@
                             "properties": {
                                 "date": {
                                     "type": "string",
-                                    "description": "\"Y-m-d\", UTC."
+                                    "format": "date",
+                                    "description": "The UTC day.",
+                                    "examples": [
+                                        "2026-11-07"
+                                    ]
                                 },
                                 "count": {
                                     "type": "integer"
@@ -6325,6 +7566,147 @@
                     "topDecks",
                     "topSpreads",
                     "daily"
+                ]
+            },
+            "ProblemDetails": {
+                "type": "object",
+                "description": "An error, as RFC 9457 problem details: what every 4xx and 5xx answers with, as application/problem+json.",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "description": "Always about:blank: the status says what kind of problem it is.",
+                        "enum": [
+                            "about:blank"
+                        ]
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "The status's reason phrase, e.g. \"Unprocessable Entity\"."
+                    },
+                    "status": {
+                        "type": "integer",
+                        "description": "The HTTP status code, repeated."
+                    },
+                    "detail": {
+                        "type": "string",
+                        "description": "Why the request failed, in words to show the user."
+                    },
+                    "errors": {
+                        "type": "array",
+                        "description": "On a failed validation (422) only: each field that was refused.",
+                        "items": {
+                            "$ref": "#/components/schemas/ProblemFieldError"
+                        }
+                    },
+                    "exception": {
+                        "type": "array",
+                        "description": "Outside production, on an unexpected error (500) only: the exception chain, outermost first.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "description": "The exception's class."
+                                },
+                                "code": {
+                                    "type": [
+                                        "integer",
+                                        "string"
+                                    ],
+                                    "description": "The exception's code."
+                                },
+                                "message": {
+                                    "type": "string",
+                                    "description": "The exception's message."
+                                },
+                                "file": {
+                                    "type": "string",
+                                    "description": "The file it was thrown in."
+                                },
+                                "line": {
+                                    "type": "integer",
+                                    "description": "The line it was thrown at."
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "code",
+                                "message",
+                                "file",
+                                "line"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                ]
+            },
+            "ProblemFieldError": {
+                "type": "object",
+                "description": "One field a failed validation refused.",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Why the field was refused, in words to show beside it."
+                    },
+                    "location": {
+                        "type": "string",
+                        "description": "Where the field was sent: `body.email`, `body.positions[2].x`, `query.limit`, `path.deck_id`, or `body` for the body as a whole."
+                    }
+                },
+                "required": [
+                    "message",
+                    "location"
+                ]
+            },
+            "DailyCardTaken": {
+                "description": "The problem a second daily card for one day answers with (409).",
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/ProblemDetails"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "reading_id": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "description": "The reading already drawn for the day; null when it was deleted."
+                            }
+                        },
+                        "required": [
+                            "reading_id"
+                        ]
+                    }
+                ]
+            },
+            "InvalidGrant": {
+                "description": "The problem a plugin's code exchange answers with when the code or verifier is wrong (400): RFC 6749's invalid_grant, which `error` names for an OAuth client.",
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/ProblemDetails"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "error": {
+                                "type": "string",
+                                "description": "The OAuth error code.",
+                                "enum": [
+                                    "invalid_grant"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "error"
+                        ]
+                    }
                 ]
             },
             "CardCount": {
@@ -6435,13 +7817,25 @@
                             "string",
                             "null"
                         ],
-                        "description": "When an admin marked it handled; null = open."
+                        "format": "date-time",
+                        "description": "When an admin marked it handled; null = open.",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     },
                     "first_reported_at": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     },
                     "last_reported_at": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     },
                     "round": {
                         "type": "integer",
@@ -6502,7 +7896,11 @@
                         "description": "What the reporter wrote; may be empty."
                     },
                     "submitted_at": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     }
                 },
                 "required": [
@@ -6540,7 +7938,11 @@
                         "type": "integer"
                     },
                     "submitted_at": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     }
                 },
                 "required": [
@@ -6559,7 +7961,11 @@
                 "properties": {
                     "day": {
                         "type": "string",
-                        "description": "The day it was drawn for: the owner's local date, \"Y-m-d\"."
+                        "format": "date",
+                        "description": "The day it was drawn for: the owner's local date, \"Y-m-d\".",
+                        "examples": [
+                            "2026-11-07"
+                        ]
                     },
                     "reading_id": {
                         "type": [
@@ -6815,12 +8221,20 @@
                         "type": "string"
                     },
                     "created_at": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     },
                     "last_used_at": {
                         "type": [
                             "string",
                             "null"
+                        ],
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
                         ]
                     }
                 },
@@ -6866,7 +8280,11 @@
                         ]
                     },
                     "submitted_at": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     }
                 },
                 "required": [
@@ -6897,24 +8315,40 @@
                         "type": "string"
                     },
                     "created_at": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     },
                     "last_used_at": {
                         "type": [
                             "string",
                             "null"
+                        ],
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
                         ]
                     },
                     "expires_at": {
                         "type": [
                             "string",
                             "null"
+                        ],
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
                         ]
                     },
                     "revoked_at": {
                         "type": [
                             "string",
                             "null"
+                        ],
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
                         ]
                     }
                 },
@@ -6941,7 +8375,11 @@
                         "description": "What was drawn."
                     },
                     "reading_time": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     },
                     "user_id": {
                         "type": [
@@ -6977,7 +8415,11 @@
                             "string",
                             "null"
                         ],
-                        "description": "The day (\"Y-m-d\", the owner's local date) this reading is their daily card for; null for any other reading."
+                        "format": "date",
+                        "description": "The day (\"Y-m-d\", the owner's local date) this reading is their daily card for; null for any other reading.",
+                        "examples": [
+                            "2026-11-07"
+                        ]
                     },
                     "question": {
                         "type": [
@@ -7016,7 +8458,11 @@
                             "string",
                             "null"
                         ],
-                        "description": "When a guest reading will be deleted, UTC (\"Y-m-d H:i:s\"), as its maker chose; null for the usual retention. A reading made signed in never has one."
+                        "format": "date-time",
+                        "description": "When a guest reading will be deleted, in UTC, as its maker chose; null for the usual retention. A reading made signed in never has one.",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     }
                 },
                 "required": [
@@ -7063,7 +8509,11 @@
                         "type": "string"
                     },
                     "reading_time": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     },
                     "user_id": {
                         "type": [
@@ -7272,12 +8722,20 @@
                         "type": "boolean"
                     },
                     "registered_at": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     },
                     "last_login_at": {
                         "type": [
                             "string",
                             "null"
+                        ],
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
                         ]
                     },
                     "google_linked": {
@@ -7334,10 +8792,18 @@
                         }
                     },
                     "created_at": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     },
                     "updated_at": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "date-time",
+                        "examples": [
+                            "2026-11-07T09:18:09Z"
+                        ]
                     }
                 },
                 "required": [
@@ -7355,8 +8821,8 @@
         "securitySchemes": {
             "sessionCookie": {
                 "type": "apiKey",
-                "description": "Session cookie issued on sign-in. Sent automatically by the browser.",
-                "name": "PHPSESSID",
+                "description": "Session cookie issued on sign-in: HttpOnly, SameSite=Lax, Secure, and bound to this exact host by its `__Host-` prefix. Sent automatically by the browser.",
+                "name": "__Host-tarotgen",
                 "in": "cookie"
             },
             "pluginToken": {

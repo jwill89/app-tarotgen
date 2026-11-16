@@ -92,7 +92,7 @@ const open = ref<string[]>(newest ? [key(newest)] : [])
 
 .changelog-trigger:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
+  box-shadow: 0 0 0 2px var(--myst-focus-ring);
   border-radius: 6px;
 }
 

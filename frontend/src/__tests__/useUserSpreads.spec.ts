@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useUserSpreads } from '@/composables/useUserSpreads'
 import type { UserSpread } from '@/types'
-import { stubApi } from './helpers/app'
+import { stubApi, problem } from './helpers/app'
 
 function fakeResponse(body: unknown, { ok = true, status = 200 } = {}): Response {
   return { ok, status, json: async () => body } as unknown as Response
@@ -95,7 +95,7 @@ describe('useUserSpreads loading and sharing', () => {
 
   it("leaves the list alone when an edit is refused, and says why in the server's words", async () => {
     stubApi({
-      'PUT /account/spreads/1': { status: 400, body: { error: 'A spread needs a name.' } },
+      'PUT /account/spreads/1': { status: 422, body: problem('A spread needs a name.') },
     })
     const { updateUserSpread, userSpreads } = useUserSpreads()
 
@@ -120,7 +120,7 @@ describe('useUserSpreads loading and sharing', () => {
     expect(await useUserSpreads().submitAsPublic(1)).toBe(true)
 
     stubApi({
-      'POST /account/spreads/1/submit': { status: 409, body: { error: 'Already submitted.' } },
+      'POST /account/spreads/1/submit': { status: 409, body: problem('Already submitted.') },
     })
     expect(await useUserSpreads().submitAsPublic(1)).toBe(false)
   })
@@ -139,7 +139,7 @@ describe('useUserSpreads loading and sharing', () => {
   })
 
   it("says why a copy was refused, in the server's words or a fallback", async () => {
-    stubApi({ 'POST /spreads/9/copy': { status: 404, body: { error: 'Spread not found.' } } })
+    stubApi({ 'POST /spreads/9/copy': { status: 404, body: problem('Spread not found.') } })
     expect(await useUserSpreads().copyPublicSpread(9)).toMatchObject({
       ok: false,
       error: 'Spread not found.',

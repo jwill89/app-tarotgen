@@ -23,7 +23,7 @@ final class StatsServiceTest extends TestCase
             "CREATE TABLE readings (
                 reading_id TEXT PRIMARY KEY,
                 reading_info TEXT NOT NULL,
-                reading_time TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                reading_time DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
             )"
         );
         $this->pdo->exec("INSERT INTO decks (deck_id, name) VALUES (1, 'Rider-Waite'), (2, 'Thoth')");
@@ -78,7 +78,7 @@ final class StatsServiceTest extends TestCase
         $this->pdo->exec('CREATE TABLE users (user_id INTEGER PRIMARY KEY)');
         $this->pdo->exec('CREATE TABLE contacts (contact_id INTEGER PRIMARY KEY, is_read INTEGER NOT NULL DEFAULT 0)');
         $this->pdo->exec('CREATE TABLE card_reports (report_id INTEGER PRIMARY KEY, resolved_at TEXT DEFAULT NULL)');
-        $this->pdo->exec("INSERT INTO card_reports (resolved_at) VALUES (NULL), (NULL), ('2026-10-20 10:00:00')");
+        $this->pdo->exec("INSERT INTO card_reports (resolved_at) VALUES (NULL), (NULL), ('2026-10-20T10:00:00Z')");
         $this->pdo->exec('CREATE TABLE pending_spreads (pending_id INTEGER PRIMARY KEY)');
         $this->pdo->exec('INSERT INTO pending_spreads (pending_id) VALUES (1), (2), (3)');
         $this->pdo->exec('INSERT INTO deck_systems (deck_system_id, approved) VALUES (1, 1), (2, 0), (3, 1)');

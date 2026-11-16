@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import DeckSystemSubmissionsView from '@/views/admin/DeckSystemSubmissionsView.vue'
 import { useUser } from '@/composables/useUser'
-import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -99,7 +99,7 @@ describe('admin DeckSystemSubmissionsView', () => {
 
     it('drops to the login page when the session has expired', async () => {
       stubApi({
-        'GET /admin/deck-systems/pending': { status: 401, body: { error: 'Unauthorized' } },
+        'GET /admin/deck-systems/pending': { status: 401, body: problem('Unauthorized') },
       })
       const { router } = await mountPage(DeckSystemSubmissionsView, { path: PATH })
 
@@ -158,7 +158,7 @@ describe('admin DeckSystemSubmissionsView', () => {
     it("closes the preview when the cards can't be loaded, saying why", async () => {
       stubApi({
         ...loads(pending),
-        'GET /admin/deck-systems/9': { status: 404, body: { error: 'Deck system not found' } },
+        'GET /admin/deck-systems/9': { status: 404, body: problem('Deck system not found') },
       })
       await mountPage(DeckSystemSubmissionsView, { path: PATH })
 
@@ -252,7 +252,7 @@ describe('admin DeckSystemSubmissionsView', () => {
         'GET /admin/deck-systems/9': { body: solaBuscaCards },
         'POST /admin/deck-systems/9/approve': {
           status: 404,
-          body: { error: 'Deck system not found' },
+          body: problem('Deck system not found'),
         },
       })
       await mountPage(DeckSystemSubmissionsView, { path: PATH })
@@ -359,7 +359,7 @@ describe('admin DeckSystemSubmissionsView', () => {
     it("keeps the submission queued and shows the server's reason when rejecting fails", async () => {
       stubApi({
         ...loads(pending),
-        'DELETE /admin/deck-systems/9': { status: 404, body: { error: 'Deck system not found' } },
+        'DELETE /admin/deck-systems/9': { status: 404, body: problem('Deck system not found') },
       })
       await mountPage(DeckSystemSubmissionsView, { path: PATH })
       await click(button('Reject', row('Sola Busca')))

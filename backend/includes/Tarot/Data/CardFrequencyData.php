@@ -8,7 +8,7 @@ use Tarot\Structure\CardCount;
  * Card frequency over one user's readings, counted in SQL by walking each
  * reading's `draw` array with json_each. Both queries take the same filters: a
  * deck (null for every deck) and a time (null for all time; otherwise readings
- * made at or after it, "Y-m-d H:i:s" UTC like reading_time).
+ * made at or after it, RFC 3339 UTC like reading_time).
  *
  * A reading whose reading_info isn't valid JSON is left out rather than failing
  * the whole count: `valid` is MATERIALIZED so that check has run before any JSON

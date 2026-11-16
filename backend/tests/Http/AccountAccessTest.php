@@ -68,7 +68,7 @@ final class AccountAccessTest extends HttpTestCase
 
         $response = $this->request($method, $path, $body);
 
-        $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $response));
+        $this->assertSame('Not authenticated', $this->assertProblem(401, $response));
         $this->assertSame(1, $this->rowCount('users'));
         foreach (['user_spreads', 'user_favorite_spreads', 'user_favorite_decks', 'plugin_auth_codes', 'readings', 'daily_cards'] as $table) {
             $this->assertSame(0, $this->rowCount($table), $table);

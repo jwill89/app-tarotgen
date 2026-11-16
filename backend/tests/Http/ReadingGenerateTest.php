@@ -69,7 +69,7 @@ final class ReadingGenerateTest extends HttpTestCase
     {
         $response = $this->post('/readings/generate', ['deck_id' => $this->deckId + 1]);
 
-        $this->assertSame(['error' => 'InvalidDeckID'], $this->assertJsonResponse(400, $response));
+        $this->assertSame('InvalidDeckID', $this->assertProblem(422, $response));
         $this->assertSame(0, $this->rowCount('readings'));
     }
 
@@ -121,7 +121,7 @@ final class ReadingGenerateTest extends HttpTestCase
 
         $response = $this->post('/readings/generate', ['deck_id' => $this->deckId, 'password' => 'abc']);
 
-        $this->assertSame(['error' => 'Reading password must be at least 4 characters.'], $this->assertJsonResponse(400, $response));
+        $this->assertSame('Reading password must be at least 4 characters.', $this->assertProblem(422, $response));
         $this->assertSame(0, $this->rowCount('readings'));
     }
 
@@ -252,20 +252,20 @@ final class ReadingGenerateTest extends HttpTestCase
             'name' => 'Submitted', 'deck_system_id' => $this->systemId, 'approved' => false,
         ]);
         $this->assertNotNull($pending);
-        $refused = ['error' => 'InvalidDeckID'];
+        $refused = 'InvalidDeckID';
         $generate = ['deck_id' => $pending->deck_id];
         $custom = ['deck_id' => $pending->deck_id, 'cards' => [['card_id' => 1]]];
         $admin = $this->createUser('admin@example.test', admin: true);
 
-        $this->assertSame($refused, $this->assertJsonResponse(400, $this->post('/readings/generate', $generate)));
-        $this->assertSame($refused, $this->assertJsonResponse(400, $this->post('/readings', $custom)));
+        $this->assertSame($refused, $this->assertProblem(422, $this->post('/readings/generate', $generate)));
+        $this->assertSame($refused, $this->assertProblem(422, $this->post('/readings', $custom)));
         $this->signInAs($this->createUser('reader@example.test')->user_id);
-        $this->assertSame($refused, $this->assertJsonResponse(400, $this->post('/readings/generate', $generate)));
-        $this->assertSame($refused, $this->assertJsonResponse(400, $this->post('/readings', $custom)));
+        $this->assertSame($refused, $this->assertProblem(422, $this->post('/readings/generate', $generate)));
+        $this->assertSame($refused, $this->assertProblem(422, $this->post('/readings', $custom)));
         // Admin rights come with a browser session only, never with a plugin token.
         $this->useSessionCookie(null);
         $adminsPlugin = ['Authorization' => 'Bearer ' . $this->service(PluginTokenService::class)->issueToken($admin->user_id)];
-        $this->assertSame($refused, $this->assertJsonResponse(400, $this->post('/readings/generate', $generate, $adminsPlugin)));
+        $this->assertSame($refused, $this->assertProblem(422, $this->post('/readings/generate', $generate, $adminsPlugin)));
         $this->assertSame(0, $this->rowCount('readings'));
 
         $this->signInAs($admin->user_id);
@@ -283,8 +283,8 @@ final class ReadingGenerateTest extends HttpTestCase
         $response = $this->post('/readings/generate', ['deck_id' => $this->deckId]);
 
         $this->assertSame(
-            ['error' => 'You are generating readings too quickly. Please wait a moment.'],
-            $this->assertJsonResponse(429, $response)
+            'You are generating readings too quickly. Please wait a moment.',
+            $this->assertProblem(429, $response)
         );
         $this->assertSame(30, $this->rowCount('readings'));
     }
@@ -300,7 +300,7 @@ final class ReadingGenerateTest extends HttpTestCase
             'reading_name' => 'Recorded',
             'cards' => [
                 // Names come from the deck, never from the client.
-                ['card_id' => 3, 'reversed' => 'true', 'title' => '  Past  ', 'x' => 150, 'y' => -5, 'rotation' => -90, 'card_name' => 'Forged'],
+                ['card_id' => 3, 'reversed' => 'true', 'title' => '  Past  ', 'x' => 100, 'y' => 0, 'rotation' => -90, 'card_name' => 'Forged'],
                 ['card_id' => 1, 'reversed' => false, 'title' => 'Present', 'x' => 20.456, 'y' => 50, 'rotation' => 450],
             ],
         ]));
@@ -315,7 +315,7 @@ final class ReadingGenerateTest extends HttpTestCase
                 'name' => 'Kitchen table',
                 'description' => '',
                 'positions' => [
-                    // Clamped onto the canvas, rounded, rotation brought into 0–359.
+                    // Rounded, rotation brought into 0–359.
                     ['order' => 1, 'title' => 'Past', 'x' => 100, 'y' => 0, 'rotation' => 270],
                     ['order' => 2, 'title' => 'Present', 'x' => 20.46, 'y' => 50, 'rotation' => 90],
                 ],
@@ -325,6 +325,24 @@ final class ReadingGenerateTest extends HttpTestCase
                 ['card_id' => 1, 'reversed' => false, 'card_name' => 'Card 1'],
             ],
         ], $created['reading_info']);
+    }
+
+    public function testACustomCardPastALimitIsRefusedNotMovedOrCut(): void
+    {
+        $cases = [
+            'body.cards[0].x'     => [['card_id' => 1, 'x' => 150]],
+            'body.cards[1].y'     => [['card_id' => 1], ['card_id' => 2, 'y' => -5]],
+            'body.cards[0].title' => [['card_id' => 1, 'title' => str_repeat('t', 101)]],
+        ];
+        foreach ($cases as $location => $cards) {
+            $refused = $this->post('/readings', ['deck_id' => $this->deckId, 'cards' => $cards]);
+            $this->assertDocumentedProblem('post', '/readings', 422, $refused);
+            $this->assertSame([$location], array_keys($this->problemErrors($refused)), $location);
+        }
+
+        $long = $this->post('/readings', ['deck_id' => $this->deckId, 'name' => str_repeat('n', 101), 'cards' => [['card_id' => 1]]]);
+        $this->assertSame('name can be at most 100 characters.', $this->assertProblem(422, $long));
+        $this->assertSame(0, $this->rowCount('readings'));
     }
 
     public function testAnUnnamedCustomReadingIsCalledCustomReading(): void
@@ -360,7 +378,7 @@ final class ReadingGenerateTest extends HttpTestCase
     {
         $response = $this->post('/readings', $payload + ['deck_id' => $this->deckId]);
 
-        $this->assertSame(['error' => $error], $this->assertJsonResponse(400, $response));
+        $this->assertSame($error, $this->assertProblem(422, $response));
         $this->assertSame(0, $this->rowCount('readings'));
     }
 

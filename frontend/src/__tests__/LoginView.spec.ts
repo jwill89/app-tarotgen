@@ -3,7 +3,7 @@ import { flushPromises } from '@vue/test-utils'
 import LoginView from '@/views/LoginView.vue'
 import { useToasts } from '@/composables/useToasts'
 import { useUser } from '@/composables/useUser'
-import { mountWithApp, cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { mountWithApp, cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 
 const text = (el: Element) => el.textContent.replace(/\s+/g, ' ').trim()
 
@@ -137,7 +137,7 @@ describe('LoginView', () => {
     })
 
     it("shows the server's reason and stays put", async () => {
-      stub({ 'POST /auth/login': { status: 401, body: { error: 'Invalid email or password.' } } })
+      stub({ 'POST /auth/login': { status: 401, body: problem('Invalid email or password.') } })
       const { router } = await mountWithApp(LoginView, { path: '/login' })
 
       await fillIn('reader@example.test', 'wrong')
@@ -150,13 +150,13 @@ describe('LoginView', () => {
 
     it('shows only the latest error when the user tries again', async () => {
       stub({
-        'POST /auth/login': { status: 401, body: { error: 'Invalid email or password.' } },
+        'POST /auth/login': { status: 401, body: problem('Invalid email or password.') },
       })
       await mountWithApp(LoginView, { path: '/login' })
       await fillIn('reader@example.test', 'wrong')
       await click(button('Log In'))
 
-      stub({ 'POST /auth/login': { status: 429, body: { error: 'Too many attempts.' } } })
+      stub({ 'POST /auth/login': { status: 429, body: problem('Too many attempts.') } })
       await click(button('Log In'))
 
       expect(pageText()).not.toContain('Invalid email or password.')
@@ -208,7 +208,7 @@ describe('LoginView', () => {
 
     it('asks for a fresh challenge after a failed attempt (tokens are single-use)', async () => {
       stub(
-        { 'POST /auth/login': { status: 401, body: { error: 'Invalid email or password.' } } },
+        { 'POST /auth/login': { status: 401, body: problem('Invalid email or password.') } },
         { turnstile_sitekey: '0x4AAA' },
       )
       await mountWithApp(LoginView, { path: '/login' })

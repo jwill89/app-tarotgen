@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import SpreadCategoriesView from '@/views/admin/SpreadCategoriesView.vue'
 import { useUser } from '@/composables/useUser'
-import { cleanup, stubApi, signIn, testUser, lazyLoad } from './helpers/app'
+import { cleanup, stubApi, signIn, testUser, lazyLoad, problem } from './helpers/app'
 import {
   mountPage,
   resetPageState,
@@ -85,7 +85,7 @@ describe('admin SpreadCategoriesView', () => {
     const reason = '“Career” still holds 1 spread. Move it to another category first.'
     const api = stubApi({
       'GET /admin/spread-categories': { body: categories },
-      'DELETE /admin/spread-categories/3': { status: 409, body: { error: reason } },
+      'DELETE /admin/spread-categories/3': { status: 409, body: problem(reason) },
     })
     await mountPage(SpreadCategoriesView, { path: '/admin/spreads/categories' })
     await click(button('Remove Career'))
@@ -99,7 +99,7 @@ describe('admin SpreadCategoriesView', () => {
   })
 
   it('drops to the login page when the session has expired', async () => {
-    stubApi({ 'GET /admin/spread-categories': { status: 401, body: { error: 'Unauthorized' } } })
+    stubApi({ 'GET /admin/spread-categories': { status: 401, body: problem('Unauthorized') } })
     const { router } = await mountPage(SpreadCategoriesView, { path: '/admin/spreads/categories' })
 
     await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'), lazyLoad)
