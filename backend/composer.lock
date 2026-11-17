@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "cd3ebacc2e6b2ead2ea440181ccdb1fb",
+    "content-hash": "7f35a6d4110c580f86014a838de104ca",
     "packages": [
         {
             "name": "cakephp/chronos",
@@ -10258,16 +10258,16 @@
         },
         {
             "name": "zircote/swagger-php",
-            "version": "7.6.0",
+            "version": "7.7.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/zircote/swagger-php.git",
-                "reference": "9e782a7b3132a11549ef32dd44bd04a344b01b33"
+                "reference": "cbbeeab3abd2e3f167b16797e884d0423a6f0652"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/zircote/swagger-php/zipball/9e782a7b3132a11549ef32dd44bd04a344b01b33",
-                "reference": "9e782a7b3132a11549ef32dd44bd04a344b01b33",
+                "url": "https://api.github.com/repos/zircote/swagger-php/zipball/cbbeeab3abd2e3f167b16797e884d0423a6f0652",
+                "reference": "cbbeeab3abd2e3f167b16797e884d0423a6f0652",
                 "shasum": ""
             },
             "require": {
@@ -10338,7 +10338,7 @@
             ],
             "support": {
                 "issues": "https://github.com/zircote/swagger-php/issues",
-                "source": "https://github.com/zircote/swagger-php/tree/7.6.0"
+                "source": "https://github.com/zircote/swagger-php/tree/untagged-c508e4ff08ed2d123dfa"
             },
             "funding": [
                 {
@@ -10346,8 +10346,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-11-12T02:54:11+00:00",
-            "published-time": "2026-11-12T02:56:10+00:00"
+            "time": "2026-11-17T00:46:34+00:00",
+            "published-time": "2026-11-17T00:50:30+00:00"
         }
     ],
     "aliases": [],
