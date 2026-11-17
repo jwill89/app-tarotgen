@@ -22,24 +22,24 @@
         "psr/http-server-handler": "^1.0.2",
         "robmorgan/phinx": "^0.16.12",
         "slim/http": "^1.4",
-        "slim/psr7": "^1.8",
+        "slim/psr7": "^1.8.1",
         "slim/slim": "^4.15.3",
         "symfony/console": "^8.1.11"
     },
     "require-dev": {
-        "ergebnis/composer-normalize": "^2.56.1",
-        "friendsofphp/php-cs-fixer": "^3.95.30",
+        "ergebnis/composer-normalize": "^2.57.0",
+        "friendsofphp/php-cs-fixer": "^3.95.31",
         "icanhazstring/composer-unused": "^0.9.8",
         "maglnet/composer-require-checker": "^4.24",
         "phpstan/extension-installer": "^1.4.3",
         "phpstan/phpstan": "^2.3.3",
         "phpstan/phpstan-deprecation-rules": "^2.0.5",
-        "phpstan/phpstan-phpunit": "^2.1.1",
+        "phpstan/phpstan-phpunit": "^2.1.2",
         "phpstan/phpstan-strict-rules": "^2.1.1",
-        "phpunit/phpunit": "^13.4.6",
+        "phpunit/phpunit": "^13.4.7",
         "rector/rector": "^2.8.2",
         "roave/security-advisories": "dev-latest",
-        "zircote/swagger-php": "^7.5"
+        "zircote/swagger-php": "^7.6"
     },
     "conflict": {
         "phpstan/phpstan": ">2.3.3"
