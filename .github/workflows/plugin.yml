@@ -26,6 +26,9 @@ jobs:
     # says where Dalamud is.
     # A pull request from a fork runs on GitHub's runners, never on a self-hosted one.
     runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04' || vars.CI_RUNNER || 'ubuntu-24.04' }}
+    env:
+      # Each check runs through Invoke-CiCheck.ps1, which records it for the run's report.
+      CI_TOOLS: ${{ github.workspace }}/shared/ci
     steps:
       # The analyzers and code style come from the shared/ submodule
       # (plugin/Directory.Build.props), so it is checked out with the repo.
@@ -41,13 +44,19 @@ jobs:
       # The Dalamud dev distribution the SDK compiles against (XIVLauncher installs
       # it locally).
       - name: Dalamud
+        shell: pwsh
+        env:
+          CHECK: |
+            curl -fsSL -o "$RUNNER_TEMP/dalamud.zip" https://goatcorp.github.io/dalamud-distrib/latest.zip
+            unzip -q "$RUNNER_TEMP/dalamud.zip" -d "$RUNNER_TEMP/dalamud"
+            echo "DALAMUD_HOME=$RUNNER_TEMP/dalamud" >> "$GITHUB_ENV"
         run: |
-          curl -fsSL -o "$RUNNER_TEMP/dalamud.zip" https://goatcorp.github.io/dalamud-distrib/latest.zip
-          unzip -q "$RUNNER_TEMP/dalamud.zip" -d "$RUNNER_TEMP/dalamud"
-          echo "DALAMUD_HOME=$RUNNER_TEMP/dalamud" >> "$GITHUB_ENV"
+          & "$env:CI_TOOLS/Invoke-CiCheck.ps1" -Name 'Dalamud' -Command 'bash -eo pipefail -c "$CHECK"'
 
       - name: Build
-        run: dotnet build plugin/TarotGen.Plugin/TarotGen.Plugin.csproj --configuration Release
+        shell: pwsh
+        run: |
+          & "$env:CI_TOOLS/Invoke-CiCheck.ps1" -Name 'Build' -Command 'dotnet build plugin/TarotGen.Plugin/TarotGen.Plugin.csproj --configuration Release'
 
       - name: Upload the package
         uses: actions/upload-artifact@v7
@@ -56,3 +65,29 @@ jobs:
           path: plugin/TarotGen.Plugin/bin/Release/TarotGen.Plugin/
           if-no-files-found: error
           retention-days: 7
+
+      # On a failure, the job's checks go up for report.yml to merge into the run's report.
+      - name: CI report
+        id: ci-report
+        if: failure()
+        continue-on-error: true
+        shell: pwsh
+        run: '& "$env:CI_TOOLS/Complete-CiReport.ps1"'
+
+      - name: Upload the CI report
+        if: failure() && steps.ci-report.outputs.name != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.ci-report.outputs.name }}
+          path: ${{ runner.temp }}/ci-report
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # When the package fails, one report of what failed and where (report.yml).
+  report:
+    needs: [package]
+    if: failure()
+    uses: jwill89/shared-tooling/.github/workflows/report.yml@v2.17.0
+    permissions:
+      contents: read
+      actions: read
