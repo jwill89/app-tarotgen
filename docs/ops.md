@@ -126,7 +126,7 @@ Deployed on 2026-11-16, with every step below done that day:
 
 - `sudo apachectl -S` shows `tarotgen.io.conf` alone serving ports 80 and 443 for both names, certbot's file disabled and kept; the three migrations are recorded, every reading's time is in RFC 3339 form, and the database's integrity and foreign-key checks are clean.
 - The browser found no policy report on Home, New Draw, `/login`, `/contact` or `/api/docs` while the policy was report-only, nor after it was enforced again; Turnstile loads on all three of its pages, and the headers, the `__Host-tarotgen` cookie and the plugin's `repo.json` are as the production-only checks want them.
-- The first copy of the images came in one plain SSH stream, 5.0 GB in 23 minutes: through the deploy's shared connection it runs at well under 1 MB/s. `Sync-LiveFolder` then found all 2,237 files current.
+- The first copy of the images came in one plain SSH stream, 5.0 GB in 23 minutes, since the deploy's shared connection then ran at well under 1 MB/s (shared-tooling 2.16.0 gives such copies a connection of their own). `Sync-LiveFolder` then found all 2,237 files current.
 - The flat layout's leftovers are gone, after a check that `public/assets` held every deck and all 6,693 files.
 
 Still to check by hand: a guest draw and its reading's share meta (Turnstile asked for its checkbox), the three sign-ins, and a password-reset email.
