@@ -8061,7 +8061,8 @@
                             "integer",
                             "null"
                         ],
-                        "description": "The account that submitted it. Admin views only."
+                        "description": "The account that submitted it. Admin views only.",
+                        "x-admin-only": true
                     },
                     "system_short_name": {
                         "type": "string",
@@ -8111,7 +8112,8 @@
                             "integer",
                             "null"
                         ],
-                        "description": "The account that submitted it. Admin views only."
+                        "description": "The account that submitted it. Admin views only.",
+                        "x-admin-only": true
                     }
                 },
                 "required": [
