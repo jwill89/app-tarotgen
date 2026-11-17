@@ -692,4 +692,4 @@ Each is a place where this project differs from [`shared/standards/`](shared/sta
 
 ## 14. Not yet meeting the standards
 
-- Since 2026-11-16: CHANGELOG.md's 1.0.0, 2.0.0 and 3.0.0–3.4.0 headings, reconstructed from the history, name versions that were never tagged, so their links lead to tag pages that don't exist; waiting on the owner to tag their release commits and push the tags (docs-and-agents.md, What each doc holds).
+None.
