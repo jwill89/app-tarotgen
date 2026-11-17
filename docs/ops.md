@@ -18,12 +18,19 @@ apt-get install -y php8.5-fpm php8.5-curl php8.5-gd php8.5-gmp php8.5-mbstring p
 a2enmod rewrite headers ssl remoteip setenvif http2 proxy_fcgi
 
 # The site's folder (the deploy fills it) and its images, which www-data writes (the WebP copies).
-install -d -o root -g root -m 755 "$site" "$site/public"
-install -d -o www-data -g www-data -m 755 "$site/public/assets" "$site/public/assets/decks"
+# A site still on the flat layout (og.php in the site's folder itself) gets public/ from its first
+# 6.0.0 deploy, which carries the images over: an empty public/assets made first would be carried
+# instead.
+install -d -o root -g root -m 755 "$site"
+if [ ! -e "$site/og.php" ]; then
+  install -d -o root -g root -m 755 "$site/public"
+  install -d -o www-data -g www-data -m 755 "$site/public/assets" "$site/public/assets/decks"
+fi
 
-# The private data: the .env and the database, www-data's alone.
-install -d -o www-data -g www-data -m 750 "$data" "$data/db"
-[ -f "$data/.env" ] || echo "Copy backend/.env.example from the repo to $data/.env (www-data, 640) and fill it in."
+# The private data: www-data reads the .env and owns the database's folder; only root changes the .env.
+install -d -o root -g www-data -m 750 "$data"
+install -d -o www-data -g www-data -m 750 "$data/db"
+[ -f "$data/.env" ] || echo "Copy backend/.env.example from the repo to $data/.env (root:www-data, 640) and fill it in."
 [ -f "$data/db/tarotdb.db" ] || runuser -u www-data -- touch "$data/db/tarotdb.db"   # the first deploy migrates it
 
 # TAROT_DATA_DIR for SSH sessions; the vhost sets it for the site, the cron file for its jobs.
@@ -113,25 +120,44 @@ After every deploy, in a fresh browser tab with the console open:
 
 ## Upgrading to 6.0.0
 
-The site moves onto a `public/` document root, the database's timestamps are rebuilt in RFC 3339 form, and the cron file goes in through `Install-HostConfig`. In order:
+The site moves onto a `public/` document root, the database's timestamps are rebuilt in RFC 3339 form, and the cron file goes in through `Install-HostConfig`. This is also the first deploy to install the site's vhost: 5.6.0's step for it never reached the host, where certbot's `tarotgen.io-le-ssl.conf` still served port 443 on 2026-11-16, so Upgrading to 5.6.0's steps 2 to 4 run with this deploy.
 
-1. In the git-ignored `scripts/deploy.config.ps1`, add `$DeployDataDir`, the folder `TAROT_DATA_DIR` names on the host (`scripts/deploy.config.example.ps1` shows it).
+Done on 2026-11-16:
+
+- `$DeployDataDir` is in `scripts/deploy.config.ps1`, taken from the host's `TAROT_DATA_DIR`. The config already held the vhost's settings: `CertName`, `ServerAdmin`, `ServerName` and `ServerAlias` (`www.tarotgen.io`, which the live sites serve too). The certificate covers `tarotgen.io` but not `www.tarotgen.io`, as before; Cloudflare still reaches it.
+- The host has what the release needs: Apache's modules (rewrite, headers, ssl, remoteip, setenvif, http2, proxy_fcgi), Cloudflare's ranges in `/etc/apache2/cloudflare-ips.txt`, PHP 8.5.12 with every extension the host setup lists, the deploy's tools, 17 GB free, ten daily backups, and no `public/` yet, which the deploy makes.
+
+Left, in order:
+
+1. Just before the deploy, as root: give the site's folder and its `.deploy` (www-data's until now) to root, as the host setup has it, and turn the policy to report-only. 5.6.0 runs on both.
+
+   ```sh
+   chown root:root '<site folder>' '<site folder>/.deploy' && chmod 755 '<site folder>' '<site folder>/.deploy'
+   cp -p '<data folder>/.env' '<data folder>/.env.bak-6.0.0' && printf '\nCSP_MODE=report-only\n' >> '<data folder>/.env'
+   ```
+
 2. Run `task deploy` at a quiet hour; the backend goes first, which the move needs (a frontend- or plugin-only deploy refuses until it has). On the host, the deploy:
    1. builds the new code with `public/` holding the API's front controller, `og.php` and the `.htaccess`, and carries the site's `dist`, `plugin` and `assets` into it as hard links (nothing is copied, and the old folders stay as they are);
    2. snapshots the database, swaps the code in, and runs the migrations: the one that rebuilds every timestamp column takes a few seconds;
-   3. installs `/etc/cron.d/tarotgen` from the template, and the vhost with its document root at `<site folder>/public` and HSTS;
+   3. installs `/etc/cron.d/tarotgen` from the template, and the vhost with its document root at `<site folder>/public`, HSTS and the two lines that take the visitor's address from Cloudflare, disabling certbot's `tarotgen.io-le-ssl.conf`;
    4. publishes the plugin, 0.9.0.
 
    Between the swap and Apache's reload at the end of the run, the API answers 404 for a few seconds, once.
 3. If the deploy rolls back, put the database back with the restore command it prints: 5.6.0's code can't write to the rebuilt tables.
 4. The first pull of the images afterwards fetches about 5 GB into `backend/public/assets` (later ones fetch only what changed). Run the deploy with `-NoDbPull` to put it off.
 5. Everyone signs in again once: the session cookie has a new name. Linked plugins keep working, as their tokens don't use the cookie.
-6. The pages' policy now refuses inline styles that don't carry the response's nonce. Before the deploy, set `CSP_MODE=report-only` in `<data folder>/.env`; after it, run the production-only checks and watch the console for `style-src` reports (Turnstile and Cloudflare's injected scripts are the ones only production runs), then remove the setting.
-7. Run the production-only checks above, then remove what the flat layout left in `<site folder>`: `.htaccess`, `og.php`, `dist`, `dist.old`, `plugin`, `plugin.old` and `assets` (its files are hard links that `public/assets` also holds, so removing it frees nothing and loses nothing). Check `<site folder>/public/assets/decks` lists the decks before removing `assets`.
+6. Check `sudo apachectl -S` on the host: `tarotgen.io.conf` alone serves ports 80 and 443 for `tarotgen.io` and `www.tarotgen.io`.
+7. Run the production-only checks above and watch the console for `style-src` reports: the pages' policy now refuses inline styles that don't carry the response's nonce, and Turnstile and Cloudflare's injected scripts run only on production. Once there are none, enforce the policy again:
 
-```sh
-cd '<site folder>' && ls public/assets/decks | wc -l && rm -rf .htaccess og.php dist dist.old plugin plugin.old assets
-```
+   ```sh
+   sed -i '/^CSP_MODE=/d' '<data folder>/.env' && rm '<data folder>/.env.bak-6.0.0'
+   ```
+
+8. Last, once 6.0.0 is staying (5.6.0 can't be put back by hand without them), remove what the flat layout left in `<site folder>`: `.htaccess`, `og.php`, `dist`, `dist.old`, `plugin`, `plugin.old` and `assets` (its files are hard links that `public/assets` also holds, so removing it frees nothing and loses nothing). Check `<site folder>/public/assets/decks` lists the decks before removing `assets`.
+
+   ```sh
+   cd '<site folder>' && ls public/assets/decks | wc -l && rm -rf .htaccess og.php dist dist.old plugin plugin.old assets
+   ```
 
 ## Upgrading to 5.6.0
 
@@ -185,4 +211,4 @@ env -i TAROT_DATA_DIR='<data folder>' runuser -u www-data -- php '<site folder>/
 
 ## Retired files on the host
 
-Removed on 2026-11-16, with the owner's approval, once the daily copies were confirmed (ten in `<data folder>/db/backups`): `<old backups>`, the folder the old nightly job wrote to, with the old nightly copies (14, from 2026-10-29 to 2026-11-06), the cron file from before the 2026-10-28 move of the data out of the web root, and the two copies of the old `.env`, vhost and `/etc/environment` that move kept. Nothing retired is left on the host but what the 6.0.0 deploy leaves in `<site folder>` (Upgrading to 6.0.0, step 7).
+Removed on 2026-11-16, with the owner's approval, once the daily copies were confirmed (ten in `<data folder>/db/backups`): `<old backups>`, the folder the old nightly job wrote to, with the old nightly copies (14, from 2026-10-29 to 2026-11-06), the cron file from before the 2026-10-28 move of the data out of the web root, and the two copies of the old `.env`, vhost and `/etc/environment` that move kept. Nothing retired is left on the host but what the 6.0.0 deploy leaves in `<site folder>` (Upgrading to 6.0.0, step 8).
