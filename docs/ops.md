@@ -122,12 +122,21 @@ After every deploy, in a fresh browser tab with the console open:
 
 The site moves onto a `public/` document root, the database's timestamps are rebuilt in RFC 3339 form, and the cron file goes in through `Install-HostConfig`. This is also the first deploy to install the site's vhost: 5.6.0's step for it never reached the host, where certbot's `tarotgen.io-le-ssl.conf` still served port 443 on 2026-11-16, so Upgrading to 5.6.0's steps 2 to 4 run with this deploy.
 
-Done on 2026-11-16:
+Deployed on 2026-11-16, with every step below done that day:
+
+- `sudo apachectl -S` shows `tarotgen.io.conf` alone serving ports 80 and 443 for both names, certbot's file disabled and kept; the three migrations are recorded, every reading's time is in RFC 3339 form, and the database's integrity and foreign-key checks are clean.
+- The browser found no policy report on Home, New Draw, `/login`, `/contact` or `/api/docs` while the policy was report-only, nor after it was enforced again; Turnstile loads on all three of its pages, and the headers, the `__Host-tarotgen` cookie and the plugin's `repo.json` are as the production-only checks want them.
+- The first copy of the images came in one plain SSH stream, 5.0 GB in 23 minutes: through the deploy's shared connection it runs at well under 1 MB/s. `Sync-LiveFolder` then found all 2,237 files current.
+- The flat layout's leftovers are gone, after a check that `public/assets` held every deck and all 6,693 files.
+
+Still to check by hand: a guest draw and its reading's share meta (Turnstile asked for its checkbox), the three sign-ins, and a password-reset email.
+
+Done before the deploy, on 2026-11-16:
 
 - `$DeployDataDir` is in `scripts/deploy.config.ps1`, taken from the host's `TAROT_DATA_DIR`. The config already held the vhost's settings: `CertName`, `ServerAdmin`, `ServerName` and `ServerAlias` (`www.tarotgen.io`, which the live sites serve too). The certificate covers `tarotgen.io` but not `www.tarotgen.io`, as before; Cloudflare still reaches it.
 - The host has what the release needs: Apache's modules (rewrite, headers, ssl, remoteip, setenvif, http2, proxy_fcgi), Cloudflare's ranges in `/etc/apache2/cloudflare-ips.txt`, PHP 8.5.12 with every extension the host setup lists, the deploy's tools, 17 GB free, ten daily backups, and no `public/` yet, which the deploy makes.
 
-Left, in order:
+The steps, in order:
 
 1. Just before the deploy, as root: give the site's folder and its `.deploy` (www-data's until now) to root, as the host setup has it, and turn the policy to report-only. 5.6.0 runs on both.
 
@@ -211,4 +220,4 @@ env -i TAROT_DATA_DIR='<data folder>' runuser -u www-data -- php '<site folder>/
 
 ## Retired files on the host
 
-Removed on 2026-11-16, with the owner's approval, once the daily copies were confirmed (ten in `<data folder>/db/backups`): `<old backups>`, the folder the old nightly job wrote to, with the old nightly copies (14, from 2026-10-29 to 2026-11-06), the cron file from before the 2026-10-28 move of the data out of the web root, and the two copies of the old `.env`, vhost and `/etc/environment` that move kept. Nothing retired is left on the host but what the 6.0.0 deploy leaves in `<site folder>` (Upgrading to 6.0.0, step 8).
+Removed on 2026-11-16, with the owner's approval, once the daily copies were confirmed (ten in `<data folder>/db/backups`): `<old backups>`, the folder the old nightly job wrote to, with the old nightly copies (14, from 2026-10-29 to 2026-11-06), the cron file from before the 2026-10-28 move of the data out of the web root, and the two copies of the old `.env`, vhost and `/etc/environment` that move kept. What the 6.0.0 deploy left in `<site folder>` from the flat layout was removed the same day (Upgrading to 6.0.0, step 8). Kept on purpose: the deploy's rollback copies (`.deploy/backend-prev`, `tarotgen.io.conf.old`, certbot's disabled `tarotgen.io-le-ssl.conf`, the cron file's previous copy) and `/root/tarotgen-6.0.0-prep.txt`, the site folder's owners before 6.0.0.
