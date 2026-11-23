@@ -21,7 +21,7 @@ jobs:
   # docs always, and every job when CI's own files, shared/ or the Taskfile change
   # (changes.yml). `task shared:ci:changes` shows what a push would run.
   changes:
-    uses: jwill89/shared-tooling/.github/workflows/changes.yml@v2.17.0
+    uses: jwill89/shared-tooling/.github/workflows/changes.yml@v2.19.3
     permissions:
       contents: read
       actions: read
@@ -38,7 +38,7 @@ jobs:
   frontend:
     needs: changes
     if: fromJSON(needs.changes.outputs.areas).app
-    uses: jwill89/shared-tooling/.github/workflows/web.yml@v2.17.0
+    uses: jwill89/shared-tooling/.github/workflows/web.yml@v2.19.3
     with:
       dir: frontend
       fontawesome: true
@@ -52,7 +52,7 @@ jobs:
   backend:
     needs: changes
     if: fromJSON(needs.changes.outputs.areas).app
-    uses: jwill89/shared-tooling/.github/workflows/php.yml@v2.17.0
+    uses: jwill89/shared-tooling/.github/workflows/php.yml@v2.19.3
     with:
       dir: backend
       php-version: '8.5'
@@ -69,7 +69,7 @@ jobs:
   e2e:
     needs: [changes, frontend, backend]
     if: fromJSON(needs.changes.outputs.areas).app
-    uses: jwill89/shared-tooling/.github/workflows/e2e.yml@v2.17.0
+    uses: jwill89/shared-tooling/.github/workflows/e2e.yml@v2.19.3
     with:
       dir: frontend
       fontawesome: true
@@ -87,7 +87,7 @@ jobs:
   plugin:
     needs: changes
     if: fromJSON(needs.changes.outputs.areas).plugin
-    uses: jwill89/shared-tooling/.github/workflows/dotnet.yml@v2.17.0
+    uses: jwill89/shared-tooling/.github/workflows/dotnet.yml@v2.19.3
     with:
       projects: plugin/TarotGen.Plugin/TarotGen.Plugin.csproj plugin/TarotGen.Plugin.Preview/TarotGen.Plugin.Preview.csproj
       test-project: plugin/TarotGen.Plugin.Tests/TarotGen.Plugin.Tests.csproj
@@ -97,18 +97,18 @@ jobs:
   scripts:
     needs: changes
     if: fromJSON(needs.changes.outputs.areas).scripts
-    uses: jwill89/shared-tooling/.github/workflows/pwsh.yml@v2.17.0
+    uses: jwill89/shared-tooling/.github/workflows/pwsh.yml@v2.19.3
 
   # markdownlint, the shared .editorconfig/.gitattributes, and the workflow refs.
   docs:
-    uses: jwill89/shared-tooling/.github/workflows/docs.yml@v2.17.0
+    uses: jwill89/shared-tooling/.github/workflows/docs.yml@v2.19.3
 
   # OSV-Scanner over every lockfile. An osv-scanner.toml beside a lockfile passes over the
   # advisories that reach only lint, test or build tooling.
   osv:
     needs: changes
     if: fromJSON(needs.changes.outputs.areas).lockfiles
-    uses: jwill89/shared-tooling/.github/workflows/osv.yml@v2.17.0
+    uses: jwill89/shared-tooling/.github/workflows/osv.yml@v2.19.3
 
   # On a push to main, AFTER the gate passes, tag + release the project version
   # if it has no release yet. Tag = v<version> (frontend/package.json); release
@@ -138,7 +138,7 @@ jobs:
   report:
     needs: [changes, frontend, backend, e2e, plugin, scripts, docs, osv, release]
     if: failure()
-    uses: jwill89/shared-tooling/.github/workflows/report.yml@v2.17.0
+    uses: jwill89/shared-tooling/.github/workflows/report.yml@v2.19.3
     permissions:
       contents: read
       actions: read

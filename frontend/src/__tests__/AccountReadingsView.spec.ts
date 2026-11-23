@@ -18,6 +18,7 @@ import {
 } from './helpers/app'
 import { choose, labelled, optionsOf, typeInto, valueOf } from './helpers/page'
 import type { AccountReading, Deck, ReadingSpread, ReadingTag } from '@/types'
+import { soon } from '../../../shared/test/web/wait.js'
 
 // The view inside what App.vue gives it: the TooltipProvider the notes editor's
 // toolbar needs and the shared ConfirmDialog its confirm() calls open.
@@ -295,7 +296,7 @@ describe('AccountReadingsView', () => {
       expect(titles()).toHaveLength(25)
 
       await click(button('2'))
-      await vi.waitFor(() =>
+      await soon(() =>
         expect(titles()).toEqual(
           many(30)
             .slice(25)
@@ -515,7 +516,7 @@ describe('AccountReadingsView', () => {
       expect(lastFilters()).toEqual({ tag: 'career', deck_id: '2' })
 
       router.back()
-      await vi.waitFor(() => expect(router.currentRoute.value.query).toEqual({ tag: 'career' }))
+      await soon(() => expect(router.currentRoute.value.query).toEqual({ tag: 'career' }))
       await flushPromises()
 
       expect(lastFilters()).toEqual({ tag: 'career' })
@@ -535,7 +536,7 @@ describe('AccountReadingsView', () => {
       expect(lastFilters()).toEqual({ deck_id: '2', tag: 'career', spread: 'Celtic Cross' })
 
       router.back()
-      await vi.waitFor(() =>
+      await soon(() =>
         expect(router.currentRoute.value.query).toEqual({ deck: '2', tag: 'career' }),
       )
       await flushPromises()
@@ -708,12 +709,12 @@ describe('AccountReadingsView', () => {
       })
       const { router } = await open()
       await click(button('2'))
-      await vi.waitFor(() => expect(titles()).toEqual(['Reading 26']))
+      await soon(() => expect(titles()).toEqual(['Reading 26']))
 
       await click(button('Delete', row('Reading 26')))
       await answer('Delete')
 
-      await vi.waitFor(() => expect(titles()).toHaveLength(25))
+      await soon(() => expect(titles()).toHaveLength(25))
       expect(asked.map((q) => q.offset)).toEqual(['0', '25', '25', '0'])
       expect(router.currentRoute.value.query).toEqual({})
     })

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest'
 import { stubApi, testUser, problem } from './helpers/app'
 import type { User } from '@/types'
+import { soon } from '../../../shared/test/web/wait.js'
 
 /*
  * The app's router, guards included. Its last-revalidation time and the signed-in
@@ -280,7 +281,7 @@ describe('router page head', () => {
     const { router } = await freshApp()
 
     await router.push('/privacy')
-    await vi.waitFor(() => expect(window.scrollTo).toHaveBeenCalled())
+    await soon(() => expect(window.scrollTo).toHaveBeenCalled())
 
     expect(vi.mocked(window.scrollTo).mock.calls.at(-1)?.[0]).toMatchObject({ top: 0 })
   })

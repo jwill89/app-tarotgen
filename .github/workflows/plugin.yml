@@ -87,7 +87,7 @@ jobs:
   report:
     needs: [package]
     if: failure()
-    uses: jwill89/shared-tooling/.github/workflows/report.yml@v2.17.0
+    uses: jwill89/shared-tooling/.github/workflows/report.yml@v2.19.3
     permissions:
       contents: read
       actions: read

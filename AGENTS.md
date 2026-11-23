@@ -34,7 +34,7 @@ It is a **single-page app (SPA) frontend + REST API backend**:
 |-------------|---------|
 | Frontend    | Vue `^3.5`, vue-router `^5.1`, TypeScript `~6.0` (`vue-tsc 3.3.13`, held: §10), Vite `^8`, Bulma `^1.0`, Reka UI `^2.10` |
 | Editor/MD   | TipTap `^3.25` (`@tiptap/*`), `marked`, `dompurify`, `turndown` |
-| Shared      | **shared-tooling v2.15.2**, the git submodule at `shared/` (`shared/README.md`): the lint configs, test settings, CI workflows, repo files, the deploy module (`SharedDeploy`) and the standards (`shared/standards/`) every jwill89 project shares. |
+| Shared      | **shared-tooling**, the git submodule at `shared/` (its release in `shared/VERSION`) (`shared/README.md`): the lint configs, test settings, CI workflows, repo files, the deploy module (`SharedDeploy`) and the standards (`shared/standards/`) every jwill89 project shares. |
 | Icons       | FontAwesome **Pro v7**, self-hosted from the site's own kit package, `@awesome.me/kit-91d12dd2d3` (classic solid and regular, duotone solid, brands), through `@fortawesome/fontawesome-svg-core`. Needs the Font Awesome token in `~/.npmrc` to install — see §6. |
 | FE testing  | Vitest `^5` on `jsdom` with shared-tooling's settings (`vitestDefaults`) + `@vue/test-utils` (components/views), coverage via `@vitest/coverage-v8` (floor in `vite.config.ts`); Playwright `^1` end-to-end suite (`e2e/`) on shared-tooling's settings, with axe (`@jwill89/test-a11y`) |
 | FE linting  | ESLint `^10`, Prettier, Stylelint `^18` and the tsconfigs all extend shared-tooling's `@jwill89/lint-web` (`shared/lint/web`: ESLint with `eslint-plugin-vue`, typescript-eslint's strict type-checked set, `eslint-plugin-vuejs-accessibility` and `curly`; Stylelint's standard + Vue configs; tsconfigs with `noUncheckedIndexedAccess`), plus this app's own rules (SCSS, the palette rule); Knip (unused code/deps) |
@@ -115,7 +115,7 @@ The repo is split into **`frontend/`** (Vue/Vite, the npm project root) and **`b
 │   ├── Directory.Build.props #  Imports the shared analyzers and C# code style (shared/lint/dotnet).
 │   └── TarotGen.Plugin/    #   C# project (net10.0-windows, Dalamud.NET.Sdk); packaged by DalamudPackager.
 │
-├── shared/                 # Git submodule: shared-tooling v2.15.2 (`git submodule update --init`).
+├── shared/                 # Git submodule: shared-tooling (`git submodule update --init`).
 ├── deploy/                 # Templates every deploy fills from its settings and ships (§6):
 │   ├── apache-vhost.conf   #   the site's one vhost (ports 80 and 443);
 │   └── tarotgen.cron       #   /etc/cron.d/tarotgen (retention).

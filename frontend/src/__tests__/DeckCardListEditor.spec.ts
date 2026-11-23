@@ -1,10 +1,11 @@
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import { h, ref } from 'vue'
 import { flushPromises } from '@vue/test-utils'
 import DeckCardListEditor from '@/components/DeckCardListEditor.vue'
 import { emptyCard } from '@/components/deckCards'
 import { mountWithApp, cleanup } from './helpers/app'
 import type { DeckSystemCard } from '@/types'
+import { soon } from '../../../shared/test/web/wait.js'
 
 function named(cardId: number, name: string): DeckSystemCard {
   return { ...emptyCard(cardId), deck_system_id: 4, name }
@@ -131,7 +132,7 @@ describe('DeckCardListEditor', () => {
 
     expect(rows().map((r) => r.open)).toEqual([false, true])
     // Reka mounts the newly opened card a frame later; the focus waits for it.
-    await vi.waitFor(() => expect(document.activeElement).toBe(titleInputs()[0]!.element))
+    await soon(() => expect(document.activeElement).toBe(titleInputs()[0]!.element))
   })
 
   it('closes the last card with Done', async () => {
@@ -164,7 +165,7 @@ describe('DeckCardListEditor', () => {
     await flushPromises()
 
     expect(rows().map((r) => r.open)).toEqual([false, false, true])
-    await vi.waitFor(() => expect(document.activeElement).toBe(titleInputs()[0]!.element))
+    await soon(() => expect(document.activeElement).toBe(titleInputs()[0]!.element))
   })
 
   it('reports that every card is named, so a page can use it as its check', async () => {

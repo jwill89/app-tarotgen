@@ -1,9 +1,10 @@
-import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
 import { createMemoryHistory, createRouter, RouterView, type Router } from 'vue-router'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import { cleanup } from './helpers/app'
 import { mountPage, resetPageState, answerConfirm, confirmDialog } from './helpers/page'
+import { soon } from '../../../shared/test/web/wait.js'
 
 const MESSAGE = 'Leave this page? Your notes will be lost.'
 
@@ -58,7 +59,7 @@ describe('useUnsavedChanges', () => {
     dirty.value = true
 
     const leaving = router.push('/elsewhere')
-    await vi.waitFor(() => expect(confirmDialog()?.textContent).toContain(MESSAGE))
+    await soon(() => expect(confirmDialog()?.textContent).toContain(MESSAGE))
     expect(confirmDialog()?.textContent).toContain('Unsaved changes')
     await answerConfirm('cancel')
     await leaving
@@ -71,7 +72,7 @@ describe('useUnsavedChanges', () => {
     dirty.value = true
 
     const leaving = router.push('/elsewhere')
-    await vi.waitFor(() => expect(confirmDialog()).not.toBeNull())
+    await soon(() => expect(confirmDialog()).not.toBeNull())
     await answerConfirm('confirm')
     await leaving
 

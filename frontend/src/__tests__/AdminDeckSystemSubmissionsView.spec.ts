@@ -20,6 +20,7 @@ import {
 } from './helpers/page'
 import { pending, solaBusca, solaBuscaCards, system } from './helpers/deckSystems'
 import type { DeckSystem } from '@/types'
+import { soon } from '../../../shared/test/web/wait.js'
 
 const PATH = '/admin/deck-systems/submissions'
 
@@ -152,7 +153,7 @@ describe('admin DeckSystemSubmissionsView', () => {
       expect(open?.textContent).not.toContain('submitted by')
 
       answer(Response.json({ ...anonymous, cards: [] }))
-      await vi.waitFor(() => expect(open?.textContent).toContain('No cards were submitted.'))
+      await soon(() => expect(open?.textContent).toContain('No cards were submitted.'))
     })
 
     it("closes the preview when the cards can't be loaded, saying why", async () => {
@@ -183,7 +184,7 @@ describe('admin DeckSystemSubmissionsView', () => {
 
       await click(button('Close', previewFooter()))
       answer(Response.json(solaBuscaCards))
-      await vi.waitFor(() => expect(dialog('Sola Busca')).toBeNull())
+      await soon(() => expect(dialog('Sola Busca')).toBeNull())
     })
 
     it('closes with Close, or the corner ×', async () => {

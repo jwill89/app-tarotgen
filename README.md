@@ -45,7 +45,7 @@ shared/     shared-tooling — git submodule: the lint, test, CI and deploy piec
 | `scripts/deploy.ps1` | Build & deploy orchestration (frontend + backend + plugin), on shared-tooling's SharedDeploy module. |
 | `deploy/` | The templates every deploy fills and ships: the Apache vhost and the cron file. |
 | `docs/ops.md` | The runbook for the live site: host setup, backups and restores, production checks, upgrade steps, rolling back, logs. |
-| `shared/` | [shared-tooling](https://github.com/jwill89/shared-tooling) v2.15.2, a git submodule: ESLint/Prettier/Stylelint/tsconfig, the PHP and C# lint bases, the Vitest and Playwright settings, the CI workflows, `.editorconfig`/`.gitattributes`, the deploy module and the standards every project follows (`shared/standards/`). |
+| `shared/` | [shared-tooling](https://github.com/jwill89/shared-tooling), a git submodule at the release `shared/VERSION` names: ESLint/Prettier/Stylelint/tsconfig, the PHP and C# lint bases, the Vitest and Playwright settings, the CI workflows, `.editorconfig`/`.gitattributes`, the deploy module and the standards every project follows (`shared/standards/`). |
 | `Taskfile.yml` | [Task](https://taskfile.dev) commands (`task` lists them), including the shared ones. |
 | `*/{node_modules,vendor,dist}/` | Generated dependency / build output. |
 

@@ -22,6 +22,7 @@ import {
   problem,
 } from './helpers/app'
 import type { Deck, LockedReading, Reading, ReadingInfo } from '@/types'
+import { soon } from '../../../shared/test/web/wait.js'
 
 // Drawing the export needs a 2D canvas, which jsdom lacks; the export itself
 // is useReadingExport's to test. Here: what the page asks it to draw.
@@ -367,7 +368,7 @@ describe('ReadingView', () => {
       await flushPromises()
       expect(lightbox()).toBeUndefined()
       // Back on the card it was opened from, so keyboard users keep their place.
-      await vi.waitFor(() => expect(document.activeElement).toBe(card.element))
+      await soon(() => expect(document.activeElement).toBe(card.element))
     })
 
     it('flips every card over in turn, then back again', async () => {

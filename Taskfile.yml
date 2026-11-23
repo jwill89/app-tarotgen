@@ -170,7 +170,8 @@ tasks:
     desc: Check dependencies for known vulnerabilities (Composer, npm's shipped packages, and OSV-Scanner over every lockfile and requirements file)
     cmds:
       - cd backend && composer audit
-      - cd frontend && npm audit --audit-level=high --omit=dev
+      - task: shared:web:audit
+        vars: { DIR: frontend }
       - task: shared:vuln
 
   # Everything CI runs. The generated files are checked first, since gen:check rewrites the

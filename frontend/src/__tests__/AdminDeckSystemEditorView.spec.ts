@@ -34,6 +34,7 @@ import {
   system,
   systems,
 } from './helpers/deckSystems'
+import { soon } from '../../../shared/test/web/wait.js'
 
 const LIST = '/admin/deck-systems'
 const EDIT = '/admin/deck-systems/3/edit'
@@ -457,13 +458,13 @@ describe('admin DeckSystemEditorView', () => {
       await typeInto(labelled('Name'), 'Petit Lenormand')
 
       await click(button('Cancel'))
-      await vi.waitFor(() => expect(unsavedPrompt()).toBe(true))
+      await soon(() => expect(unsavedPrompt()).toBe(true))
       expect(confirmDialog()?.textContent).toContain('Keep Editing')
 
       await answerConfirm('cancel')
 
       // The address is put back on the editor once the browser has gone forward.
-      await vi.waitFor(() => expect(window.location.pathname).toBe(EDIT))
+      await soon(() => expect(window.location.pathname).toBe(EDIT))
       expect(router.currentRoute.value.name).toBe('admin-deck-system-edit')
       expect(valueOf(labelled('Name'))).toBe('Petit Lenormand')
     })
@@ -475,7 +476,7 @@ describe('admin DeckSystemEditorView', () => {
       api.mockClear()
 
       await click(link('Back to Deck Systems'))
-      await vi.waitFor(() => expect(unsavedPrompt()).toBe(true))
+      await soon(() => expect(unsavedPrompt()).toBe(true))
       await answerConfirm('confirm')
       await arrive(router, 'admin-deck-systems')
 
@@ -493,16 +494,16 @@ describe('admin DeckSystemEditorView', () => {
       await nameCards(['Rider', 'Cloverleaf'])
 
       window.history.back()
-      await vi.waitFor(() => expect(unsavedPrompt()).toBe(true))
+      await soon(() => expect(unsavedPrompt()).toBe(true))
       await answerConfirm('cancel')
 
       // The address is put back on the editor, edits and all.
-      await vi.waitFor(() => expect(window.location.pathname).toBe(EDIT))
+      await soon(() => expect(window.location.pathname).toBe(EDIT))
       expect(router.currentRoute.value.name).toBe('admin-deck-system-edit')
       expect(cardHeadings()).toEqual(['1 Rider', '2 Cloverleaf'])
 
       window.history.back()
-      await vi.waitFor(() => expect(unsavedPrompt()).toBe(true))
+      await soon(() => expect(unsavedPrompt()).toBe(true))
       await answerConfirm('confirm')
       await arrive(router, 'admin-deck-systems')
     })
@@ -513,7 +514,7 @@ describe('admin DeckSystemEditorView', () => {
       await enterNumber(labelled('Total Cards'), 22)
 
       await click(button('Cancel'))
-      await vi.waitFor(() => expect(unsavedPrompt()).toBe(true))
+      await soon(() => expect(unsavedPrompt()).toBe(true))
       await answerConfirm('confirm')
       await arrive(router, 'admin-deck-systems')
     })
@@ -552,7 +553,7 @@ describe('admin DeckSystemEditorView', () => {
       expect(reloadIsHeldBack()).toBe(true)
 
       await click(button('Cancel'))
-      await vi.waitFor(() => expect(unsavedPrompt()).toBe(true))
+      await soon(() => expect(unsavedPrompt()).toBe(true))
       await answerConfirm('confirm')
       await arrive(router, 'admin-deck-systems')
       // The editor is gone, and its question with it.
