@@ -97,7 +97,7 @@ jobs:
   scripts:
     needs: changes
     if: fromJSON(needs.changes.outputs.areas).scripts
-    uses: jwill89/shared-tooling/.github/workflows/pwsh.yml@v2.17.0
+    uses: jwill89/shared-tooling/.github/workflows/pwsh.yml@v2.18.0
 
   # markdownlint, the shared .editorconfig/.gitattributes, and the workflow refs.
   docs:
