@@ -87,7 +87,7 @@ jobs:
   plugin:
     needs: changes
     if: fromJSON(needs.changes.outputs.areas).plugin
-    uses: jwill89/shared-tooling/.github/workflows/dotnet.yml@v2.17.0
+    uses: jwill89/shared-tooling/.github/workflows/dotnet.yml@v2.18.0
     with:
       projects: plugin/TarotGen.Plugin/TarotGen.Plugin.csproj plugin/TarotGen.Plugin.Preview/TarotGen.Plugin.Preview.csproj
       test-project: plugin/TarotGen.Plugin.Tests/TarotGen.Plugin.Tests.csproj
